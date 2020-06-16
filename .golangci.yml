@@ -1,0 +1,236 @@
+---
+run:
+  # concurrency: 6
+  timeout: 2m
+  issues-exit-code: 1
+  tests: true
+linters-settings:
+  errcheck:
+    check-type-assertions: false
+    check-blank: false
+  govet:
+    check-shadowing: true
+    settings:
+      printf:
+        funcs:
+          - (github.com/sirupsen/logrus.FieldLogger).Infof
+          - (github.com/sirupsen/logrus.FieldLogger).Warnf
+          - (github.com/sirupsen/logrus.FieldLogger).Errorf
+          - (github.com/sirupsen/logrus.FieldLogger).Fatalf
+  golint:
+    min-confidence: 0.8
+  goimports:
+    local-prefixes: github.com/networkservicemesh/sdk
+  gocyclo:
+    min-complexity: 15
+  maligned:
+    suggest-new: true
+  dupl:
+    threshold: 150
+  funlen:
+    Lines: 100
+    Statements: 50
+  goconst:
+    min-len: 2
+    min-occurrences: 2
+  depguard:
+    list-type: blacklist
+    include-go-root: false
+    packages:
+      - errors
+    packages-with-error-message:
+      # specify an error message to output when a blacklisted package is used
+      - errors: "Please use \"github.com/pkg/errors\" instead of \"errors\" in go imports"
+  misspell:
+    locale: US
+  unparam:
+    check-exported: false
+  nakedret:
+    max-func-lines: 30
+  prealloc:
+    simple: true
+    range-loops: true
+    for-loops: false
+  gocritic:
+    enabled-checks:
+      - appendAssign
+      - assignOp
+      - appendCombine
+      - argOrder
+      - badCall
+      - badCond
+      - boolExprSimplify
+      - builtinShadow
+      - captLocal
+      - caseOrder
+      - codegenComment
+      - commentFormatting
+      - commentedOutCode
+      - commentedOutImport
+      - defaultCaseOrder
+      - deprecatedComment
+      - docStub
+      - dupArg
+      - dupBranchBody
+      - dupCase
+      - dupImport
+      - dupSubExpr
+      - elseif
+      - emptyFallthrough
+      - emptyStringTest
+      - equalFold
+      - evalOrder
+      - exitAfterDefer
+      - flagDeref
+      - flagName
+      - hexLiteral
+      - hugeParam
+      - ifElseChain
+      - importShadow
+      - indexAlloc
+      - initClause
+      - methodExprCall
+      - nestingReduce
+      - newDeref
+      - nilValReturn
+      - octalLiteral
+      - offBy1
+      - paramTypeCombine
+      - rangeExprCopy
+      - rangeValCopy
+      - regexpMust
+      - regexpPattern
+      - singleCaseSwitch
+      - sloppyLen
+      - sloppyReassign
+      - stringXbytes
+      - switchTrue
+      - typeAssertChain
+      - typeSwitchVar
+      - typeUnparen
+      - unlabelStmt
+      - unnamedResult
+      - unnecessaryBlock
+      - underef
+      - unlambda
+      - unslice
+      - valSwap
+      - weakCond
+      - wrapperFunc
+      - yodaStyleExpr
+linters:
+  disable-all: true
+  enable:
+    # - rowserrcheck
+    - bodyclose
+    - deadcode
+    - depguard
+    - dogsled
+    - dupl
+    - errcheck
+    - funlen
+    - gochecknoinits
+    - goconst
+    - gocritic
+    - gocyclo
+    - gofmt
+    - goimports
+    - golint
+    - gosec
+    - gosimple
+    - govet
+    - ineffassign
+    - interfacer
+    # - lll
+    - misspell
+    - nakedret
+    - scopelint
+    - staticcheck
+    - structcheck
+    - stylecheck
+    - typecheck
+    - unconvert
+    - unparam
+    # - unused
+    - varcheck
+    - whitespace
+issues:
+  exclude-use-default: false
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  exclude-rules:
+    # We really *do* want to pass a pointer to an interface in these cases.  See comments in file for New{Server,Client}
+    # function for why
+    - path: .*\.gen\.go
+      linters:
+        - dupl
+        - golint
+    - path: .*registry.*.go
+      linters:
+        - dupl
+    # TODO - remove after deciding how to properly handle the cancel
+    - path: pkg/networkservice/common/connect/server.go
+      linters:
+        - govet
+      text: "lostcancel"
+    # Sometimes test functions just get long :(
+    - path: pkg/networkservice/common/monitor/server_test.go
+      linters:
+        - funlen
+      text: "Function 'TestMonitor' is too long"
+    - path: pkg/networkservice/utils/checks/checkerror/server_test.go
+      linters:
+        - dupl
+      text: "lines are duplicate of"
+    - path: pkg/networkservice/utils/checks/checkerror/client_test.go
+      linters:
+        - dupl
+      text: "lines are duplicate of"
+    - path: pkg/tools/spiffeutils/spiffeutils.go
+      linters:
+        - interfacer
+      text: "can be `fmt.Stringer`"
+    - path: pkg/networkservice/chains/nsmgr/peertracker/server.go
+      linters:
+        - interfacer
+      text: "can be `fmt.Stringer`"
+    - path: pkg/networkservice/core/trace/client.go
+      linters:
+        - dupl
+      text: "lines are duplicate of"
+    - path: pkg/registry/core/trace/registry_client.go
+      linters:
+        - dupl
+      text: "lines are duplicate of"
+    - path: pkg/registry/core/trace/discovery_client.go
+      linters:
+        - dupl
+      text: "lines are duplicate of"
+    - path: pkg/tools/spiffeutils/tls_peer.go
+      linters:
+        - gosec
+      text: "G402: TLS InsecureSkipVerify set true"
+    - path: pkg/networkservice/common/updatepath/server_test.go
+      linters:
+        - gochecknoinits
+      text: "don't use `init` function"
+    - path: pkg/tools/debug/self.go
+      linters:
+        - gosec
+      text: "G204: Subprocess launched with variable"
+    - path: pkg/tools/executils/start.go
+      linters:
+        - gosec
+      text: "G204: Subprocess launched with variable"
+    - path: pkg/tools/executils/run.go
+      linters:
+        - gosec
+      text: "G204: Subprocess launched with variable"
+    - path: pkg/tools/executils/output.go
+      linters:
+        - gosec
+      text: "G204: Subprocess launched with variable"
+    - path: pkg/tools/spire/start.go
+      linters:
+        - funlen
+        - gocyclo
