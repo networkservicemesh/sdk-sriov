@@ -1,3 +1,3 @@
 # Network Service Mesh SR-IOV sdk
 
-This repo is for -IOV sdk code
+This repo is for SR-IOV sdk code
