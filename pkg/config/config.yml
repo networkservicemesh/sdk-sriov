@@ -1,0 +1,6 @@
+---
+resourceList:
+  - registryDomainName: "domain1"
+    capability: "capability1"
+    devicePciAddress: "pciAddr1"
+    connectedToPort: "macAddr1"
