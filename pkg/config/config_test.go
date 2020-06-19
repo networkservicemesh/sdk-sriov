@@ -25,21 +25,24 @@ import (
 )
 
 const (
-	registryDomainName1 = "domain1"
-	capability1         = "capability1"
-	devicePciAddress1   = "pciAddr1"
-	connectedToPort1    = "macAddr1"
+	networkServiceName = "networkServiceName"
+	sourceHostName     = "example.org"
+	sourcePCIAddress   = "0000:01:00:0"
+	capability         = "10G"
+	targetMACAddress   = "00:0a:95:9d:68:16"
 
 	configFileName = "config.yml"
 )
 
-func TestReadConfigFile(t *testing.T) {
+// TestReadConfigFile test reading a endpoint config file
+func TestReadEndpointConfigFile(t *testing.T) {
 	configList, _ := config.ReadConfig(configFileName)
 	assert.NotNil(t, configList)
-	resConfig1 := configList.ResourceList[0]
-	assert.NotNil(t, resConfig1)
-	assert.Equal(t, resConfig1.RegistryDomainName, registryDomainName1)
-	assert.Equal(t, resConfig1.Capability, capability1)
-	assert.Equal(t, resConfig1.DevicePciAddress, devicePciAddress1)
-	assert.Equal(t, resConfig1.ConnectedToPort, connectedToPort1)
+	resConfig := configList.ResourceList[0]
+	assert.NotNil(t, resConfig)
+	assert.Equal(t, resConfig.NetworkServiceName, networkServiceName)
+	assert.Equal(t, resConfig.SourceHostName, sourceHostName)
+	assert.Equal(t, resConfig.SourcePCIAddress, sourcePCIAddress)
+	assert.Equal(t, resConfig.Capability, capability)
+	assert.Equal(t, resConfig.TargetMACAddress, targetMACAddress)
 }

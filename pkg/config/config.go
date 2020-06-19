@@ -27,22 +27,23 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// ResourceConfigList is list of ResourceConfig
-type ResourceConfigList struct {
-	ResourceList []ResourceConfig `yaml:"resourceList"` // config file
+// ResourceEndpointConfigList is list of ResourceEndpointConfig
+type ResourceEndpointConfigList struct {
+	ResourceList []ResourceEndpointConfig `yaml:"resources"` // config file
 }
 
-// ResourceConfig contains configuration parameters for a resource pool
-type ResourceConfig struct {
-	RegistryDomainName string `yaml:"registryDomainName"`
+// ResourceEndpointConfig is a config for endpoint
+type ResourceEndpointConfig struct {
+	NetworkServiceName string `yaml:"networkServiceName"`
+	SourceHostName     string `yaml:"sourceHostName"`
+	SourcePCIAddress   string `yaml:"sourcePCIAddress"`
 	Capability         string `yaml:"capability"`
-	DevicePciAddress   string `yaml:"devicePciAddress"`
-	ConnectedToPort    string `yaml:"connectedToPort"`
+	TargetMACAddress   string `yaml:"targetMACAddress"`
 }
 
 // ReadConfig reads and parses config by provided configuration file path
-func ReadConfig(configFile string) (*ResourceConfigList, error) {
-	resources := &ResourceConfigList{}
+func ReadConfig(configFile string) (*ResourceEndpointConfigList, error) {
+	resources := &ResourceEndpointConfigList{}
 
 	rawBytes, err := ioutil.ReadFile(filepath.Clean(configFile))
 	if err != nil {
