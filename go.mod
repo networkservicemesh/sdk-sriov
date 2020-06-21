@@ -3,8 +3,7 @@ module github.com/networkservicemesh/sdk-sriov
 go 1.13
 
 require (
-	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/networkservicemesh/sdk v0.0.0-20200617204137-77c1a2e30408
 	github.com/pkg/errors v0.9.1
-	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/stretchr/testify v1.2.2
+	github.com/stretchr/testify v1.5.1
 )

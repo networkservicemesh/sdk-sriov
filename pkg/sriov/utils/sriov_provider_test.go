@@ -18,6 +18,7 @@ package utils_test
 
 import (
 	"bytes"
+	"context"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -46,12 +47,12 @@ var (
 )
 
 func Test_IsDeviceSriovCapable(t *testing.T) {
-	u := utils.NewSriovUtilsProvider(sysfsDevicesPath)
+	u := utils.NewSriovProvider(sysfsDevicesPath)
 
 	err := os.RemoveAll(devicePath)
 	assert.Nil(t, err)
 
-	capable := u.IsDeviceSriovCapable(pciAddr)
+	capable := u.IsDeviceSriovCapable(context.Background(), pciAddr)
 	assert.False(t, capable)
 
 	err = os.MkdirAll(devicePath, 0750)
@@ -60,7 +61,7 @@ func Test_IsDeviceSriovCapable(t *testing.T) {
 	_, err = os.Create(filepath.Join(devicePath, totalVfFile))
 	assert.Nil(t, err)
 
-	capable = u.IsDeviceSriovCapable(pciAddr)
+	capable = u.IsDeviceSriovCapable(context.Background(), pciAddr)
 	assert.True(t, capable)
 
 	err = os.RemoveAll(devicePath)
@@ -68,12 +69,12 @@ func Test_IsDeviceSriovCapable(t *testing.T) {
 }
 
 func Test_IsSriovVirtualFunction(t *testing.T) {
-	u := utils.NewSriovUtilsProvider(sysfsDevicesPath)
+	u := utils.NewSriovProvider(sysfsDevicesPath)
 
 	err := os.RemoveAll(devicePath)
 	assert.Nil(t, err)
 
-	capable := u.IsSriovVirtualFunction(pciAddr)
+	capable := u.IsSriovVirtualFunction(context.Background(), pciAddr)
 	assert.False(t, capable)
 
 	err = os.MkdirAll(devicePath, 0750)
@@ -82,7 +83,7 @@ func Test_IsSriovVirtualFunction(t *testing.T) {
 	_, err = os.Create(filepath.Join(devicePath, physicalFunctionPath))
 	assert.Nil(t, err)
 
-	capable = u.IsSriovVirtualFunction(pciAddr)
+	capable = u.IsSriovVirtualFunction(context.Background(), pciAddr)
 	assert.True(t, capable)
 
 	err = os.RemoveAll(devicePath)
@@ -90,12 +91,12 @@ func Test_IsSriovVirtualFunction(t *testing.T) {
 }
 
 func Test_GetConfiguredVirtualFunctionsNumber(t *testing.T) {
-	u := utils.NewSriovUtilsProvider(sysfsDevicesPath)
+	u := utils.NewSriovProvider(sysfsDevicesPath)
 
 	err := os.RemoveAll(devicePath)
 	assert.Nil(t, err)
 
-	_, err = u.GetConfiguredVirtualFunctionsNumber(pciAddr)
+	_, err = u.GetConfiguredVirtualFunctionsNumber(context.Background(), pciAddr)
 	assert.NotNil(t, err)
 
 	err = os.MkdirAll(devicePath, 0750)
@@ -107,14 +108,14 @@ func Test_GetConfiguredVirtualFunctionsNumber(t *testing.T) {
 	err = ioutil.WriteFile(configuredVfPath, []byte("invalid number"), 0600)
 	assert.Nil(t, err)
 
-	_, err = u.GetConfiguredVirtualFunctionsNumber(pciAddr)
+	_, err = u.GetConfiguredVirtualFunctionsNumber(context.Background(), pciAddr)
 	assert.NotNil(t, err)
 
 	numVfs := 7
 	err = ioutil.WriteFile(configuredVfPath, []byte(strconv.FormatInt(int64(numVfs), 10)), 0600)
 	assert.Nil(t, err)
 
-	gotNumVfs, err := u.GetConfiguredVirtualFunctionsNumber(pciAddr)
+	gotNumVfs, err := u.GetConfiguredVirtualFunctionsNumber(context.Background(), pciAddr)
 	assert.Nil(t, err)
 	assert.Equal(t, numVfs, gotNumVfs)
 
@@ -123,12 +124,12 @@ func Test_GetConfiguredVirtualFunctionsNumber(t *testing.T) {
 }
 
 func Test_IsSriovConfigured(t *testing.T) {
-	u := utils.NewSriovUtilsProvider(sysfsDevicesPath)
+	u := utils.NewSriovProvider(sysfsDevicesPath)
 
 	err := os.RemoveAll(devicePath)
 	assert.Nil(t, err)
 
-	conf := u.IsSriovConfigured(pciAddr)
+	conf := u.IsSriovConfigured(context.Background(), pciAddr)
 	assert.False(t, conf)
 
 	err = os.MkdirAll(devicePath, 0750)
@@ -140,14 +141,14 @@ func Test_IsSriovConfigured(t *testing.T) {
 	err = ioutil.WriteFile(configuredVfPath, []byte("invalid number"), 0600)
 	assert.Nil(t, err)
 
-	conf = u.IsSriovConfigured(pciAddr)
+	conf = u.IsSriovConfigured(context.Background(), pciAddr)
 	assert.False(t, conf)
 
 	numVfs := 7
 	err = ioutil.WriteFile(configuredVfPath, []byte(strconv.FormatInt(int64(numVfs), 10)), 0600)
 	assert.Nil(t, err)
 
-	conf = u.IsSriovConfigured(pciAddr)
+	conf = u.IsSriovConfigured(context.Background(), pciAddr)
 	assert.True(t, conf)
 
 	err = os.RemoveAll(devicePath)
@@ -155,12 +156,12 @@ func Test_IsSriovConfigured(t *testing.T) {
 }
 
 func Test_GetSriovVirtualFunctionsCapacity(t *testing.T) {
-	u := utils.NewSriovUtilsProvider(sysfsDevicesPath)
+	u := utils.NewSriovProvider(sysfsDevicesPath)
 
 	err := os.RemoveAll(devicePath)
 	assert.Nil(t, err)
 
-	_, err = u.GetSriovVirtualFunctionsCapacity(pciAddr)
+	_, err = u.GetSriovVirtualFunctionsCapacity(context.Background(), pciAddr)
 	assert.NotNil(t, err)
 
 	err = os.MkdirAll(devicePath, 0750)
@@ -170,17 +171,17 @@ func Test_GetSriovVirtualFunctionsCapacity(t *testing.T) {
 	_, err = os.Create(totalVfPath)
 	assert.Nil(t, err)
 
-	err = ioutil.WriteFile(totalVfPath, []byte("invalid number"), 0600)
+	err = ioutil.WriteFile(totalVfPath, []byte("invalid number"), os.ModePerm)
 	assert.Nil(t, err)
 
-	_, err = u.GetSriovVirtualFunctionsCapacity(pciAddr)
+	_, err = u.GetSriovVirtualFunctionsCapacity(context.Background(), pciAddr)
 	assert.NotNil(t, err)
 
 	numVfs := 7
 	err = ioutil.WriteFile(totalVfPath, []byte(strconv.FormatInt(int64(numVfs), 10)), 0600)
 	assert.Nil(t, err)
 
-	gotNumVfs, err := u.GetSriovVirtualFunctionsCapacity(pciAddr)
+	gotNumVfs, err := u.GetSriovVirtualFunctionsCapacity(context.Background(), pciAddr)
 	assert.Nil(t, err)
 	assert.Equal(t, numVfs, gotNumVfs)
 
@@ -189,30 +190,30 @@ func Test_GetSriovVirtualFunctionsCapacity(t *testing.T) {
 }
 
 func Test_IsDeviceExists(t *testing.T) {
-	u := utils.NewSriovUtilsProvider(sysfsDevicesPath)
+	u := utils.NewSriovProvider(sysfsDevicesPath)
 
 	err := os.RemoveAll(devicePath)
 	assert.Nil(t, err)
 
-	_, err = u.IsDeviceExists("invalid PCI address")
+	_, err = u.IsDeviceExists(context.Background(), "invalid PCI address")
 	assert.NotNil(t, err)
 
-	exists, err := u.IsDeviceExists(pciAddr)
+	exists, err := u.IsDeviceExists(context.Background(), pciAddr)
 	assert.Nil(t, err)
 	assert.False(t, exists)
 
-	exists, err = u.IsDeviceExists(pciAddrShortForm)
+	exists, err = u.IsDeviceExists(context.Background(), pciAddrShortForm)
 	assert.Nil(t, err)
 	assert.False(t, exists)
 
 	err = os.MkdirAll(devicePath, 0750)
 	assert.Nil(t, err)
 
-	exists, err = u.IsDeviceExists(pciAddr)
+	exists, err = u.IsDeviceExists(context.Background(), pciAddr)
 	assert.Nil(t, err)
 	assert.True(t, exists)
 
-	exists, err = u.IsDeviceExists(pciAddrShortForm)
+	exists, err = u.IsDeviceExists(context.Background(), pciAddrShortForm)
 	assert.Nil(t, err)
 	assert.True(t, exists)
 
@@ -221,19 +222,19 @@ func Test_IsDeviceExists(t *testing.T) {
 }
 
 func Test_GetNetInterfacesNames(t *testing.T) {
-	u := utils.NewSriovUtilsProvider(sysfsDevicesPath)
+	u := utils.NewSriovProvider(sysfsDevicesPath)
 
 	err := os.RemoveAll(devicePath)
 	assert.Nil(t, err)
 
-	_, err = u.GetNetInterfacesNames(pciAddr)
+	_, err = u.GetNetInterfacesNames(context.Background(), pciAddr)
 	assert.NotNil(t, err)
 
 	netIfacesPath := filepath.Join(devicePath, netInterfacesPath)
 	err = os.MkdirAll(netIfacesPath, 0750)
 	assert.Nil(t, err)
 
-	netIfaces, err := u.GetNetInterfacesNames(pciAddr)
+	netIfaces, err := u.GetNetInterfacesNames(context.Background(), pciAddr)
 	assert.Nil(t, err)
 	assert.Empty(t, netIfaces)
 
@@ -241,7 +242,7 @@ func Test_GetNetInterfacesNames(t *testing.T) {
 	_, err = os.Create(filepath.Join(netIfacesPath, iface1))
 	assert.Nil(t, err)
 
-	netIfaces, err = u.GetNetInterfacesNames(pciAddr)
+	netIfaces, err = u.GetNetInterfacesNames(context.Background(), pciAddr)
 	assert.Nil(t, err)
 	assert.Equal(t, []string{iface1}, netIfaces)
 
@@ -249,7 +250,7 @@ func Test_GetNetInterfacesNames(t *testing.T) {
 	_, err = os.Create(filepath.Join(netIfacesPath, iface2))
 	assert.Nil(t, err)
 
-	netIfaces, err = u.GetNetInterfacesNames(pciAddr)
+	netIfaces, err = u.GetNetInterfacesNames(context.Background(), pciAddr)
 	assert.Nil(t, err)
 	// is this array network interfaces are sorted alphabetically by their names
 	assert.Equal(t, []string{iface1, iface2}, netIfaces)
@@ -259,25 +260,25 @@ func Test_GetNetInterfacesNames(t *testing.T) {
 }
 
 func Test_CreateVirtualFunctions(t *testing.T) {
-	u := utils.NewSriovUtilsProvider(sysfsDevicesPath)
+	u := utils.NewSriovProvider(sysfsDevicesPath)
 
 	err := os.RemoveAll(devicePath)
 	assert.Nil(t, err)
 
-	err = u.CreateVirtualFunctions(pciAddr, -123)
+	err = u.CreateVirtualFunctions(context.Background(), pciAddr, -123)
 	assert.NotNil(t, err)
 
-	err = u.CreateVirtualFunctions(pciAddr, 0)
+	err = u.CreateVirtualFunctions(context.Background(), pciAddr, 0)
 	assert.NotNil(t, err)
 
 	numVfs := 7
-	err = u.CreateVirtualFunctions(pciAddr, numVfs)
+	err = u.CreateVirtualFunctions(context.Background(), pciAddr, numVfs)
 	assert.NotNil(t, err)
 
 	err = os.MkdirAll(devicePath, 0750)
 	assert.Nil(t, err)
 
-	err = u.CreateVirtualFunctions(pciAddr, numVfs)
+	err = u.CreateVirtualFunctions(context.Background(), pciAddr, numVfs)
 	assert.Nil(t, err)
 
 	gotVfs, err := ioutil.ReadFile(filepath.Clean(configuredVfPath))
@@ -287,7 +288,7 @@ func Test_CreateVirtualFunctions(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, numVfs, gotNumVfs)
 
-	err = u.CreateVirtualFunctions(pciAddr, 15)
+	err = u.CreateVirtualFunctions(context.Background(), pciAddr, 15)
 	assert.NotNil(t, err)
 
 	err = os.RemoveAll(devicePath)
@@ -295,18 +296,18 @@ func Test_CreateVirtualFunctions(t *testing.T) {
 }
 
 func Test_GetVirtualFunctionsList(t *testing.T) {
-	u := utils.NewSriovUtilsProvider(sysfsDevicesPath)
+	u := utils.NewSriovProvider(sysfsDevicesPath)
 
 	err := os.RemoveAll(devicePath)
 	assert.Nil(t, err)
 
-	_, err = u.GetVirtualFunctionsList(pciAddr)
+	_, err = u.GetVirtualFunctionsList(context.Background(), pciAddr)
 	assert.NotNil(t, err)
 
 	err = os.MkdirAll(devicePath, 0750)
 	assert.Nil(t, err)
 
-	vfs, err := u.GetVirtualFunctionsList(pciAddr)
+	vfs, err := u.GetVirtualFunctionsList(context.Background(), pciAddr)
 	assert.Nil(t, err)
 	assert.Empty(t, vfs)
 
@@ -317,7 +318,7 @@ func Test_GetVirtualFunctionsList(t *testing.T) {
 	err = os.Symlink(vf1Path, filepath.Join(devicePath, "virtfn1"))
 	assert.Nil(t, err)
 
-	vfs, err = u.GetVirtualFunctionsList(pciAddr)
+	vfs, err = u.GetVirtualFunctionsList(context.Background(), pciAddr)
 	assert.Nil(t, err)
 	assert.Equal(t, []string{vf1PciAddr}, vfs)
 
@@ -328,7 +329,7 @@ func Test_GetVirtualFunctionsList(t *testing.T) {
 	err = os.Symlink(vf2Path, filepath.Join(devicePath, "virtfn2"))
 	assert.Nil(t, err)
 
-	vfs, err = u.GetVirtualFunctionsList(pciAddr)
+	vfs, err = u.GetVirtualFunctionsList(context.Background(), pciAddr)
 	assert.Nil(t, err)
 	assert.Equal(t, []string{vf1PciAddr, vf2PciAddr}, vfs)
 
