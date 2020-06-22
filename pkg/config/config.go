@@ -53,8 +53,8 @@ type ResourceEndpoint struct {
 	Domains []ResourceDomain `yaml:"domains"`
 }
 
-// ReadEndpoint reads and parses endpoint config by provided configuration file path
-func ReadEndpoint(ctx context.Context, configFile string) (*ResourceEndpoint, error) {
+// FromFileForEndpoint reads and parses endpoint config by provided configuration file path
+func FromFileForEndpoint(ctx context.Context, configFile string) (*ResourceEndpoint, error) {
 	resources := &ResourceEndpoint{}
 
 	rawBytes, err := ioutil.ReadFile(filepath.Clean(configFile))
@@ -63,11 +63,11 @@ func ReadEndpoint(ctx context.Context, configFile string) (*ResourceEndpoint, er
 	}
 
 	if err = yaml.Unmarshal(rawBytes, resources); err != nil {
-		return nil, errors.Wrapf(err, "error unmarshalling raw bytes")
+		return nil, errors.Wrapf(err, "error unmarshalling raw bytes %s", rawBytes)
 	}
 
-	log.Entry(ctx).Infof("raw ResourceList: %s", rawBytes)
-	log.Entry(ctx).Infof("unmarshalled ResourceList: %+v", resources.Domains)
+	log.Entry(ctx).Infof("raw ResourceEndpoint: %s", rawBytes)
+	log.Entry(ctx).Infof("unmarshalled ResourceEndpoint: %+v", resources.Domains)
 
 	return resources, nil
 }

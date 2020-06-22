@@ -36,7 +36,7 @@ const (
 
 // TestReadConfigFile test reading a endpoint config file
 func TestReadEndpointConfigFile(t *testing.T) {
-	configList, _ := config.ReadEndpoint(context.Background(), configFileName)
+	configList, _ := config.FromFileForEndpoint(context.Background(), configFileName)
 	assert.NotNil(t, configList)
 	resConfig := configList.Domains[0]
 	assert.NotNil(t, resConfig)
