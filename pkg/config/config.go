@@ -42,20 +42,20 @@ type PCIDevice struct {
 	Target *SRIOvTarget `yaml:"target"`
 }
 
-// ResourceDomainConfig contains host information, name and list of corresponding pci devices
-type ResourceDomainConfig struct {
+// ResourceDomain contains host information, name and list of corresponding pci devices
+type ResourceDomain struct {
 	HostName   string      `yaml:"hostName"`
 	PCIDevices []PCIDevice `yaml:"pciDevices"`
 }
 
-// ResourceEndpointConfig contains list of endpoint configuration for each host
-type ResourceEndpointConfig struct {
-	Domains []ResourceDomainConfig `yaml:"domains"`
+// ResourceEndpoint contains list of endpoint configuration for each host
+type ResourceEndpoint struct {
+	Domains []ResourceDomain `yaml:"domains"`
 }
 
-// ReadEndpointConfig reads and parses endpoint config by provided configuration file path
-func ReadEndpointConfig(ctx context.Context, configFile string) (*ResourceEndpointConfig, error) {
-	resources := &ResourceEndpointConfig{}
+// ReadEndpoint reads and parses endpoint config by provided configuration file path
+func ReadEndpoint(ctx context.Context, configFile string) (*ResourceEndpoint, error) {
+	resources := &ResourceEndpoint{}
 
 	rawBytes, err := ioutil.ReadFile(filepath.Clean(configFile))
 	if err != nil {
