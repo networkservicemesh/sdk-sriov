@@ -17,6 +17,7 @@
 package config_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -25,24 +26,23 @@ import (
 )
 
 const (
-	networkServiceName = "networkServiceName"
-	sourceHostName     = "example.org"
-	sourcePCIAddress   = "0000:01:00:0"
-	capability         = "10G"
-	targetMACAddress   = "00:0a:95:9d:68:16"
+	hostName   = "service1.example.com"
+	pciAddress = "0000:01:00:0"
+	capability = "10G"
+	macAddress = "00:0a:95:9d:68:16"
 
 	configFileName = "config.yml"
 )
 
 // TestReadConfigFile test reading a endpoint config file
 func TestReadEndpointConfigFile(t *testing.T) {
-	configList, _ := config.ReadConfig(configFileName)
+	configList, _ := config.ReadEndpointConfig(context.Background(), configFileName)
 	assert.NotNil(t, configList)
-	resConfig := configList.ResourceList[0]
+	resConfig := configList.Domains[0]
 	assert.NotNil(t, resConfig)
-	assert.Equal(t, resConfig.NetworkServiceName, networkServiceName)
-	assert.Equal(t, resConfig.SourceHostName, sourceHostName)
-	assert.Equal(t, resConfig.SourcePCIAddress, sourcePCIAddress)
-	assert.Equal(t, resConfig.Capability, capability)
-	assert.Equal(t, resConfig.TargetMACAddress, targetMACAddress)
+	assert.Equal(t, hostName, resConfig.HostName)
+	pciDevice := resConfig.PCIDevices[0]
+	assert.Equal(t, pciAddress, pciDevice.PCIAddress)
+	assert.Equal(t, capability, pciDevice.Capability)
+	assert.Equal(t, macAddress, pciDevice.Target.MACAddress)
 }

@@ -18,44 +18,56 @@
 package config
 
 import (
+	"context"
 	"io/ioutil"
 	"path/filepath"
 
-	"github.com/pkg/errors"
-
 	"github.com/ghodss/yaml"
-	"github.com/sirupsen/logrus"
+	"github.com/networkservicemesh/sdk/pkg/tools/log"
+	"github.com/pkg/errors"
 )
 
-// ResourceEndpointConfigList is list of ResourceEndpointConfig
-type ResourceEndpointConfigList struct {
-	ResourceList []ResourceEndpointConfig `yaml:"resources"` // config file
+// SRIOvTarget contains mac address and additional information
+type SRIOvTarget struct {
+	MACAddress string            `yaml:"macAddress"`
+	Labels     map[string]string `yaml:"labels"` // A set of labels, Endpoint could choose address by.
 }
 
-// ResourceEndpointConfig is a config for endpoint
+// PCIDevice contains config for each device and corresponding mac address on endpoint side
+type PCIDevice struct {
+	PCIAddress string            `yaml:"pciAddress"`
+	Capability string            `yaml:"capability"`
+	Labels     map[string]string `yaml:"labels"` // A set of labels, Endpoint could choose address by.
+
+	Target *SRIOvTarget `yaml:"target"`
+}
+
+// ResourceDomainConfig contains host information, name and list of corresponding pci devices
+type ResourceDomainConfig struct {
+	HostName   string      `yaml:"hostName"`
+	PCIDevices []PCIDevice `yaml:"pciDevices"`
+}
+
+// ResourceEndpointConfig contains list of endpoint configuration for each host
 type ResourceEndpointConfig struct {
-	NetworkServiceName string `yaml:"networkServiceName"`
-	SourceHostName     string `yaml:"sourceHostName"`
-	SourcePCIAddress   string `yaml:"sourcePCIAddress"`
-	Capability         string `yaml:"capability"`
-	TargetMACAddress   string `yaml:"targetMACAddress"`
+	Domains []ResourceDomainConfig `yaml:"domains"`
 }
 
-// ReadConfig reads and parses config by provided configuration file path
-func ReadConfig(configFile string) (*ResourceEndpointConfigList, error) {
-	resources := &ResourceEndpointConfigList{}
+// ReadEndpointConfig reads and parses endpoint config by provided configuration file path
+func ReadEndpointConfig(ctx context.Context, configFile string) (*ResourceEndpointConfig, error) {
+	resources := &ResourceEndpointConfig{}
 
 	rawBytes, err := ioutil.ReadFile(filepath.Clean(configFile))
 	if err != nil {
-		return nil, errors.Errorf("error reading file %s, %v", configFile, err)
+		return nil, errors.Wrapf(err, "error reading file %s", configFile)
 	}
 
 	if err = yaml.Unmarshal(rawBytes, resources); err != nil {
-		return nil, errors.Errorf("error unmarshalling raw bytes %v", err)
+		return nil, errors.Wrapf(err, "error unmarshalling raw bytes")
 	}
 
-	logrus.Infof("raw ResourceList: %s", rawBytes)
-	logrus.Infof("unmarshalled ResourceList: %+v", resources.ResourceList)
+	log.Entry(ctx).Infof("raw ResourceList: %s", rawBytes)
+	log.Entry(ctx).Infof("unmarshalled ResourceList: %+v", resources.Domains)
 
 	return resources, nil
 }
