@@ -40,9 +40,9 @@ jobs:
         with:
           go-version: 1.13.4
       - name: Install gotestsum
-        start: go get gotest.tools/gotestsum@v0.4.0
+        run: go get gotest.tools/gotestsum@v0.4.0
       - name: Run tests
-        start: |
+        run: |
          eval $(go env)
          mkdir -p ~/junit/
          ${GOPATH}/bin/gotestsum --junitfile ~/junit/unit-tests.xml -- -race -short $(go list ./...)
@@ -50,14 +50,14 @@ jobs:
     name: golangci-lint
     runs-on: ubuntu-latest
     env:
-      GOLANGCI_LINT_CONTAINER: golangci/golangci-lint:v1.23.2
+      GOLANGCI_LINT_CONTAINER: golangci/golangci-lint:v1.27.0
     steps:
       - name: Check out code into the Go module directory
         uses: actions/checkout@v2
       - name: Pull golangci-lint docker container
-        start: docker pull ${GOLANGCI_LINT_CONTAINER}
+        run: docker pull ${GOLANGCI_LINT_CONTAINER}
       - name: Run golangci-lint
-        start: docker start --rm -v $(pwd):/app -w /app ${GOLANGCI_LINT_CONTAINER} golangci-lint start
+        run: docker run --rm -v $(pwd):/app -w /app ${GOLANGCI_LINT_CONTAINER} golangci-lint run
   excludeFmtErrorf:
     name: exclude fmt.Errorf
     runs-on: ubuntu-latest
@@ -90,9 +90,9 @@ jobs:
       - uses: actions/setup-go@v1
         with:
           go-version: 1.13.4
-      - start: go mod tidy
+      - run: go mod tidy
       - name: Check for changes in go.mod or go.sum
-        start: |
+        run: |
           git diff --name-only --exit-code go.mod || ( echo "Run go tidy" && false )
           git diff --name-only --exit-code go.sum || ( echo "Run go tidy" && false )
   license:
@@ -104,7 +104,7 @@ jobs:
         with:
           go-version: 1.13.4
       - name: Install go-header
-        run: 'go get github.com/denis-tingajkin/go-header@v0.2.1'
+        run: 'go get github.com/denis-tingajkin/go-header@v0.2.2'
       - name: Run go-header
         run: |
           eval $(go env)
