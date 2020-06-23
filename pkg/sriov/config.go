@@ -14,8 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package config define reading settings from file
-package config
+// Package sriov contains configuration reader
+package sriov
 
 import (
 	"context"
@@ -27,19 +27,19 @@ import (
 	"github.com/pkg/errors"
 )
 
-// SRIOvTarget contains mac address and additional information
-type SRIOvTarget struct {
+// TargetAddress contains mac address and additional information
+type TargetAddress struct {
 	MACAddress string            `yaml:"macAddress"`
-	Labels     map[string]string `yaml:"labels"` // A set of labels, Endpoint could choose address by.
+	Labels     map[string]string `yaml:"labels"`
 }
 
 // PCIDevice contains config for each device and corresponding mac address on endpoint side
 type PCIDevice struct {
 	PCIAddress string            `yaml:"pciAddress"`
 	Capability string            `yaml:"capability"`
-	Labels     map[string]string `yaml:"labels"` // A set of labels, Endpoint could choose address by.
+	Labels     map[string]string `yaml:"labels"`
 
-	Target *SRIOvTarget `yaml:"target"`
+	Target *TargetAddress `yaml:"target"`
 }
 
 // ResourceDomain contains host information, name and list of corresponding pci devices
@@ -48,14 +48,14 @@ type ResourceDomain struct {
 	PCIDevices []PCIDevice `yaml:"pciDevices"`
 }
 
-// ResourceEndpoint contains list of endpoint configuration for each host
-type ResourceEndpoint struct {
+// Config contains list of configuration for each host
+type Config struct {
 	Domains []ResourceDomain `yaml:"domains"`
 }
 
-// FromFileForEndpoint reads and parses endpoint config by provided configuration file path
-func FromFileForEndpoint(ctx context.Context, configFile string) (*ResourceEndpoint, error) {
-	resources := &ResourceEndpoint{}
+// ReadConfig reads configuration from file
+func ReadConfig(ctx context.Context, configFile string) (*Config, error) {
+	resources := &Config{}
 
 	rawBytes, err := ioutil.ReadFile(filepath.Clean(configFile))
 	if err != nil {
@@ -66,8 +66,8 @@ func FromFileForEndpoint(ctx context.Context, configFile string) (*ResourceEndpo
 		return nil, errors.Wrapf(err, "error unmarshalling raw bytes %s", rawBytes)
 	}
 
-	log.Entry(ctx).Infof("raw ResourceEndpoint: %s", rawBytes)
-	log.Entry(ctx).Infof("unmarshalled ResourceEndpoint: %+v", resources.Domains)
+	log.Entry(ctx).Infof("raw Config: %s", rawBytes)
+	log.Entry(ctx).Infof("unmarshalled Config: %+v", resources.Domains)
 
 	return resources, nil
 }

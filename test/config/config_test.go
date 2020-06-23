@@ -22,7 +22,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/networkservicemesh/sdk-sriov/pkg/config"
+	"github.com/networkservicemesh/sdk-sriov/pkg/sriov"
 )
 
 const (
@@ -35,8 +35,8 @@ const (
 )
 
 // TestReadConfigFile test reading a endpoint config file
-func TestReadEndpointConfigFile(t *testing.T) {
-	configList, _ := config.FromFileForEndpoint(context.Background(), configFileName)
+func TestReadConfigFile(t *testing.T) {
+	configList, _ := sriov.ReadConfig(context.Background(), configFileName)
 	assert.NotNil(t, configList)
 	resConfig := configList.Domains[0]
 	assert.NotNil(t, resConfig)
