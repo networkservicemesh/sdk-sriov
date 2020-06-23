@@ -31,34 +31,33 @@ jobs:
           go-version: 1.13.4
       - run: |
           go build -race ./...
-#  test:
-#    name: test
-#    runs-on: ubuntu-latest
-#    steps:
-#      - uses: actions/checkout@v2
-#      - uses: actions/setup-go@v1
-#        with:
-#          go-version: 1.13.4
-#      - name: Install gotestsum
-#        start: go get gotest.tools/gotestsum@v0.4.0
-#      - name: Run tests
-#        start: |
-#         eval $(go env)
-#         mkdir -p ~/junit/
-#         ${GOPATH}/bin/gotestsum --junitfile ~/junit/unit-tests.xml -- -race -short $(go list ./...)
-#  golangci-lint:
-#    name: golangci-lint
-#    runs-on: ubuntu-latest
-#    env:
-#      GOLANGCI_LINT_CONTAINER: golangci/golangci-lint:v1.23.2
-#    steps:
-#      - name: Check out code into the Go module directory
-#        uses: actions/checkout@v2
-#      - name: Pull golangci-lint docker container
-#        start: docker pull ${GOLANGCI_LINT_CONTAINER}
-#      - name: Run golangci-lint
-#        start: docker start --rm -v $(pwd):/app -w /app ${GOLANGCI_LINT_CONTAINER} golangci-lint start
-
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v1
+        with:
+          go-version: 1.13.4
+      - name: Install gotestsum
+        start: go get gotest.tools/gotestsum@v0.4.0
+      - name: Run tests
+        start: |
+         eval $(go env)
+         mkdir -p ~/junit/
+         ${GOPATH}/bin/gotestsum --junitfile ~/junit/unit-tests.xml -- -race -short $(go list ./...)
+  golangci-lint:
+    name: golangci-lint
+    runs-on: ubuntu-latest
+    env:
+      GOLANGCI_LINT_CONTAINER: golangci/golangci-lint:v1.23.2
+    steps:
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v2
+      - name: Pull golangci-lint docker container
+        start: docker pull ${GOLANGCI_LINT_CONTAINER}
+      - name: Run golangci-lint
+        start: docker start --rm -v $(pwd):/app -w /app ${GOLANGCI_LINT_CONTAINER} golangci-lint start
   excludeFmtErrorf:
     name: exclude fmt.Errorf
     runs-on: ubuntu-latest
@@ -83,19 +82,19 @@ jobs:
               exit 1
             fi
           done
-#  checkgomod:
-#    name: check go.mod and go.sum
-#    runs-on: ubuntu-latest
-#    steps:
-#      - uses: actions/checkout@v2
-#      - uses: actions/setup-go@v1
-#        with:
-#          go-version: 1.13.4
-#      - start: go mod tidy
-#      - name: Check for changes in go.mod or go.sum
-#        start: |
-#          git diff --name-only --exit-code go.mod || ( echo "Run go tidy" && false )
-#          git diff --name-only --exit-code go.sum || ( echo "Run go tidy" && false )
+  checkgomod:
+    name: check go.mod and go.sum
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v1
+        with:
+          go-version: 1.13.4
+      - start: go mod tidy
+      - name: Check for changes in go.mod or go.sum
+        start: |
+          git diff --name-only --exit-code go.mod || ( echo "Run go tidy" && false )
+          git diff --name-only --exit-code go.sum || ( echo "Run go tidy" && false )
   license:
     name: license header check
     runs-on: ubuntu-latest
