@@ -14,36 +14,70 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package types contains common type interfaces
+// Package types contains common type structures
 package types
 
-import "github.com/networkservicemesh/sdk-sriov/pkg/sriov"
+import (
+	"sync"
 
-// NetResourcePool provides an interface for accessing net device resources
-type NetResourcePool interface {
-	AddNetDevices(cfg *sriov.Config) error
-	GetResources() []NetResource
+	"github.com/pkg/errors"
+)
+
+const (
+	// VirtualFunctionInUse is virtual function is use state
+	VirtualFunctionInUse = "inUse"
+	// FreeVirtualFunction is virtual function free state
+	FreeVirtualFunction = "free"
+)
+
+// NetResourcePool provides contains information about net devices
+type NetResourcePool struct {
+	Resources []*NetResource
+	sync.Mutex
 }
 
-// NetResource contains information about concrete resource in net resource pool
-type NetResource interface {
-	GetCapability() string
-	GetPhysicalFunction() PhysicalFunction
+// NetResource contains information about net device
+type NetResource struct {
+	Capability       string
+	PhysicalFunction PhysicalFunction
 }
 
-// PhysicalFunction provides an interface to get information about physical function
-type PhysicalFunction interface {
-	GetPCIAddress() string
-	GetVirtualFunctionsCapacity() int
-	GetVirtualFunctionsInUse() []VirtualFunction
-	GetFreeVirtualFunctions() []VirtualFunction
-	SetVirtualFunctionInUse(VirtualFunction)
-	SetVirtualFunctionFree(VirtualFunction)
-	GetNetInterfaceName() string
+// PhysicalFunction contains information about physical function
+type PhysicalFunction struct {
+	PCIAddress               string
+	VirtualFunctionsCapacity int
+	NetInterfaceName         string
+	VirtualFunctions         map[VirtualFunction]string
+	sync.Mutex
 }
 
-// VirtualFunction provides an interface to get information about virtual function
-type VirtualFunction interface {
-	GetPCIAddress() string
-	GetNetInterfaceName() string
+// SetVirtualFunctionInUse moves given free virtual function into the virtual functions in use map
+func (p *PhysicalFunction) SetVirtualFunctionInUse(vf VirtualFunction) error {
+	return p.setVirtualFunctionState(vf, VirtualFunctionInUse)
+}
+
+// SetVirtualFunctionFree moves given virtual function in use into the free virtual functions map
+func (p *PhysicalFunction) SetVirtualFunctionFree(vf VirtualFunction) error {
+	return p.setVirtualFunctionState(vf, FreeVirtualFunction)
+}
+
+func (p *PhysicalFunction) setVirtualFunctionState(vf VirtualFunction, state string) error {
+	p.Lock()
+	defer p.Unlock()
+
+	val, found := p.VirtualFunctions[vf]
+	if !found {
+		return errors.New("specified virtual function is not found")
+	}
+	if val == state {
+		return errors.Errorf("specified virtual function is already %s", state)
+	}
+	p.VirtualFunctions[vf] = state
+	return nil
+}
+
+// VirtualFunction provides contains information about virtual function
+type VirtualFunction struct {
+	PCIAddress       string
+	NetInterfaceName string
 }
