@@ -14,8 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package types contains common type structures
-package types
+package sriov
 
 import (
 	"sync"
@@ -23,11 +22,14 @@ import (
 	"github.com/pkg/errors"
 )
 
+// VirtualFunctionState is a virtual function state
+type VirtualFunctionState string
+
 const (
-	// VirtualFunctionInUse is virtual function is use state
-	VirtualFunctionInUse = "inUse"
+	// UsedVirtualFunction is virtual function is use state
+	UsedVirtualFunction VirtualFunctionState = "used"
 	// FreeVirtualFunction is virtual function free state
-	FreeVirtualFunction = "free"
+	FreeVirtualFunction VirtualFunctionState = "free"
 )
 
 // NetResourcePool provides contains information about net devices
@@ -39,7 +41,7 @@ type NetResourcePool struct {
 // NetResource contains information about net device
 type NetResource struct {
 	Capability       string
-	PhysicalFunction PhysicalFunction
+	PhysicalFunction *PhysicalFunction
 }
 
 // PhysicalFunction contains information about physical function
@@ -47,24 +49,11 @@ type PhysicalFunction struct {
 	PCIAddress               string
 	VirtualFunctionsCapacity int
 	NetInterfaceName         string
-	VirtualFunctions         map[VirtualFunction]string
-	sync.Mutex
+	VirtualFunctions         map[*VirtualFunction]VirtualFunctionState
 }
 
-// SetVirtualFunctionInUse moves given free virtual function into the virtual functions in use map
-func (p *PhysicalFunction) SetVirtualFunctionInUse(vf VirtualFunction) error {
-	return p.setVirtualFunctionState(vf, VirtualFunctionInUse)
-}
-
-// SetVirtualFunctionFree moves given virtual function in use into the free virtual functions map
-func (p *PhysicalFunction) SetVirtualFunctionFree(vf VirtualFunction) error {
-	return p.setVirtualFunctionState(vf, FreeVirtualFunction)
-}
-
-func (p *PhysicalFunction) setVirtualFunctionState(vf VirtualFunction, state string) error {
-	p.Lock()
-	defer p.Unlock()
-
+// SetVirtualFunctionState changes state of the given virtual function
+func (p *PhysicalFunction) SetVirtualFunctionState(vf *VirtualFunction, state VirtualFunctionState) error {
 	val, found := p.VirtualFunctions[vf]
 	if !found {
 		return errors.New("specified virtual function is not found")
@@ -76,7 +65,7 @@ func (p *PhysicalFunction) setVirtualFunctionState(vf VirtualFunction, state str
 	return nil
 }
 
-// VirtualFunction provides contains information about virtual function
+// VirtualFunction contains information about virtual function
 type VirtualFunction struct {
 	PCIAddress       string
 	NetInterfaceName string
