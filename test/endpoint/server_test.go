@@ -22,6 +22,8 @@ import (
 	"testing"
 	"time"
 
+	"go.uber.org/goleak"
+
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/cls"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/kernel"
@@ -45,8 +47,7 @@ func TokenGenerator(_ credentials.AuthInfo) (token string, expireTime time.Time,
 	return "TestToken", time.Date(3000, 1, 1, 1, 1, 1, 1, time.UTC), nil
 }
 func TestEndpoint(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 150*time.Second)
-	defer cancel()
+	defer goleak.VerifyNone(t)
 
 	testURL := &url.URL{Scheme: "tcp", Host: "127.0.0.1:0"}
 	testRequest := &networkservice.NetworkServiceRequest{
@@ -76,28 +77,28 @@ func TestEndpoint(t *testing.T) {
 	}
 
 	// start server
-	server, errCh := NewServer(ctx, testURL)
+	server, errCh := NewServer(context.Background(), testURL)
 	require.NotNil(t, server)
 	require.NotNil(t, errCh)
 
 	// client send request
 	var nsmClient grpc.ClientConnInterface
-	nsmClient, err := newClient(ctx, testURL)
+	nsmClient, err := newClient(context.Background(), testURL)
 	require.Nil(t, err)
 	cl := client.NewClient(context.Background(), "nsc-1", nil, TokenGenerator, nsmClient)
 
 	var connection *networkservice.Connection
 
-	connection, err = cl.Request(ctx, testRequest)
+	connection, err = cl.Request(context.Background(), testRequest)
 	require.Nil(t, err)
 	require.NotNil(t, connection)
 	require.Equal(t, "0000:03:00:0", connection.Mechanism.Parameters[kernel.PCIAddress])
 
-	connection, err = cl.Request(ctx, testRequest)
+	connection, err = cl.Request(context.Background(), testRequest)
 	require.Nil(t, err)
 	require.NotNil(t, connection)
 	require.Equal(t, "0000:04:00:0", connection.Mechanism.Parameters[kernel.PCIAddress])
 
-	_, err = cl.Request(ctx, testRequestBad)
+	_, err = cl.Request(context.Background(), testRequestBad)
 	require.NotNil(t, err)
 }
