@@ -38,12 +38,12 @@ func TestNewClient_AddKernelMechanisms(t *testing.T) {
 	resourcePool := &sriov.NetResourcePool{
 		Resources: []*sriov.NetResource{
 			{
-				PhysicalFunction: sriov.PhysicalFunction{
+				PhysicalFunction: &sriov.PhysicalFunction{
 					PCIAddress: "0000:00:01:0",
 				},
 			},
 			{
-				PhysicalFunction: sriov.PhysicalFunction{
+				PhysicalFunction: &sriov.PhysicalFunction{
 					PCIAddress: "0000:00:02:0",
 				},
 			},
@@ -86,12 +86,12 @@ func TestNewClient_AddVFIOMechanisms(t *testing.T) {
 	resourcePool := &sriov.NetResourcePool{
 		Resources: []*sriov.NetResource{
 			{
-				PhysicalFunction: sriov.PhysicalFunction{
+				PhysicalFunction: &sriov.PhysicalFunction{
 					PCIAddress: "0000:00:01:0",
 				},
 			},
 			{
-				PhysicalFunction: sriov.PhysicalFunction{
+				PhysicalFunction: &sriov.PhysicalFunction{
 					PCIAddress: "0000:00:02:0",
 				},
 			},

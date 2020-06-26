@@ -45,8 +45,8 @@ func NewClient(resourcePool *sriov.NetResourcePool) networkservice.NetworkServic
 func (a *setPCIAddressesClient) Request(ctx context.Context, request *networkservice.NetworkServiceRequest, opts ...grpc.CallOption) (*networkservice.Connection, error) {
 	newMechanisms := make([]*networkservice.Mechanism, 0)
 
+	// for each kernel or vfio mechanism add separate mechanisms with PCI addresses of available on host net devices
 	for _, mech := range request.MechanismPreferences {
-		// for each kernel or vfio mechanism add separate mechanisms with PCI addresses of available net devices
 		if mech.GetType() == kernel.MECHANISM {
 			mechsWithPci := a.withPCIAddresses(mech, kernel.PCIAddress)
 			newMechanisms = append(newMechanisms, mechsWithPci...)
