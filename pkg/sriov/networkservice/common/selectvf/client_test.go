@@ -18,122 +18,74 @@ package selectvf_test
 
 import (
 	"context"
+	"testing"
+
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/kernel"
-	"github.com/networkservicemesh/sdk-sriov/pkg/sriov"
-	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/networkservice/common/selectvf"
-	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/types"
-	"github.com/networkservicemesh/sdk-sriov/test/mocks"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/adapters"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"go.uber.org/goleak"
-	"testing"
+
+	"github.com/networkservicemesh/sdk-sriov/pkg/sriov"
+	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/networkservice/common/selectvf"
+)
+
+const (
+	pfPCIAddress  = "0000:01:00:0"
+	vf1PCIAddress = "0000:01:00:1"
+	vf1IfaceName  = "enp1s1"
+	vf2PCIAddress = "0000:01:00:2"
+	vf2IfaceName  = "enp1s2"
 )
 
 type mockedEndpoint struct {
 	conn *networkservice.Connection
 }
 
-func (m mockedEndpoint) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
+func (m mockedEndpoint) Request(context.Context, *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
 	return m.conn, nil
 }
 
-func (m mockedEndpoint) Close(ctx context.Context, connection *networkservice.Connection) (*empty.Empty, error) {
+func (m mockedEndpoint) Close(context.Context, *networkservice.Connection) (*empty.Empty, error) {
 	return &empty.Empty{}, nil
 }
 
-type vfData struct {
-	pciAddr      string
-	netIfaceName string
-}
-
-type pfData struct {
-	pciAddr        string
-	setVfInUseChan chan types.VirtualFunction
-	setVfFreeChan  chan types.VirtualFunction
-	freeVfs        []*vfData
-	vfsInUse       []*vfData
-}
-
-func getMockedResourcePool(pfs []*pfData) types.NetResourcePool {
-	netResources := make([]types.NetResource, 0)
-	for _, pf := range pfs {
-		physicalFunction := new(mocks.PhysicalFunction)
-		physicalFunction.On("GetPCIAddress").Return(pf.pciAddr)
-
-		physicalFunction.On("SetVirtualFunctionFree", mock.Anything).Run(func(args mock.Arguments) {
-			pf.setVfFreeChan <- args.Get(0).(types.VirtualFunction)
-		}).Return(pf.pciAddr)
-
-		physicalFunction.On("SetVirtualFunctionInUse", mock.Anything).Run(func(args mock.Arguments) {
-			pf.setVfInUseChan <- args.Get(0).(types.VirtualFunction)
-		}).Return(pf.pciAddr)
-
-		freeVfs := make([]types.VirtualFunction, 0)
-		for _, vf := range pf.freeVfs {
-			virtualFunction := new(mocks.VirtualFunction)
-			virtualFunction.On("GetPCIAddress").Return(vf.pciAddr)
-			virtualFunction.On("GetNetInterfaceName").Return(vf.netIfaceName)
-
-			freeVfs = append(freeVfs, virtualFunction)
-		}
-		physicalFunction.On("GetFreeVirtualFunctions").Return(freeVfs)
-
-		vfsInUse := make([]types.VirtualFunction, 0)
-		for _, vf := range pf.vfsInUse {
-			virtualFunction := new(mocks.VirtualFunction)
-			virtualFunction.On("GetPCIAddress").Return(vf.pciAddr)
-			virtualFunction.On("GetNetInterfaceName").Return(vf.netIfaceName)
-
-			vfsInUse = append(vfsInUse, virtualFunction)
-		}
-		physicalFunction.On("GetVirtualFunctionsInUse").Return(vfsInUse)
-
-		netResource := new(mocks.NetResource)
-		netResource.On("GetPhysicalFunction").Return(physicalFunction)
-
-		netResources = append(netResources, netResource)
+func initVfs() (vf1, vf2 *sriov.VirtualFunction) {
+	vf1 = &sriov.VirtualFunction{
+		PCIAddress:       vf1PCIAddress,
+		NetInterfaceName: vf1IfaceName,
 	}
-
-	netResourcePool := new(mocks.NetResourcePool)
-	netResourcePool.On("GetResources").Return(netResources)
-
-	return netResourcePool
+	vf2 = &sriov.VirtualFunction{
+		PCIAddress:       vf2PCIAddress,
+		NetInterfaceName: vf2IfaceName,
+	}
+	return
 }
 
-func TestNewClient_SelectVirtualFunction(t *testing.T) {
+func TestNewClient_KernelSelectVirtualFunction(t *testing.T) {
 	defer goleak.VerifyNone(t)
 
-	pfPciAddress := "0000:01:00:0"
-	setVfInUseChan := make(chan types.VirtualFunction, 1)
-	selectedVfPciAddr := "0000:01:00:1"
-	selectedVfNetIfaceName := "enp1s1"
-	resourcePool := sriov.NetResourcePool{}
-	pfs := []*pfData{
-		{
-			pciAddr:        pfPciAddress,
-			setVfInUseChan: setVfInUseChan,
-			freeVfs: []*vfData{
-				{
-					pciAddr:      selectedVfPciAddr,
-					netIfaceName: selectedVfNetIfaceName,
-				},
-				{
-					pciAddr:      "0000:01:00:2",
-					netIfaceName: "enp1s2",
+	vf1, vf2 := initVfs()
+	resourcePool := &sriov.NetResourcePool{
+		Resources: []*sriov.NetResource{
+			{
+				PhysicalFunction: &sriov.PhysicalFunction{
+					PCIAddress: pfPCIAddress,
+					VirtualFunctions: map[*sriov.VirtualFunction]sriov.VirtualFunctionState{
+						vf1: sriov.UsedVirtualFunction,
+						vf2: sriov.FreeVirtualFunction,
+					},
 				},
 			},
 		},
 	}
-	resourcePool := getMockedResourcePool(pfs)
 	fromEndpoint := &networkservice.Connection{
 		Mechanism: &networkservice.Mechanism{
 			Type: kernel.MECHANISM,
 			Parameters: map[string]string{
-				kernel.PCIAddress: pfPciAddress,
+				kernel.PCIAddress: pfPCIAddress,
 			},
 		},
 	}
@@ -141,8 +93,8 @@ func TestNewClient_SelectVirtualFunction(t *testing.T) {
 		Mechanism: &networkservice.Mechanism{
 			Type: kernel.MECHANISM,
 			Parameters: map[string]string{
-				kernel.PCIAddress:       pfPciAddress,
-				kernel.InterfaceNameKey: selectedVfNetIfaceName,
+				kernel.PCIAddress:       pfPCIAddress,
+				kernel.InterfaceNameKey: vf2IfaceName,
 			},
 		},
 	}
@@ -152,27 +104,32 @@ func TestNewClient_SelectVirtualFunction(t *testing.T) {
 	assert.Equal(t, expected, conn)
 	assert.Nil(t, err)
 
-	setInUseVf := <-setVfInUseChan
-	assert.Equal(t, selectedVfPciAddr, setInUseVf.GetPCIAddress())
-	assert.Equal(t, selectedVfNetIfaceName, setInUseVf.GetNetInterfaceName())
+	selectedVfState := resourcePool.Resources[0].PhysicalFunction.VirtualFunctions[vf2]
+	assert.Equal(t, sriov.UsedVirtualFunction, selectedVfState)
 }
 
 func TestNewClient_NoFreeVirtualFunctions(t *testing.T) {
 	defer goleak.VerifyNone(t)
 
-	pfPciAddress := "0000:01:00:0"
-	pfs := []*pfData{
-		{
-			pciAddr: pfPciAddress,
-			freeVfs: []*vfData{}, // no free virtual functions
+	vf1, vf2 := initVfs()
+	resourcePool := &sriov.NetResourcePool{
+		Resources: []*sriov.NetResource{
+			{
+				PhysicalFunction: &sriov.PhysicalFunction{
+					PCIAddress: pfPCIAddress,
+					VirtualFunctions: map[*sriov.VirtualFunction]sriov.VirtualFunctionState{
+						vf1: sriov.UsedVirtualFunction,
+						vf2: sriov.UsedVirtualFunction,
+					},
+				},
+			},
 		},
 	}
-	resourcePool := getMockedResourcePool(pfs)
 	fromEndpoint := &networkservice.Connection{
 		Mechanism: &networkservice.Mechanism{
 			Type: kernel.MECHANISM,
 			Parameters: map[string]string{
-				kernel.PCIAddress: pfPciAddress,
+				kernel.PCIAddress: pfPCIAddress,
 			},
 		},
 	}
@@ -183,36 +140,29 @@ func TestNewClient_NoFreeVirtualFunctions(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
-func TestNewClient_FreeVirtualFunctionsOnClose(t *testing.T) {
+func TestNewClient_KernelFreeVirtualFunctionsOnClose(t *testing.T) {
 	defer goleak.VerifyNone(t)
 
-	pfPciAddress := "0000:01:00:0"
-	setVfFreeChan := make(chan types.VirtualFunction, 1)
-	releasedVfPciAddr := "0000:01:00:2"
-	releasedVfNetIfaceName := "enp1s2"
-	pfs := []*pfData{
-		{
-			pciAddr:       pfPciAddress,
-			setVfFreeChan: setVfFreeChan,
-			vfsInUse: []*vfData{
-				{
-					pciAddr:      "0000:01:00:1",
-					netIfaceName: "enp1s1",
-				},
-				{
-					pciAddr:      releasedVfPciAddr,
-					netIfaceName: releasedVfNetIfaceName,
+	vf1, vf2 := initVfs()
+	resourcePool := &sriov.NetResourcePool{
+		Resources: []*sriov.NetResource{
+			{
+				PhysicalFunction: &sriov.PhysicalFunction{
+					PCIAddress: pfPCIAddress,
+					VirtualFunctions: map[*sriov.VirtualFunction]sriov.VirtualFunctionState{
+						vf1: sriov.UsedVirtualFunction,
+						vf2: sriov.UsedVirtualFunction,
+					},
 				},
 			},
 		},
 	}
-	resourcePool := getMockedResourcePool(pfs)
 	conn := &networkservice.Connection{
 		Mechanism: &networkservice.Mechanism{
 			Type: kernel.MECHANISM,
 			Parameters: map[string]string{
-				kernel.PCIAddress:       pfPciAddress,
-				kernel.InterfaceNameKey: releasedVfNetIfaceName,
+				kernel.PCIAddress:       pfPCIAddress,
+				kernel.InterfaceNameKey: vf1IfaceName,
 			},
 		},
 	}
@@ -221,7 +171,6 @@ func TestNewClient_FreeVirtualFunctionsOnClose(t *testing.T) {
 	_, err := client.Close(context.Background(), conn)
 	assert.Nil(t, err)
 
-	setFreeVf := <-setVfFreeChan
-	assert.Equal(t, releasedVfPciAddr, setFreeVf.GetPCIAddress())
-	assert.Equal(t, releasedVfNetIfaceName, setFreeVf.GetNetInterfaceName())
+	freedVfState := resourcePool.Resources[0].PhysicalFunction.VirtualFunctions[vf1]
+	assert.Equal(t, sriov.FreeVirtualFunction, freedVfState)
 }

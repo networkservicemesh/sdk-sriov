@@ -14,18 +14,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package selectvf provides chain element for selection one of the available virtual functions for client based on
+// returned PCI address from endpoint
 package selectvf
 
 import (
 	"context"
+
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/kernel"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/vfio"
-	"github.com/networkservicemesh/sdk-sriov/pkg/sriov"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
+
+	"github.com/networkservicemesh/sdk-sriov/pkg/sriov"
 )
 
 type selectVirtualFunctionClient struct {
@@ -47,19 +51,18 @@ func (a *selectVirtualFunctionClient) Request(ctx context.Context, request *netw
 
 	var pciAddress string
 	var ok bool
-	if conn.GetMechanism().GetType() == kernel.MECHANISM {
+	switch conn.GetMechanism().GetType() {
+	case kernel.MECHANISM:
 		pciAddress, ok = conn.GetMechanism().GetParameters()[kernel.PCIAddress]
 		if !ok {
 			return nil, errors.Errorf("No selected PCI address provided")
 		}
-
-	} else if conn.GetMechanism().GetType() == vfio.MECHANISM {
+	case vfio.MECHANISM:
 		pciAddress, ok = conn.GetMechanism().GetParameters()[vfio.PCIAddress]
 		if !ok {
 			return nil, errors.Errorf("No selected PCI address provided")
 		}
-
-	} else {
+	default:
 		return conn, nil
 	}
 
@@ -71,10 +74,7 @@ func (a *selectVirtualFunctionClient) Request(ctx context.Context, request *netw
 	if conn.GetMechanism().GetType() == kernel.MECHANISM {
 		conn.GetMechanism().GetParameters()[kernel.InterfaceNameKey] = selectedVf.NetInterfaceName
 	}
-	if conn.GetMechanism().GetType() == vfio.MECHANISM {
-		// TODO - add VFIO-specific info about selected virtual function - e.g. VirtualFunction PCIAddress
-		// have to add vfio info to api repo first
-	}
+	// TODO - add VFIO-specific info about selected virtual function - e.g. VirtualFunction PCIAddress
 
 	return conn, nil
 }
@@ -93,24 +93,19 @@ func (a *selectVirtualFunctionClient) Close(ctx context.Context, conn *networkse
 		if err != nil {
 			return nil, err
 		}
-
-	} else if conn.GetMechanism().GetType() == vfio.MECHANISM {
-		// TODO - get VFIO-specific info about selected virtual function - e.g. VirtualFunction PCIAddress
-		// have to add vfio info to api repo first
-
 	}
+	// TODO - get VFIO-specific info about selected virtual function - e.g. VirtualFunction PCIAddress
 
-	// TODO think about should we call Close() before or after function body
 	return next.Client(ctx).Close(ctx, conn, opts...)
 }
 
-func (a *selectVirtualFunctionClient) selectVirtualFunction(pfPciAddr string) (selectedVf *sriov.VirtualFunction, err error) {
+func (a *selectVirtualFunctionClient) selectVirtualFunction(pfPCIAddr string) (selectedVf *sriov.VirtualFunction, err error) {
 	a.resourcePool.Lock()
 	defer a.resourcePool.Unlock()
 
 	for _, netResource := range a.resourcePool.Resources {
 		pf := netResource.PhysicalFunction
-		if pf.PCIAddress != pfPciAddr {
+		if pf.PCIAddress != pfPCIAddr {
 			continue
 		}
 
@@ -122,7 +117,7 @@ func (a *selectVirtualFunctionClient) selectVirtualFunction(pfPciAddr string) (s
 			}
 		}
 		if selectedVf == nil {
-			return nil, errors.Errorf("no free virtual function found for device %s", pfPciAddr)
+			return nil, errors.Errorf("no free virtual function found for device %s", pfPCIAddr)
 		}
 
 		// mark it as in use
@@ -132,16 +127,16 @@ func (a *selectVirtualFunctionClient) selectVirtualFunction(pfPciAddr string) (s
 		}
 		return selectedVf, nil
 	}
-	return nil, errors.Errorf("no physical function with PCI address %s found", pfPciAddr)
+	return nil, errors.Errorf("no physical function with PCI address %s found", pfPCIAddr)
 }
 
-func (a *selectVirtualFunctionClient) freeVirtualFunction(pfPciAddr string, vfNetIfaceName string) error {
+func (a *selectVirtualFunctionClient) freeVirtualFunction(pfPCIAddr, vfNetIfaceName string) error {
 	a.resourcePool.Lock()
 	defer a.resourcePool.Unlock()
 
 	for _, netResource := range a.resourcePool.Resources {
 		pf := netResource.PhysicalFunction
-		if pf.PCIAddress != pfPciAddr {
+		if pf.PCIAddress != pfPCIAddr {
 			continue
 		}
 
@@ -152,5 +147,5 @@ func (a *selectVirtualFunctionClient) freeVirtualFunction(pfPciAddr string, vfNe
 		}
 		return errors.Errorf("no virtual function with net interface name %s found", vfNetIfaceName)
 	}
-	return errors.Errorf("no physical function with PCI address %s found", pfPciAddr)
+	return errors.Errorf("no physical function with PCI address %s found", pfPCIAddr)
 }
