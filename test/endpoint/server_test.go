@@ -22,26 +22,18 @@ import (
 	"testing"
 	"time"
 
-	"go.uber.org/goleak"
-
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/cls"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/kernel"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/vfio"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/chains/client"
-	"github.com/networkservicemesh/sdk/pkg/tools/grpcutils"
+
+	"go.uber.org/goleak"
+
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
-
-func newClient(ctx context.Context, u *url.URL) (*grpc.ClientConn, error) {
-	clientCtx, clientCancelFunc := context.WithTimeout(ctx, 10*time.Second)
-	defer clientCancelFunc()
-	return grpc.DialContext(clientCtx, grpcutils.URLToTarget(u),
-		grpc.WithInsecure(),
-		grpc.WithBlock())
-}
 
 func TokenGenerator(_ credentials.AuthInfo) (token string, expireTime time.Time, err error) {
 	return "TestToken", time.Date(3000, 1, 1, 1, 1, 1, 1, time.UTC), nil
@@ -81,11 +73,12 @@ func TestEndpoint(t *testing.T) {
 	require.NotNil(t, server)
 	require.NotNil(t, errCh)
 
-	// client send request
-	var nsmClient grpc.ClientConnInterface
-	nsmClient, err := newClient(context.Background(), testURL)
+	// create client and send test requests
+	opts := []grpc.DialOption{grpc.WithInsecure()}
+	conn, err := grpc.Dial(testURL.Host, opts...)
 	require.Nil(t, err)
-	cl := client.NewClient(context.Background(), "nsc-1", nil, TokenGenerator, nsmClient)
+	require.NotNil(t, conn)
+	cl := client.NewClient(context.Background(), "client", nil, TokenGenerator, conn)
 
 	var connection *networkservice.Connection
 
@@ -101,4 +94,8 @@ func TestEndpoint(t *testing.T) {
 
 	_, err = cl.Request(context.Background(), testRequestBad)
 	require.NotNil(t, err)
+
+	err = conn.Close()
+	require.Nil(t, err)
+	server.Stop()
 }
