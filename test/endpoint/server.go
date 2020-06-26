@@ -42,31 +42,25 @@ type nseImpl struct {
 	ctx       context.Context
 	cancel    context.CancelFunc
 	listenOn  *url.URL
+	config    *sriov.Config
+	pciIndex  int
 	errorChan <-chan error
 }
-
-type pciInfo struct {
-	isKernel   bool // flag for selection of corresponding mechanism
-	pciAddress string
-}
-
-var pciIndex int
-var config *sriov.Config
 
 // NewServer a new endpoint and running on grpc server
 func NewServer(ctx context.Context, listenOn *url.URL) (server *grpc.Server, errChan <-chan error) {
 	// if we havn't config file then endpoint will not start
-	var err error
-	config, err = sriov.ReadConfig(ctx, configFileName)
+	config, err := sriov.ReadConfig(ctx, configFileName)
 	if err != nil {
-		errCh2 := make(chan error, 1)
-		errCh2 <- err
-		return nil, errCh2
+		errChan := make(chan error, 1)
+		errChan <- err
+		return nil, errChan
 	}
 
-	pciIndex = 0
 	nse := &nseImpl{
 		listenOn: listenOn,
+		config:   config,
+		pciIndex: 0,
 		server:   grpc.NewServer(),
 	}
 
@@ -79,9 +73,9 @@ func NewServer(ctx context.Context, listenOn *url.URL) (server *grpc.Server, err
 }
 
 // Search pci device in config
-// TODO add hostName as parameter for filtering
-func isSupportedPci(pciAddress string) bool {
-	for _, domain := range config.Domains {
+// TODO add hostName, capability as parameters for filtering
+func isSupportedPci(pciAddress string, domains []sriov.ResourceDomain) bool {
+	for _, domain := range domains {
 		for _, pciDevice := range domain.PCIDevices {
 			if pciDevice.PCIAddress == pciAddress {
 				return true
@@ -92,51 +86,42 @@ func isSupportedPci(pciAddress string) bool {
 	return false
 }
 
-// getPciListByMechanisms return list of pci address filtered by supported mechanism
-func getPciListByMechanisms(mechanisms []*networkservice.Mechanism) (list []pciInfo) {
+// getFilteredMechanisms return list of pci address filtered by supported mechanism
+func getFilteredMechanisms(mechList []*networkservice.Mechanism, domains []sriov.ResourceDomain) (mechListFiltered []*networkservice.Mechanism) {
 	var pciAddress string
-	var isKernel bool
-	for _, mech := range mechanisms {
+	for _, mech := range mechList {
 		pciAddress = ""
-		isKernel = true
 		switch mech.GetType() {
 		case kernel.MECHANISM:
 			pciAddress = kernel.ToMechanism(mech).GetPCIAddress()
 		case vfio.MECHANISM:
 			pciAddress = vfio.ToMechanism(mech).GetPCIAddress()
-			isKernel = false
 		}
 
-		if pciAddress != "" {
-			if isSupportedPci(pciAddress) {
-				list = append(list, pciInfo{isKernel: isKernel, pciAddress: pciAddress})
-			}
+		if pciAddress != "" && isSupportedPci(pciAddress, domains) {
+			mechListFiltered = append(mechListFiltered, mech)
 		}
 	}
 
-	return list
+	return
 }
 
-func selectPciInfo(list []pciInfo) (info pciInfo) {
-	index := pciIndex % len(list)
-	info = list[index]
-	pciIndex++
+func selectMech(index *int, mechList []*networkservice.Mechanism) (mech *networkservice.Mechanism) {
+	newIndex := *index % len(mechList)
+	mech = mechList[newIndex]
+	*index = newIndex + 1
 
-	return info
+	return
 }
 
 func (d *nseImpl) Request(_ context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
 	request.Connection.Mechanism.Parameters = map[string]string{}
 
 	// get pci address list for selection
-	list := getPciListByMechanisms(request.GetMechanismPreferences())
-	if list != nil {
-		info := selectPciInfo(list)
-		key := kernel.PCIAddress
-		if !info.isKernel {
-			key = vfio.PCIAddress
-		}
-		request.Connection.Mechanism.Parameters = map[string]string{key: info.pciAddress}
+	mechList := getFilteredMechanisms(request.GetMechanismPreferences(), d.config.Domains)
+	if mechList != nil {
+		mech := selectMech(&d.pciIndex, mechList)
+		request.Connection.Mechanism = mech
 
 		return request.GetConnection(), nil
 	}
