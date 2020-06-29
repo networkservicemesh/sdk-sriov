@@ -11,6 +11,7 @@ require (
 	github.com/sirupsen/logrus v1.6.0 // indirect
 	github.com/stretchr/testify v1.5.1
 	go.uber.org/goleak v1.0.0
+	golang.org/x/tools v0.0.0-20200323144430-8dcfad9e016e // indirect
 	google.golang.org/grpc v1.29.1
 	gopkg.in/yaml.v2 v2.3.0 // indirect
 )
