@@ -145,15 +145,15 @@ func selectMech(s *safeIndex, mechList []*networkservice.Mechanism) (mech *netwo
 func (d *nseImpl) Request(_ context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
 	request.Connection.Mechanism.Parameters = map[string]string{}
 
-	// check on contains
-	if mech := d.pciUsed.Get(request.GetConnection().Id); mech != nil {
-		request.Connection.Mechanism = mech
-		return request.GetConnection(), nil
-	}
-
 	// get pci address list for selection
 	mechList := getFilteredMechanisms(request.GetMechanismPreferences(), d.config.Domains)
 	if len(mechList) > 0 {
+		// check on contains
+		if mech := d.pciUsed.Get(request.GetConnection().Id); mech != nil {
+			request.Connection.Mechanism = mech
+			return request.GetConnection(), nil
+		}
+
 		mech := selectMech(&d.pciIndex, mechList)
 		request.Connection.Mechanism = mech
 		// TODO allocate resources

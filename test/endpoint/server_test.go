@@ -86,22 +86,28 @@ func TestEndpoint(t *testing.T) {
 	conn, err := grpc.Dial(testURL.Host, opts...)
 	require.Nil(t, err)
 	require.NotNil(t, conn)
-	cl := client.NewClient(context.Background(), "client", nil, TokenGenerator, conn)
+	cl1 := client.NewClient(context.Background(), "client1", nil, TokenGenerator, conn)
+	cl2 := client.NewClient(context.Background(), "client2", nil, TokenGenerator, conn)
 
 	// send test requests
 	var connection *networkservice.Connection
-	connection, err = cl.Request(context.Background(), testRequest)
+	connection, err = cl1.Request(context.Background(), testRequest)
 	require.Nil(t, err)
 	require.NotNil(t, connection)
 	require.Equal(t, "0000:03:00:0", connection.Mechanism.Parameters[kernel.PCIAddress])
 
-	connection, err = cl.Request(context.Background(), testRequest)
+	connection, err = cl1.Request(context.Background(), testRequest)
+	require.Nil(t, err)
+	require.NotNil(t, connection)
+	require.Equal(t, "0000:03:00:0", connection.Mechanism.Parameters[kernel.PCIAddress])
+
+	_, err = cl1.Request(context.Background(), testRequestBad)
+	require.NotNil(t, err)
+
+	connection, err = cl2.Request(context.Background(), testRequest)
 	require.Nil(t, err)
 	require.NotNil(t, connection)
 	require.Equal(t, "0000:04:00:0", connection.Mechanism.Parameters[kernel.PCIAddress])
-
-	_, err = cl.Request(context.Background(), testRequestBad)
-	require.NotNil(t, err)
 
 	err = conn.Close()
 	require.Nil(t, err)
