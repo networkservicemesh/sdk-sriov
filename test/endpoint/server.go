@@ -67,6 +67,12 @@ func (s *safePciInfo) Remove(connID string) {
 	s.Unlock()
 }
 
+func (s *safePciInfo) Get(connID string) *networkservice.Mechanism {
+	s.Lock()
+	defer s.Unlock()
+	return s.info[connID]
+}
+
 // NewServer a new endpoint and running on grpc server
 func NewServer(ctx context.Context, listenOn *url.URL, config *sriov.Config) (server *grpc.Server, errChan <-chan error) {
 	// if we havn't config file then endpoint will not start
@@ -139,9 +145,15 @@ func selectMech(s *safeIndex, mechList []*networkservice.Mechanism) (mech *netwo
 func (d *nseImpl) Request(_ context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
 	request.Connection.Mechanism.Parameters = map[string]string{}
 
+	// check on contains
+	if mech := d.pciUsed.Get(request.GetConnection().Id); mech != nil {
+		request.Connection.Mechanism = mech
+		return request.GetConnection(), nil
+	}
+
 	// get pci address list for selection
 	mechList := getFilteredMechanisms(request.GetMechanismPreferences(), d.config.Domains)
-	if mechList != nil {
+	if len(mechList) > 0 {
 		mech := selectMech(&d.pciIndex, mechList)
 		request.Connection.Mechanism = mech
 		// TODO allocate resources
