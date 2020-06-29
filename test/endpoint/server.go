@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"net/url"
+	"sync"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/kernel"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/vfio"
@@ -33,9 +34,15 @@ import (
 	"google.golang.org/grpc"
 )
 
-const (
-	configFileName = "config.yml"
-)
+type safeIndex struct {
+	index int
+	sync.Mutex
+}
+
+type safePciInfo struct {
+	info map[string]*networkservice.Mechanism
+	sync.Mutex
+}
 
 type nseImpl struct {
 	server    *grpc.Server
@@ -43,24 +50,37 @@ type nseImpl struct {
 	cancel    context.CancelFunc
 	listenOn  *url.URL
 	config    *sriov.Config
-	pciIndex  int
+	pciIndex  safeIndex
+	pciUsed   safePciInfo
 	errorChan <-chan error
 }
 
+func (s *safePciInfo) Add(connID string, mech *networkservice.Mechanism) {
+	s.Lock()
+	s.info[connID] = mech
+	s.Unlock()
+}
+
+func (s *safePciInfo) Remove(connID string) {
+	s.Lock()
+	delete(s.info, connID)
+	s.Unlock()
+}
+
 // NewServer a new endpoint and running on grpc server
-func NewServer(ctx context.Context, listenOn *url.URL) (server *grpc.Server, errChan <-chan error) {
+func NewServer(ctx context.Context, listenOn *url.URL, config *sriov.Config) (server *grpc.Server, errChan <-chan error) {
 	// if we havn't config file then endpoint will not start
-	config, err := sriov.ReadConfig(ctx, configFileName)
-	if err != nil {
+	if config == nil {
 		errChan := make(chan error, 1)
-		errChan <- err
+		errChan <- errors.New("empty config")
 		return nil, errChan
 	}
 
 	nse := &nseImpl{
 		listenOn: listenOn,
 		config:   config,
-		pciIndex: 0,
+		pciIndex: safeIndex{index: 0},
+		pciUsed:  safePciInfo{info: map[string]*networkservice.Mechanism{}},
 		server:   grpc.NewServer(),
 	}
 
@@ -106,10 +126,12 @@ func getFilteredMechanisms(mechList []*networkservice.Mechanism, domains []sriov
 	return
 }
 
-func selectMech(index *int, mechList []*networkservice.Mechanism) (mech *networkservice.Mechanism) {
-	newIndex := *index % len(mechList)
+func selectMech(s *safeIndex, mechList []*networkservice.Mechanism) (mech *networkservice.Mechanism) {
+	s.Lock()
+	newIndex := s.index % len(mechList)
 	mech = mechList[newIndex]
-	*index = newIndex + 1
+	s.index = newIndex + 1
+	s.Unlock()
 
 	return
 }
@@ -122,13 +144,16 @@ func (d *nseImpl) Request(_ context.Context, request *networkservice.NetworkServ
 	if mechList != nil {
 		mech := selectMech(&d.pciIndex, mechList)
 		request.Connection.Mechanism = mech
-
+		// TODO allocate resources
+		d.pciUsed.Add(request.GetConnection().Id, mech)
 		return request.GetConnection(), nil
 	}
 
 	return request.GetConnection(), errors.New("specified ports are not supported")
 }
 
-func (d *nseImpl) Close(_ context.Context, _ *networkservice.Connection) (*empty.Empty, error) {
+func (d *nseImpl) Close(_ context.Context, conn *networkservice.Connection) (*empty.Empty, error) {
+	// TODO release resources
+	d.pciUsed.Remove(conn.Id)
 	return &empty.Empty{}, nil
 }

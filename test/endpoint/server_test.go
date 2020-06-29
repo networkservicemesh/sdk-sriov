@@ -22,6 +22,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/networkservicemesh/sdk-sriov/pkg/sriov"
+
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/cls"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/kernel"
@@ -33,6 +35,10 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+)
+
+const (
+	configFileName = "config.yml"
 )
 
 func TokenGenerator(_ credentials.AuthInfo) (token string, expireTime time.Time, err error) {
@@ -68,20 +74,22 @@ func TestEndpoint(t *testing.T) {
 		},
 	}
 
+	config, err := sriov.ReadConfig(context.Background(), configFileName)
+	require.Nil(t, err)
 	// start server
-	server, errCh := NewServer(context.Background(), testURL)
+	server, errCh := NewServer(context.Background(), testURL, config)
 	require.NotNil(t, server)
 	require.NotNil(t, errCh)
 
-	// create client and send test requests
+	// create client
 	opts := []grpc.DialOption{grpc.WithInsecure()}
 	conn, err := grpc.Dial(testURL.Host, opts...)
 	require.Nil(t, err)
 	require.NotNil(t, conn)
 	cl := client.NewClient(context.Background(), "client", nil, TokenGenerator, conn)
 
+	// send test requests
 	var connection *networkservice.Connection
-
 	connection, err = cl.Request(context.Background(), testRequest)
 	require.Nil(t, err)
 	require.NotNil(t, connection)
