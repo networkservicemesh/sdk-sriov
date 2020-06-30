@@ -46,16 +46,26 @@ func TokenGenerator(_ credentials.AuthInfo) (token string, expireTime time.Time,
 }
 func TestEndpoint(t *testing.T) {
 	defer goleak.VerifyNone(t)
-
+	mechPref := []*networkservice.Mechanism{
+		{Cls: cls.LOCAL, Type: kernel.MECHANISM, Parameters: map[string]string{kernel.PCIAddress: "0000:00:00:0"}},
+		{Cls: cls.LOCAL, Type: kernel.MECHANISM, Parameters: map[string]string{kernel.PCIAddress: "0000:03:00:0"}},
+		{Cls: cls.LOCAL, Type: vfio.MECHANISM, Parameters: map[string]string{kernel.PCIAddress: "0000:04:00:0"}},
+	}
 	testURL := &url.URL{Scheme: "tcp", Host: "127.0.0.1:0"}
 	testRequest := &networkservice.NetworkServiceRequest{
-		MechanismPreferences: []*networkservice.Mechanism{
-			{Cls: cls.LOCAL, Type: kernel.MECHANISM, Parameters: map[string]string{kernel.PCIAddress: "0000:00:00:0"}},
-			{Cls: cls.LOCAL, Type: kernel.MECHANISM, Parameters: map[string]string{kernel.PCIAddress: "0000:03:00:0"}},
-			{Cls: cls.LOCAL, Type: vfio.MECHANISM, Parameters: map[string]string{kernel.PCIAddress: "0000:04:00:0"}},
-		},
+		MechanismPreferences: mechPref,
 		Connection: &networkservice.Connection{
 			Id:             "1",
+			NetworkService: "my-service",
+			Context:        &networkservice.ConnectionContext{},
+			Mechanism:      &networkservice.Mechanism{},
+		},
+	}
+
+	testRequest2 := &networkservice.NetworkServiceRequest{
+		MechanismPreferences: mechPref,
+		Connection: &networkservice.Connection{
+			Id:             "3",
 			NetworkService: "my-service",
 			Context:        &networkservice.ConnectionContext{},
 			Mechanism:      &networkservice.Mechanism{},
@@ -67,7 +77,7 @@ func TestEndpoint(t *testing.T) {
 			{Cls: cls.LOCAL, Type: kernel.MECHANISM, Parameters: map[string]string{kernel.PCIAddress: "0000:00:00:0"}},
 		},
 		Connection: &networkservice.Connection{
-			Id:             "1",
+			Id:             "2",
 			NetworkService: "my-service",
 			Context:        &networkservice.ConnectionContext{},
 			Mechanism:      &networkservice.Mechanism{},
@@ -86,28 +96,27 @@ func TestEndpoint(t *testing.T) {
 	conn, err := grpc.Dial(testURL.Host, opts...)
 	require.Nil(t, err)
 	require.NotNil(t, conn)
-	cl1 := client.NewClient(context.Background(), "client1", nil, TokenGenerator, conn)
-	cl2 := client.NewClient(context.Background(), "client2", nil, TokenGenerator, conn)
+	cl := client.NewClient(context.Background(), "client1", nil, TokenGenerator, conn)
 
 	// send test requests
 	var connection *networkservice.Connection
-	connection, err = cl1.Request(context.Background(), testRequest)
+	connection, err = cl.Request(context.Background(), testRequest)
 	require.Nil(t, err)
 	require.NotNil(t, connection)
 	require.Equal(t, "0000:03:00:0", connection.Mechanism.Parameters[kernel.PCIAddress])
 
-	connection, err = cl1.Request(context.Background(), testRequest)
+	connection, err = cl.Request(context.Background(), testRequest)
 	require.Nil(t, err)
 	require.NotNil(t, connection)
 	require.Equal(t, "0000:03:00:0", connection.Mechanism.Parameters[kernel.PCIAddress])
 
-	_, err = cl1.Request(context.Background(), testRequestBad)
-	require.NotNil(t, err)
-
-	connection, err = cl2.Request(context.Background(), testRequest)
+	connection, err = cl.Request(context.Background(), testRequest2)
 	require.Nil(t, err)
 	require.NotNil(t, connection)
 	require.Equal(t, "0000:04:00:0", connection.Mechanism.Parameters[kernel.PCIAddress])
+
+	_, err = cl.Request(context.Background(), testRequestBad)
+	require.NotNil(t, err)
 
 	err = conn.Close()
 	require.Nil(t, err)
