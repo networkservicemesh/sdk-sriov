@@ -12,3 +12,15 @@ domains:
         capability: 10G
         target:
           macAddress: 00:0a:95:9d:68:17
+  - hostName: service3.example.com
+    pciDevices:
+      - pciAddress: 0000:03:00:0
+        capability: 10G
+        target:
+          macAddress: 00:0a:95:9d:68:17
+  - hostName: service4.example.com
+    pciDevices:
+      - pciAddress: 0000:04:00:0
+        capability: 10G
+        target:
+          macAddress: 00:0a:95:9d:68:17

@@ -22,103 +22,113 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/protobuf/ptypes/timestamp"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/common/authorize"
+
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/cls"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/kernel"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/vfio"
-	"github.com/networkservicemesh/sdk/pkg/networkservice/chains/client"
-
 	"go.uber.org/goleak"
 
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
 
 const (
-	configFileName = "config.yml"
+	configFileName = "../config/config.yml"
 )
 
-func TokenGenerator(_ credentials.AuthInfo) (token string, expireTime time.Time, err error) {
+func tokenGenerator(_ credentials.AuthInfo) (token string, expireTime time.Time, err error) {
 	return "TestToken", time.Date(3000, 1, 1, 1, 1, 1, 1, time.UTC), nil
 }
-func TestEndpoint(t *testing.T) {
+
+func getConnectionSetting(id string) *networkservice.Connection {
+	conn := &networkservice.Connection{
+		Id:             id,
+		NetworkService: "my-service",
+		Context:        &networkservice.ConnectionContext{},
+		Mechanism:      &networkservice.Mechanism{},
+		Path: &networkservice.Path{
+			Index: 0,
+			PathSegments: []*networkservice.PathSegment{
+				{
+					Token:   "my_token",
+					Expires: &timestamp.Timestamp{Seconds: time.Now().Add(time.Minute * 10).Unix()},
+				},
+			},
+		},
+	}
+
+	return conn
+}
+func TestEndpointSimple(t *testing.T) {
 	defer goleak.VerifyNone(t)
 	mechPref := []*networkservice.Mechanism{
 		{Cls: cls.LOCAL, Type: kernel.MECHANISM, Parameters: map[string]string{kernel.PCIAddress: "0000:00:00:0"}},
 		{Cls: cls.LOCAL, Type: kernel.MECHANISM, Parameters: map[string]string{kernel.PCIAddress: "0000:03:00:0"}},
 		{Cls: cls.LOCAL, Type: vfio.MECHANISM, Parameters: map[string]string{kernel.PCIAddress: "0000:04:00:0"}},
 	}
+
+	testConn0 := getConnectionSetting("0")
+
 	testURL := &url.URL{Scheme: "tcp", Host: "127.0.0.1:0"}
 	testRequest := &networkservice.NetworkServiceRequest{
 		MechanismPreferences: mechPref,
-		Connection: &networkservice.Connection{
-			Id:             "1",
-			NetworkService: "my-service",
-			Context:        &networkservice.ConnectionContext{},
-			Mechanism:      &networkservice.Mechanism{},
-		},
+		Connection:           testConn0,
 	}
 
 	testRequest2 := &networkservice.NetworkServiceRequest{
 		MechanismPreferences: mechPref,
-		Connection: &networkservice.Connection{
-			Id:             "3",
-			NetworkService: "my-service",
-			Context:        &networkservice.ConnectionContext{},
-			Mechanism:      &networkservice.Mechanism{},
-		},
+		Connection:           getConnectionSetting("1"),
 	}
 
 	testRequestBad := &networkservice.NetworkServiceRequest{
 		MechanismPreferences: []*networkservice.Mechanism{
 			{Cls: cls.LOCAL, Type: kernel.MECHANISM, Parameters: map[string]string{kernel.PCIAddress: "0000:00:00:0"}},
 		},
-		Connection: &networkservice.Connection{
-			Id:             "2",
-			NetworkService: "my-service",
-			Context:        &networkservice.ConnectionContext{},
-			Mechanism:      &networkservice.Mechanism{},
-		},
+		Connection: testConn0,
 	}
 
 	config, err := sriov.ReadConfig(context.Background(), configFileName)
 	require.Nil(t, err)
 	// start server
-	server, errCh := NewServer(context.Background(), testURL, config)
-	require.NotNil(t, server)
-	require.NotNil(t, errCh)
+	endpoint := NewServer("server", authorize.NewServer(), tokenGenerator, testURL, config)
 
-	// create client
-	opts := []grpc.DialOption{grpc.WithInsecure()}
-	conn, err := grpc.Dial(testURL.Host, opts...)
-	require.Nil(t, err)
-	require.NotNil(t, conn)
-	cl := client.NewClient(context.Background(), "client1", nil, TokenGenerator, conn)
-
-	// send test requests
 	var connection *networkservice.Connection
-	connection, err = cl.Request(context.Background(), testRequest)
+	// test if not supported mechanisms
+	_, err = endpoint.Request(context.Background(), testRequestBad)
+	require.NotNil(t, err)
+
+	// test request
+	connection, err = endpoint.Request(context.Background(), testRequest)
 	require.Nil(t, err)
 	require.NotNil(t, connection)
 	require.Equal(t, "0000:03:00:0", connection.Mechanism.Parameters[kernel.PCIAddress])
 
-	connection, err = cl.Request(context.Background(), testRequest)
+	connection, err = endpoint.Request(context.Background(), testRequestBad)
 	require.Nil(t, err)
 	require.NotNil(t, connection)
 	require.Equal(t, "0000:03:00:0", connection.Mechanism.Parameters[kernel.PCIAddress])
 
-	connection, err = cl.Request(context.Background(), testRequest2)
+	// test from the same connection id
+	connection, err = endpoint.Request(context.Background(), testRequest)
+	require.Nil(t, err)
+	require.NotNil(t, connection)
+	require.Equal(t, "0000:03:00:0", connection.Mechanism.Parameters[kernel.PCIAddress])
+
+	// test selection via round robin
+	connection, err = endpoint.Request(context.Background(), testRequest2)
 	require.Nil(t, err)
 	require.NotNil(t, connection)
 	require.Equal(t, "0000:04:00:0", connection.Mechanism.Parameters[kernel.PCIAddress])
 
-	_, err = cl.Request(context.Background(), testRequestBad)
-	require.NotNil(t, err)
-
-	err = conn.Close()
+	// test on close
+	_, err = endpoint.Close(context.Background(), testRequest.Connection)
 	require.Nil(t, err)
-	server.Stop()
+	connection, err = endpoint.Request(context.Background(), testRequestBad)
+	require.NotNil(t, err)
+	require.Nil(t, connection)
 }
