@@ -41,14 +41,7 @@ func NewServer(resourcePool *sriov.NetResourcePool) networkservice.NetworkServic
 }
 
 func (a *kernelServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
-	if request.GetConnection() == nil {
-		request.Connection = &networkservice.Connection{
-			Context: &networkservice.ConnectionContext{
-				ExtraContext: map[string]string{},
-			},
-		}
-	}
-	err := utils.WithVirtualFunctionsState(ctx, request.GetConnection().GetContext(), a.resourcePool)
+	err := utils.WithVirtualFunctionsState(ctx, request, a.resourcePool)
 	if err != nil {
 		return nil, errors.Wrap(err, "Unable to write virtual functions state into the connection context")
 	}

@@ -26,9 +26,19 @@ import (
 
 // WithVirtualFunctionsState adds information about free virtual functions number for each available physical function
 // on host to the ExtraContext of the ConnectionContext
-func WithVirtualFunctionsState(ctx context.Context, connCtx *networkservice.ConnectionContext, resourcePool *sriov.NetResourcePool) error {
+func WithVirtualFunctionsState(ctx context.Context, request *networkservice.NetworkServiceRequest, resourcePool *sriov.NetResourcePool) error {
 	resourcePool.Lock()
 	defer resourcePool.Unlock()
+
+	if request.GetConnection() == nil {
+		request.Connection = &networkservice.Connection{}
+	}
+	if request.GetConnection().GetContext() == nil {
+		request.Connection.Context = &networkservice.ConnectionContext{}
+	}
+	if request.GetConnection().GetContext().GetExtraContext() == nil {
+		request.Connection.Context.ExtraContext = map[string]string{}
+	}
 
 	config := &sriov.VirtualFunctionsStateConfig{
 		Config: map[string]int{},
@@ -46,7 +56,7 @@ func WithVirtualFunctionsState(ctx context.Context, connCtx *networkservice.Conn
 		return err
 	}
 
-	connCtx.ExtraContext[sriov.VirtualFunctionsStateConfigKey] = strCfg
+	request.GetConnection().GetContext().GetExtraContext()[sriov.VirtualFunctionsStateConfigKey] = strCfg
 	return nil
 }
 
