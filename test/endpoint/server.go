@@ -19,15 +19,15 @@ package endpoint
 
 import (
 	"net/url"
-	"sync"
+
+	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/networkservice/common/filterpciaddress"
 
 	"github.com/networkservicemesh/sdk/pkg/networkservice/chains/endpoint"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/clienturl"
 	"github.com/networkservicemesh/sdk/pkg/tools/token"
 
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/networkservice/common/filtermechanisms"
-	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/networkservice/common/markermechanism"
-	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/networkservice/common/selectormechanism"
+	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/networkservice/common/selectorpciaddress"
 
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov"
 
@@ -36,7 +36,6 @@ import (
 
 type nseImpl struct {
 	endpoint.Endpoint
-	pciUsed sync.Map
 }
 
 // NewServer a new endpoint and running on grpc server
@@ -47,9 +46,9 @@ func NewServer(name string, authzServer networkservice.NetworkServiceServer, tok
 		authzServer,
 		tokenGenerator,
 		clienturl.NewServer(clientURL),
-		filtermechanisms.NewServer(config, &rv.pciUsed),
-		selectormechanism.NewServer(),
-		markermechanism.NewServer(&rv.pciUsed),
+		filtermechanisms.NewServer(),
+		filterpciaddress.NewServer(config),
+		selectorpciaddress.NewServer(),
 	)
 
 	return rv

@@ -14,11 +14,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package selectormechanism provides a selection networkservice mechanism by round robins algorithm
-package selectormechanism
+// Package selectorpciaddress provides a selection networkservice mechanism by round robins algorithm
+package selectorpciaddress
 
 import (
-	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"go.uber.org/atomic"
 )
 
@@ -30,17 +29,17 @@ func newRoundRobinSelector() *roundRobinSelector {
 	return &roundRobinSelector{index: atomic.NewInt32(0)}
 }
 
-func (rr *roundRobinSelector) selectMechanism(mechanisms []*networkservice.Mechanism) *networkservice.Mechanism {
-	if rr == nil || len(mechanisms) == 0 {
-		return nil
+func (rr *roundRobinSelector) selectStringItem(items []string) string {
+	if rr == nil || len(items) == 0 {
+		return ""
 	}
 
-	idx := rr.index.Load() % int32(len(mechanisms))
-	mech := mechanisms[idx]
-	if mech == nil {
-		return nil
+	idx := rr.index.Load() % int32(len(items))
+	item := items[idx]
+	if item == "" {
+		return ""
 	}
 	rr.index.Inc()
 
-	return mech
+	return item
 }

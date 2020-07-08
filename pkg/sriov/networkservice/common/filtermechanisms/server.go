@@ -14,17 +14,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package filtermechanisms provides a filtration of preferences mechanisms
+// Package filtermechanisms provides a filtration of supported mechanisms
 package filtermechanisms
 
 import (
 	"context"
-	"sync"
+	"errors"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/kernel"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/vfio"
-
-	"github.com/networkservicemesh/sdk-sriov/pkg/sriov"
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
@@ -32,54 +30,31 @@ import (
 )
 
 type filterMechanismsServer struct {
-	config   *sriov.Config
-	mechUsed *sync.Map
 }
 
 // NewServer - filters out mechanisms by type and provided pci address parametr
-func NewServer(config *sriov.Config, mechUsed *sync.Map) networkservice.NetworkServiceServer {
-	return &filterMechanismsServer{config: config, mechUsed: mechUsed}
-}
-
-// Search pci device in config
-// TODO add hostName, capability as parameters for filtering
-func isSupportedPci(pciAddress string, domains []sriov.ResourceDomain) bool {
-	for _, domain := range domains {
-		for _, pciDevice := range domain.PCIDevices {
-			if pciDevice.PCIAddress == pciAddress {
-				return true
-			}
-		}
-	}
-
-	return false
+func NewServer() networkservice.NetworkServiceServer {
+	return &filterMechanismsServer{}
 }
 
 func (f *filterMechanismsServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
 	if request.GetConnection() == nil {
-		request.Connection = &networkservice.Connection{Id: "Id"}
-	}
-	// check on contains
-	if mech, ok := f.mechUsed.Load(request.GetConnection().GetId()); ok {
-		request.Connection.Mechanism = mech.(*networkservice.Mechanism)
-		return request.GetConnection(), nil
+		return nil, errors.New("request connection is invalid")
 	}
 
-	var mechanisms []*networkservice.Mechanism
+	if request.GetMechanismPreferences() == nil {
+		return nil, errors.New("mechanism preferences are invalid")
+	}
+
+	// check and select supported mechanism type
 	for _, mechanism := range request.GetMechanismPreferences() {
-		pciAddress := ""
-		switch mechanism.GetType() {
+		mtype := mechanism.GetType()
+		switch mtype {
 		case kernel.MECHANISM:
-			pciAddress = kernel.ToMechanism(mechanism).GetPCIAddress()
 		case vfio.MECHANISM:
-			pciAddress = vfio.ToMechanism(mechanism).GetPCIAddress()
-		}
-
-		if pciAddress != "" && isSupportedPci(pciAddress, f.config.Domains) {
-			mechanisms = append(mechanisms, mechanism)
+			ctx = WithSelectedMechanismType(ctx, mtype)
 		}
 	}
-	request.MechanismPreferences = mechanisms
 
 	return next.Server(ctx).Request(ctx, request)
 }
