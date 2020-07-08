@@ -20,77 +20,156 @@ import (
 	"context"
 	"testing"
 
-	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/networkservice/mechanisms/kernel"
-
+	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	kernelMech "github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/kernel"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
-	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/checks/checkrequest"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/goleak"
 
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov"
+	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/networkservice/mechanisms/kernel"
 )
 
-func TestNewClient_AddStateConfig(t *testing.T) {
+const (
+	pfPCIAddress  = "0000:01:00:0"
+	vf1PCIAddress = "0000:01:00:1"
+	vf1IfaceName  = "enp1s1"
+	vf2PCIAddress = "0000:01:00:2"
+	vf2IfaceName  = "enp1s2"
+)
+
+type mockedEndpoint struct {
+	conn *networkservice.Connection
+}
+
+func (m mockedEndpoint) Request(context.Context, *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
+	return m.conn, nil
+}
+
+func (m mockedEndpoint) Close(context.Context, *networkservice.Connection) (*empty.Empty, error) {
+	return &empty.Empty{}, nil
+}
+
+func initVfs() (vf1, vf2 *sriov.VirtualFunction) {
+	vf1 = &sriov.VirtualFunction{
+		PCIAddress:       vf1PCIAddress,
+		NetInterfaceName: vf1IfaceName,
+	}
+	vf2 = &sriov.VirtualFunction{
+		PCIAddress:       vf2PCIAddress,
+		NetInterfaceName: vf2IfaceName,
+	}
+	return
+}
+
+func TestNewServer_KernelSelectVirtualFunction(t *testing.T) {
 	defer goleak.VerifyNone(t)
 
+	vf1, vf2 := initVfs()
 	resourcePool := &sriov.NetResourcePool{
 		Resources: []*sriov.NetResource{
 			{
 				PhysicalFunction: &sriov.PhysicalFunction{
-					PCIAddress: "0000:00:01:0",
+					PCIAddress: pfPCIAddress,
 					VirtualFunctions: map[*sriov.VirtualFunction]sriov.VirtualFunctionState{
-						{}: sriov.FreeVirtualFunction,
-						{}: sriov.FreeVirtualFunction,
-					},
-				},
-			},
-			{
-				PhysicalFunction: &sriov.PhysicalFunction{
-					PCIAddress: "0000:00:02:0",
-					VirtualFunctions: map[*sriov.VirtualFunction]sriov.VirtualFunctionState{
-						{}: sriov.FreeVirtualFunction,
-						{}: sriov.UsedVirtualFunction,
-					},
-				},
-			},
-			{
-				PhysicalFunction: &sriov.PhysicalFunction{
-					PCIAddress: "0000:00:03:0",
-					VirtualFunctions: map[*sriov.VirtualFunction]sriov.VirtualFunctionState{
-						{}: sriov.UsedVirtualFunction,
-						{}: sriov.UsedVirtualFunction,
+						vf1: sriov.UsedVirtualFunction,
+						vf2: sriov.FreeVirtualFunction,
 					},
 				},
 			},
 		},
 	}
-	request := &networkservice.NetworkServiceRequest{
-		MechanismPreferences: []*networkservice.Mechanism{
-			{
-				Type: kernelMech.MECHANISM,
+	fromEndpoint := &networkservice.Connection{
+		Mechanism: &networkservice.Mechanism{
+			Type: kernelMech.MECHANISM,
+			Parameters: map[string]string{
+				kernelMech.PCIAddress: pfPCIAddress,
 			},
 		},
 	}
-	expected := &networkservice.NetworkServiceRequest{
-		MechanismPreferences: []*networkservice.Mechanism{
-			{
-				Type: kernelMech.MECHANISM,
-			},
-		},
-		Connection: &networkservice.Connection{
-			Context: &networkservice.ConnectionContext{
-				ExtraContext: map[string]string{
-					sriov.VirtualFunctionsStateConfigKey: "Config:\n  \"0000:00:01:0\": 2\n  \"0000:00:02:0\": 1\n  \"0000:00:03:0\": 0\n",
-				},
+	expected := &networkservice.Connection{
+		Mechanism: &networkservice.Mechanism{
+			Type: kernelMech.MECHANISM,
+			Parameters: map[string]string{
+				kernelMech.PCIAddress:       pfPCIAddress,
+				kernelMech.InterfaceNameKey: vf2IfaceName,
 			},
 		},
 	}
-	client := next.NewNetworkServiceServer(kernel.NewServer(resourcePool), checkrequest.NewServer(t, func(t *testing.T, request *networkservice.NetworkServiceRequest) {
-		assert.Equal(t, expected, request)
-	}))
 
-	_, err := client.Request(context.Background(), request)
+	server := next.NewNetworkServiceServer(kernel.NewServer(resourcePool), mockedEndpoint{conn: fromEndpoint})
+	conn, err := server.Request(context.Background(), &networkservice.NetworkServiceRequest{})
 	assert.Nil(t, err)
+	assert.Equal(t, expected, conn)
+
+	selectedVfState := resourcePool.Resources[0].PhysicalFunction.VirtualFunctions[vf2]
+	assert.Equal(t, sriov.UsedVirtualFunction, selectedVfState)
+}
+
+func TestNewServer_NoFreeVirtualFunctions(t *testing.T) {
+	defer goleak.VerifyNone(t)
+
+	vf1, vf2 := initVfs()
+	resourcePool := &sriov.NetResourcePool{
+		Resources: []*sriov.NetResource{
+			{
+				PhysicalFunction: &sriov.PhysicalFunction{
+					PCIAddress: pfPCIAddress,
+					VirtualFunctions: map[*sriov.VirtualFunction]sriov.VirtualFunctionState{
+						vf1: sriov.UsedVirtualFunction,
+						vf2: sriov.UsedVirtualFunction,
+					},
+				},
+			},
+		},
+	}
+	fromEndpoint := &networkservice.Connection{
+		Mechanism: &networkservice.Mechanism{
+			Type: kernelMech.MECHANISM,
+			Parameters: map[string]string{
+				kernelMech.PCIAddress: pfPCIAddress,
+			},
+		},
+	}
+
+	server := next.NewNetworkServiceServer(kernel.NewServer(resourcePool), mockedEndpoint{conn: fromEndpoint})
+	conn, err := server.Request(context.Background(), &networkservice.NetworkServiceRequest{})
+	assert.Nil(t, conn)
+	assert.NotNil(t, err)
+}
+
+func TestNewServer_FreeVirtualFunctionsOnClose(t *testing.T) {
+	defer goleak.VerifyNone(t)
+
+	vf1, vf2 := initVfs()
+	resourcePool := &sriov.NetResourcePool{
+		Resources: []*sriov.NetResource{
+			{
+				PhysicalFunction: &sriov.PhysicalFunction{
+					PCIAddress: pfPCIAddress,
+					VirtualFunctions: map[*sriov.VirtualFunction]sriov.VirtualFunctionState{
+						vf1: sriov.UsedVirtualFunction,
+						vf2: sriov.UsedVirtualFunction,
+					},
+				},
+			},
+		},
+	}
+	conn := &networkservice.Connection{
+		Mechanism: &networkservice.Mechanism{
+			Type: kernelMech.MECHANISM,
+			Parameters: map[string]string{
+				kernelMech.PCIAddress:       pfPCIAddress,
+				kernelMech.InterfaceNameKey: vf1IfaceName,
+			},
+		},
+	}
+
+	client := next.NewNetworkServiceServer(kernel.NewServer(resourcePool))
+	_, err := client.Close(context.Background(), conn)
+	assert.Nil(t, err)
+
+	freedVfState := resourcePool.Resources[0].PhysicalFunction.VirtualFunctions[vf1]
+	assert.Equal(t, sriov.FreeVirtualFunction, freedVfState)
 }

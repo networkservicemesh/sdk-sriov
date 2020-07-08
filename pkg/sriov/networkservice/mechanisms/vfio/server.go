@@ -14,26 +14,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package vfio provides a networkservice chain element that properly handles the SR-IOV vfio Mechanism
+// Package vfio provides a networkservice chain element that properly handles the SR-IOV VFIO Mechanism
 package vfio
 
 import (
 	"context"
 
+	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/vfio"
+	"github.com/pkg/errors"
+
+	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/utils"
+
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
-	"github.com/pkg/errors"
 
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov"
-	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/utils"
 )
 
 type vfioServer struct {
 	resourcePool *sriov.NetResourcePool
 }
 
-// NewServer - returns a new authorization networkservicemesh.NetworkServiceServers
+// NewServer return a NetworkServiceServer chain element that correctly handles the VFIO Mechanism
 func NewServer(resourcePool *sriov.NetResourcePool) networkservice.NetworkServiceServer {
 	return &vfioServer{
 		resourcePool: resourcePool,
@@ -41,13 +44,33 @@ func NewServer(resourcePool *sriov.NetResourcePool) networkservice.NetworkServic
 }
 
 func (a *vfioServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
-	err := utils.WithVirtualFunctionsState(ctx, request, a.resourcePool)
+	conn, err := next.Server(ctx).Request(ctx, request)
 	if err != nil {
-		return nil, errors.Wrap(err, "Unable to write virtual functions state into the connection context")
+		return nil, err
 	}
-	return next.Server(ctx).Request(ctx, request)
+
+	pciAddress, ok := conn.GetMechanism().GetParameters()[vfio.PCIAddress]
+	if !ok {
+		return nil, errors.Errorf("No selected physical function provided")
+	}
+
+	_, err = utils.SelectVirtualFunction(pciAddress, a.resourcePool)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO fill required VFIO fields in Connection
+
+	return conn, nil
 }
 
 func (a *vfioServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {
+	_, ok := conn.GetMechanism().GetParameters()[vfio.PCIAddress]
+	if !ok {
+		return nil, errors.Errorf("No physical function PCI address found")
+	}
+
+	// TODO get required VFIO fields from Connection and free virtual function
+
 	return next.Server(ctx).Close(ctx, conn)
 }

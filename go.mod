@@ -11,5 +11,8 @@ require (
 	github.com/networkservicemesh/sdk v0.0.0-20200707071838-06fc56186b09
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.5.1
+	github.com/vishvananda/netns v0.0.0-20200520041808-52d707b772fe // indirect
+	go.uber.org/goleak v1.0.0
+	github.com/stretchr/testify v1.5.1
 	go.uber.org/goleak v1.0.0
 )
