@@ -22,6 +22,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/networkservice/common/selectorpciaddress"
+
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/authorize"
 
@@ -49,8 +51,11 @@ func getConnectionSetting(id string) *networkservice.Connection {
 	conn := &networkservice.Connection{
 		Id:             id,
 		NetworkService: "my-service",
-		Context:        &networkservice.ConnectionContext{},
-		Mechanism:      &networkservice.Mechanism{},
+		Context: &networkservice.ConnectionContext{
+			ExtraContext: map[string]string{
+				selectorpciaddress.FreeVirtualFunctionsInfoKey: "FreeVirtualFunctions:\n  \"0000:01:00:0\": 2\n  \"0000:02:00:0\": 1\n  \"0000:03:00:0\": 0\n",
+			},
+		},
 		Path: &networkservice.Path{
 			Index: 0,
 			PathSegments: []*networkservice.PathSegment{
@@ -67,9 +72,9 @@ func getConnectionSetting(id string) *networkservice.Connection {
 func TestEndpointSimple(t *testing.T) {
 	defer goleak.VerifyNone(t)
 	mechPref := []*networkservice.Mechanism{
-		{Cls: cls.LOCAL, Type: kernel.MECHANISM, Parameters: map[string]string{kernel.PCIAddress: "0000:00:00:0"}},
-		{Cls: cls.LOCAL, Type: kernel.MECHANISM, Parameters: map[string]string{kernel.PCIAddress: "0000:03:00:0"}},
-		{Cls: cls.LOCAL, Type: vfio.MECHANISM, Parameters: map[string]string{kernel.PCIAddress: "0000:04:00:0"}},
+		{Cls: cls.LOCAL, Type: kernel.MECHANISM},
+		{Cls: cls.LOCAL, Type: kernel.MECHANISM},
+		{Cls: cls.LOCAL, Type: vfio.MECHANISM},
 	}
 
 	testConn0 := getConnectionSetting("0")
@@ -80,55 +85,14 @@ func TestEndpointSimple(t *testing.T) {
 		Connection:           testConn0,
 	}
 
-	testRequest2 := &networkservice.NetworkServiceRequest{
-		MechanismPreferences: mechPref,
-		Connection:           getConnectionSetting("1"),
-	}
-
-	testRequestBad := &networkservice.NetworkServiceRequest{
-		MechanismPreferences: []*networkservice.Mechanism{
-			{Cls: cls.LOCAL, Type: kernel.MECHANISM, Parameters: map[string]string{kernel.PCIAddress: "0000:00:00:0"}},
-		},
-		Connection: testConn0,
-	}
-
 	config, err := sriov.ReadConfig(context.Background(), configFileName)
 	require.Nil(t, err)
 	// start server
 	endpoint := NewServer("server", authorize.NewServer(), tokenGenerator, testURL, config)
 
-	var connection *networkservice.Connection
-	// test if not supported mechanisms
-	_, err = endpoint.Request(context.Background(), testRequestBad)
-	require.NotNil(t, err)
-
 	// test request
-	connection, err = endpoint.Request(context.Background(), testRequest)
+	connection, err := endpoint.Request(context.Background(), testRequest)
 	require.Nil(t, err)
 	require.NotNil(t, connection)
-	require.Equal(t, "0000:03:00:0", connection.Mechanism.Parameters[kernel.PCIAddress])
-
-	connection, err = endpoint.Request(context.Background(), testRequestBad)
-	require.Nil(t, err)
-	require.NotNil(t, connection)
-	require.Equal(t, "0000:03:00:0", connection.Mechanism.Parameters[kernel.PCIAddress])
-
-	// test from the same connection id
-	connection, err = endpoint.Request(context.Background(), testRequest)
-	require.Nil(t, err)
-	require.NotNil(t, connection)
-	require.Equal(t, "0000:03:00:0", connection.Mechanism.Parameters[kernel.PCIAddress])
-
-	// test selection via round robin
-	connection, err = endpoint.Request(context.Background(), testRequest2)
-	require.Nil(t, err)
-	require.NotNil(t, connection)
-	require.Equal(t, "0000:04:00:0", connection.Mechanism.Parameters[kernel.PCIAddress])
-
-	// test on close
-	_, err = endpoint.Close(context.Background(), testRequest.Connection)
-	require.Nil(t, err)
-	connection, err = endpoint.Request(context.Background(), testRequestBad)
-	require.NotNil(t, err)
-	require.Nil(t, connection)
+	require.Equal(t, "0000:01:00:0", connection.Mechanism.Parameters[kernel.PCIAddress])
 }

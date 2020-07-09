@@ -18,28 +18,31 @@
 package selectorpciaddress
 
 import (
-	"go.uber.org/atomic"
+	"sync/atomic"
 )
 
-type roundRobinSelector struct {
-	index *atomic.Int32
+// RoundRobinSelector contains index for selecting
+type RoundRobinSelector struct {
+	index int32
 }
 
-func newRoundRobinSelector() *roundRobinSelector {
-	return &roundRobinSelector{index: atomic.NewInt32(0)}
+// NewRoundRobinSelector create new selector
+func NewRoundRobinSelector() *RoundRobinSelector {
+	return &RoundRobinSelector{index: 0}
 }
 
-func (rr *roundRobinSelector) selectStringItem(items []string) string {
+// SelectStringItem select item drom list
+func (rr *RoundRobinSelector) SelectStringItem(items []string) string {
 	if rr == nil || len(items) == 0 {
 		return ""
 	}
 
-	idx := rr.index.Load() % int32(len(items))
+	idx := atomic.LoadInt32(&rr.index) % int32(len(items))
 	item := items[idx]
 	if item == "" {
 		return ""
 	}
-	rr.index.Inc()
+	atomic.AddInt32(&rr.index, 1)
 
 	return item
 }

@@ -20,14 +20,15 @@ package endpoint
 import (
 	"net/url"
 
-	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/networkservice/common/filterpciaddress"
+	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/kernel"
+	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/vfio"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms"
+
+	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/networkservice/common/selectorpciaddress"
 
 	"github.com/networkservicemesh/sdk/pkg/networkservice/chains/endpoint"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/clienturl"
 	"github.com/networkservicemesh/sdk/pkg/tools/token"
-
-	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/networkservice/common/filtermechanisms"
-	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/networkservice/common/selectorpciaddress"
 
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov"
 
@@ -46,9 +47,10 @@ func NewServer(name string, authzServer networkservice.NetworkServiceServer, tok
 		authzServer,
 		tokenGenerator,
 		clienturl.NewServer(clientURL),
-		filtermechanisms.NewServer(),
-		filterpciaddress.NewServer(config),
-		selectorpciaddress.NewServer(),
+		mechanisms.NewServer(map[string]networkservice.NetworkServiceServer{
+			kernel.MECHANISM: selectorpciaddress.NewServer(config, kernel.PCIAddress),
+			vfio.MECHANISM:   selectorpciaddress.NewServer(config, vfio.PCIAddress),
+		}),
 	)
 
 	return rv
