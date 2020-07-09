@@ -54,9 +54,6 @@ func (a *freeVirtualFunctionsInfoServer) Close(ctx context.Context, conn *networ
 }
 
 func (a *freeVirtualFunctionsInfoServer) addFreeVirtualFunctionsInfo(ctx context.Context, conn *networkservice.Connection) (*networkservice.Connection, error) {
-	a.resourcePool.Lock()
-	defer a.resourcePool.Unlock()
-
 	if conn.GetContext() == nil {
 		conn.Context = &networkservice.ConnectionContext{}
 	}
@@ -64,34 +61,14 @@ func (a *freeVirtualFunctionsInfoServer) addFreeVirtualFunctionsInfo(ctx context
 		conn.Context.ExtraContext = map[string]string{}
 	}
 
-	config := &sriov.FreeVirtualFunctionsInfo{
-		FreeVirtualFunctions: map[string]int{},
-	}
-
-	for _, netResource := range a.resourcePool.Resources {
-		pf := netResource.PhysicalFunction
-		freeVfs := getFreeVirtualFunctionsNumber(pf)
-
-		config.FreeVirtualFunctions[pf.PCIAddress] = freeVfs
-	}
-
-	strCfg, err := sriov.MarshallFreeVirtualFunctionsInfo(config)
+	info := a.resourcePool.GetFreeVirtualFunctionsInfo()
+	yamlInfo, err := info.Marshall()
 	if err != nil {
 		return nil, err
 	}
 
-	conn.GetContext().GetExtraContext()[sriov.FreeVirtualFunctionsInfoKey] = strCfg
-	log.Entry(ctx).Infof("Added info about free virtual functions into the ExtraContext for connection %s: %s", conn.GetId(), strCfg)
+	conn.GetContext().GetExtraContext()[sriov.FreeVirtualFunctionsInfoKey] = yamlInfo
+	log.Entry(ctx).Infof("Added info about free virtual functions into the ExtraContext for connection %s: %s", conn.GetId(), yamlInfo)
 
 	return conn, nil
-}
-
-func getFreeVirtualFunctionsNumber(pf *sriov.PhysicalFunction) int {
-	freeVfs := 0
-	for _, state := range pf.VirtualFunctions {
-		if state == sriov.FreeVirtualFunction {
-			freeVfs++
-		}
-	}
-	return freeVfs
 }

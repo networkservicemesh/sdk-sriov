@@ -31,19 +31,19 @@ type FreeVirtualFunctionsInfo struct {
 	FreeVirtualFunctions map[string]int `yaml:"free_vfs"`
 }
 
-// MarshallFreeVirtualFunctionsInfo converts FreeVirtualFunctionsInfo to yaml representation
-func MarshallFreeVirtualFunctionsInfo(config *FreeVirtualFunctionsInfo) (string, error) {
-	data, err := yaml.Marshal(config)
+// Marshall converts FreeVirtualFunctionsInfo to yaml representation
+func (f *FreeVirtualFunctionsInfo) Marshall() (string, error) {
+	data, err := yaml.Marshal(f)
 	if err != nil {
-		return "", errors.Wrapf(err, "error marshaling FreeVirtualFunctions: %+v", config)
+		return "", errors.Wrapf(err, "error marshaling FreeVirtualFunctions: %+v", f)
 	}
 	strConfig := string(data)
 
 	return strConfig, nil
 }
 
-// UnmarshallFreeVirtualFunctionsInfo converts yaml representation of FreeVirtualFunctionsInfo to the golang structure
-func UnmarshallFreeVirtualFunctionsInfo(config string) (*FreeVirtualFunctionsInfo, error) {
+// ParseVirtualFunctionsInfo converts yaml representation of FreeVirtualFunctionsInfo to the golang structure
+func ParseVirtualFunctionsInfo(config string) (*FreeVirtualFunctionsInfo, error) {
 	stateConfig := &FreeVirtualFunctionsInfo{}
 
 	rawBytes := []byte(config)
