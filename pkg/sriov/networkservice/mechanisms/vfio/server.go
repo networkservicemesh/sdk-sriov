@@ -23,8 +23,6 @@ import (
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/vfio"
 	"github.com/pkg/errors"
 
-	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/utils"
-
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
@@ -54,7 +52,7 @@ func (a *vfioServer) Request(ctx context.Context, request *networkservice.Networ
 		return nil, errors.Errorf("No selected physical function provided")
 	}
 
-	_, err = utils.SelectVirtualFunction(pciAddress, a.resourcePool)
+	_, err = a.resourcePool.SelectVirtualFunction(pciAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +68,7 @@ func (a *vfioServer) Close(ctx context.Context, conn *networkservice.Connection)
 		return nil, errors.Errorf("No physical function PCI address found")
 	}
 
-	// TODO get required VFIO fields from Connection and free virtual function
+	// TODO get required VFIO fields from Connection and release virtual function
 
 	return next.Server(ctx).Close(ctx, conn)
 }

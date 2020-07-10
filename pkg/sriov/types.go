@@ -38,29 +38,10 @@ type NetResourcePool struct {
 	lock      sync.Mutex
 }
 
-// GetFreeVirtualFunctionsInfo returns map containing number of free virtual functions for each physical function
-// in the pool keyed by physical function's PCI address
-func (n *NetResourcePool) GetFreeVirtualFunctionsInfo() *FreeVirtualFunctionsInfo {
-	n.lock.Lock()
-	defer n.lock.Unlock()
-
-	info := &FreeVirtualFunctionsInfo{
-		FreeVirtualFunctions: map[string]int{},
-	}
-
-	for _, netResource := range n.Resources {
-		pf := netResource.PhysicalFunction
-		freeVfs := pf.GetFreeVirtualFunctionsNumber()
-		info.FreeVirtualFunctions[pf.PCIAddress] = freeVfs
-	}
-
-	return info
-}
-
 // SelectVirtualFunction marks one of the free virtual functions for specified physical function as in-use and returns it
 func (n *NetResourcePool) SelectVirtualFunction(pfPCIAddr string) (selectedVf *VirtualFunction, err error) {
-	n.Lock()
-	defer n.Unlock()
+	n.lock.Lock()
+	defer n.lock.Unlock()
 
 	for _, netResource := range n.Resources {
 		pf := netResource.PhysicalFunction
@@ -93,8 +74,8 @@ func (n *NetResourcePool) SelectVirtualFunction(pfPCIAddr string) (selectedVf *V
 
 // ReleaseVirtualFunction marks given virtual function as free
 func (n *NetResourcePool) ReleaseVirtualFunction(pfPCIAddr, vfNetIfaceName string) error {
-	n.Lock()
-	defer n.Unlock()
+	n.lock.Lock()
+	defer n.lock.Unlock()
 
 	for _, netResource := range n.Resources {
 		pf := netResource.PhysicalFunction
@@ -137,17 +118,6 @@ func (p *PhysicalFunction) SetVirtualFunctionState(vf *VirtualFunction, state Vi
 	}
 	p.VirtualFunctions[vf] = state
 	return nil
-}
-
-// GetFreeVirtualFunctionsNumber returns number of virtual functions that have FreeVirtualFunction state
-func (p *PhysicalFunction) GetFreeVirtualFunctionsNumber() int {
-	freeVfs := 0
-	for _, state := range p.VirtualFunctions {
-		if state == FreeVirtualFunction {
-			freeVfs++
-		}
-	}
-	return freeVfs
 }
 
 // VirtualFunction contains information about virtual function

@@ -6,10 +6,10 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/golang/protobuf v1.4.2
 	github.com/networkservicemesh/api v0.0.0-20200626035416-b2c37e63dc22
-	github.com/networkservicemesh/sdk v0.0.0-20200706183955-f1dcb53ebf60
+	github.com/networkservicemesh/sdk v0.0.0-20200709161725-180df7825ad2
 	github.com/networkservicemesh/sdk-kernel v0.0.0-20200422171216-9123e90617f0
 	github.com/pkg/errors v0.9.1
-	github.com/sirupsen/logrus v1.4.2
+	github.com/sirupsen/logrus v1.6.0
 	github.com/stretchr/testify v1.5.1
 	github.com/vishvananda/netns v0.0.0-20200520041808-52d707b772fe
 	go.uber.org/goleak v1.0.0

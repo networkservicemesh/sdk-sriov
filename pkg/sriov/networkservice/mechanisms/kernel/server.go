@@ -19,33 +19,36 @@ package kernel
 
 import (
 	"context"
-	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/utils"
+
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 	"github.com/vishvananda/netns"
+
+	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/utils"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/kernel"
 	"github.com/pkg/errors"
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
-	sdkKernel "github.com/networkservicemesh/sdk-kernel/pkg/kernel"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov"
 )
 
 type kernelServer struct {
-	resourcePool *sriov.NetResourcePool
+	resourcePool   *sriov.NetResourcePool
+	kernelProvider utils.KernelProvider
 }
 
 // NewServer return a NetworkServiceServer chain element that correctly handles the kernel Mechanism
-func NewServer(resourcePool *sriov.NetResourcePool) networkservice.NetworkServiceServer {
+func NewServer(resourcePool *sriov.NetResourcePool, kernelProvider utils.KernelProvider) networkservice.NetworkServiceServer {
 	return &kernelServer{
-		resourcePool: resourcePool,
+		resourcePool:   resourcePool,
+		kernelProvider: kernelProvider,
 	}
 }
 
-func (a *kernelServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
+func (k *kernelServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
 	conn, err := next.Server(ctx).Request(ctx, request)
 	if err != nil {
 		return nil, err
@@ -57,12 +60,11 @@ func (a *kernelServer) Request(ctx context.Context, request *networkservice.Netw
 		return nil, errors.Errorf("No selected physical function provided")
 	}
 
-	selectedVf, err := a.resourcePool.SelectVirtualFunction(pciAddress)
+	selectedVf, err := k.resourcePool.SelectVirtualFunction(pciAddress)
 	if err != nil {
 		_, _ = next.Server(ctx).Close(ctx, conn)
 		return nil, err
 	}
-
 	ifaceName := selectedVf.NetInterfaceName
 	conn.GetMechanism().GetParameters()[kernel.InterfaceNameKey] = ifaceName
 
@@ -72,13 +74,13 @@ func (a *kernelServer) Request(ctx context.Context, request *networkservice.Netw
 		return nil, errors.Wrapf(err, "Unable to obtain Forwarder's network namespace handle")
 	}
 
-	clientNetNSHandle, err := getClientNetNSHandle(request.GetConnection())
+	clientNetNSHandle, err := k.getClientNetNSHandle(conn)
 	if err != nil {
 		_, _ = next.Server(ctx).Close(ctx, conn)
 		return nil, errors.Wrapf(err, "Unable to obtain Client's network namespace handle")
 	}
 
-	err = moveInterfaceToAnotherNamespace(ifaceName, forwarderNetNSHandle, clientNetNSHandle)
+	err = k.kernelProvider.MoveInterfaceToAnotherNamespace(ifaceName, forwarderNetNSHandle, clientNetNSHandle)
 	if err != nil {
 		_, _ = next.Server(ctx).Close(ctx, conn)
 		return nil, errors.Wrapf(err, "Unable to move network interface %s into the Client's namespace", ifaceName)
@@ -88,8 +90,8 @@ func (a *kernelServer) Request(ctx context.Context, request *networkservice.Netw
 	return conn, nil
 }
 
-func (a *kernelServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {
-	_, _ = next.Server(ctx).Close(ctx, conn)
+func (k *kernelServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {
+	_, errFromNext := next.Server(ctx).Close(ctx, conn)
 
 	pciAddress, ok := conn.GetMechanism().GetParameters()[kernel.PCIAddress]
 	if !ok {
@@ -106,44 +108,30 @@ func (a *kernelServer) Close(ctx context.Context, conn *networkservice.Connectio
 		return nil, errors.Wrapf(err, "Unable to obtain Forwarder's network namespace handle")
 	}
 
-	clientNetNSHandle, err := getClientNetNSHandle(conn)
+	clientNetNSHandle, err := k.getClientNetNSHandle(conn)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Unable to obtain Client's network namespace handle")
 	}
 
-	err = moveInterfaceToAnotherNamespace(ifaceName, clientNetNSHandle, forwarderNetNSHandle)
+	err = k.kernelProvider.MoveInterfaceToAnotherNamespace(ifaceName, clientNetNSHandle, forwarderNetNSHandle)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Unable to move network interface %s into the Forwarder's namespace", ifaceName)
 	}
 	log.Entry(ctx).Infof("Moved network interface %s into the Forwarder's namespace for connection %s", ifaceName, conn.GetId())
 
-	err = a.resourcePool.ReleaseVirtualFunction(pciAddress, ifaceName)
+	err = k.resourcePool.ReleaseVirtualFunction(pciAddress, ifaceName)
 	if err != nil {
 		return nil, err
 	}
 
-	return &empty.Empty{}, nil
+	return &empty.Empty{}, errFromNext
 }
 
-func moveInterfaceToAnotherNamespace(ifaceName string, fromNetNS, toNetNS netns.NsHandle) error {
-	link, err := sdkKernel.FindHostDevice("", ifaceName, fromNetNS)
-	if err != nil {
-		return err
-	}
-
-	err = link.MoveToNetns(toNetNS)
-	if err != nil {
-		return errors.Wrapf(err, "Failed to move interface %s to another namespace", ifaceName)
-	}
-
-	return nil
-}
-
-func getClientNetNSHandle(conn *networkservice.Connection) (netns.NsHandle, error) {
+func (k *kernelServer) getClientNetNSHandle(conn *networkservice.Connection) (netns.NsHandle, error) {
 	clientNetNSInode := conn.GetMechanism().GetParameters()[kernel.NetNSInodeKey]
 	if clientNetNSInode == "" {
 		return 0, errors.New("Client's pod net ns inode is not found")
 	}
 
-	return utils.GetNSHandleFromInode(clientNetNSInode)
+	return k.kernelProvider.GetNSHandleFromInode(clientNetNSInode)
 }
