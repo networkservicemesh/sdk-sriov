@@ -35,14 +35,14 @@ const (
 // NetResourcePool provides contains information about net devices
 type NetResourcePool struct {
 	Resources []*NetResource
-	sync.Mutex
+	lock      sync.Mutex
 }
 
 // GetFreeVirtualFunctionsInfo returns map containing number of free virtual functions for each physical function
 // in the pool keyed by physical function's PCI address
 func (n *NetResourcePool) GetFreeVirtualFunctionsInfo() *FreeVirtualFunctionsInfo {
-	n.Lock()
-	defer n.Unlock()
+	n.lock.Lock()
+	defer n.lock.Unlock()
 
 	info := &FreeVirtualFunctionsInfo{
 		FreeVirtualFunctions: map[string]int{},
