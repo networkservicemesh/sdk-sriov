@@ -113,6 +113,7 @@ github.com/networkservicemesh/api v0.0.0-20200616160323-8c25fb122dcc h1:2zdzwzbW
 github.com/networkservicemesh/api v0.0.0-20200616160323-8c25fb122dcc/go.mod h1:6hH0TfujZVin9W/6rWY7JnmNBNRvUrgXhr1aWyKuQKI=
 github.com/networkservicemesh/sdk v0.0.0-20200622071231-c5c9736e0ca5 h1:37svGPXWe7bd8Ai6Cy099cQ5zVttgz678S7aZ4F9MSo=
 github.com/networkservicemesh/sdk v0.0.0-20200622071231-c5c9736e0ca5/go.mod h1:46ltR9qUyePZLnbZGo2gcojTZy4FGeaM4MKm7TDy65I=
+github.com/networkservicemesh/sdk v0.0.0-20200713165129-52bd2e34c31b h1:EyLqcndpFqLEeL1Y+2qBiUmw37cgQ0mNLOMfpwtolrU=
 github.com/olekukonko/tablewriter v0.0.1/go.mod h1:vsDQFd/mU46D+Z4whnwzcISnGGzXWMclvtLoiIKAKIo=
 github.com/open-policy-agent/opa v0.16.1 h1:BDADmi1Xl08aPcubaYgSEU0lJ/zrWDwmFMRXVPX856c=
 github.com/open-policy-agent/opa v0.16.1/go.mod h1:P0xUE/GQAAgnvV537GzA0Ikw4+icPELRT327QJPkaKY=

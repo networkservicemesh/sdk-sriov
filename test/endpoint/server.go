@@ -27,7 +27,6 @@ import (
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/networkservice/common/selectorpciaddress"
 
 	"github.com/networkservicemesh/sdk/pkg/networkservice/chains/endpoint"
-	"github.com/networkservicemesh/sdk/pkg/networkservice/common/clienturl"
 	"github.com/networkservicemesh/sdk/pkg/tools/token"
 
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov"
@@ -46,7 +45,6 @@ func NewServer(name string, authzServer networkservice.NetworkServiceServer, tok
 		name,
 		authzServer,
 		tokenGenerator,
-		clienturl.NewServer(clientURL),
 		mechanisms.NewServer(map[string]networkservice.NetworkServiceServer{
 			kernel.MECHANISM: selectorpciaddress.NewServer(config, kernel.PCIAddress),
 			vfio.MECHANISM:   selectorpciaddress.NewServer(config, vfio.PCIAddress),

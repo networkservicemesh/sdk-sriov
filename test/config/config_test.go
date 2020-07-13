@@ -38,10 +38,9 @@ const (
 func TestReadConfigFile(t *testing.T) {
 	configList, _ := sriov.ReadConfig(context.Background(), configFileName)
 	assert.NotNil(t, configList)
-	resConfig := configList.Domains[0]
-	assert.NotNil(t, resConfig)
-	assert.Equal(t, hostName, resConfig.HostName)
-	pciDevice := resConfig.PCIDevices[0]
+	pciDevices := configList.Domains[hostName]
+	assert.NotNil(t, pciDevices)
+	pciDevice := pciDevices[0]
 	assert.Equal(t, pciAddress, pciDevice.PCIAddress)
 	assert.Equal(t, capability, pciDevice.Capability)
 	assert.Equal(t, macAddress, pciDevice.Target.MACAddress)

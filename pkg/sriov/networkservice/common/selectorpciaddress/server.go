@@ -31,13 +31,18 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 )
 
+type connectionInfo struct {
+	hostName   string
+	pciAddress string
+}
+
 type selectPCIAddressServer struct {
-	selector         *RoundRobinSelector
-	config           *sriov.Config
-	freeVFInfo       *FreeVirtualFunctionsInfo
-	connectedPCIAddr map[string]string
-	pciAddrKey       string
-	sync.Mutex
+	config        *sriov.Config
+	freeVFInfo    map[string]*FreeVirtualFunctionsInfo
+	connectedHost map[string]connectionInfo
+	decider       *roundrobin.IndexedDecider
+	pciAddrKey    string
+	lock          sync.Mutex
 }
 
 // FreeVirtualFunctionsInfoKey key value for virtual functions info
@@ -45,7 +50,7 @@ const FreeVirtualFunctionsInfoKey string = "FreeVFs"
 
 // FreeVirtualFunctionsInfo info about virtual functions
 type FreeVirtualFunctionsInfo struct {
-	// TODO add HostName
+	HostName             string         `yaml:"HostName"`
 	FreeVirtualFunctions map[string]int `yaml:"free_vfs"`
 }
 
@@ -60,43 +65,48 @@ func parseFreeVirtualFunctionsInfo(config string) (*FreeVirtualFunctionsInfo, er
 	return stateConfig, nil
 }
 
-///
-
 // NewServer - filters out mechanisms by type and provided pci address parametr
 func NewServer(config *sriov.Config, pciAddrKey string) networkservice.NetworkServiceServer {
+
+	// fill info about domain and corresponding pci address
+	freeVFInfo := map[string]*FreeVirtualFunctionsInfo{}
+	for domain, _ := range config.Domains {
+		freeVFInfo[domain] = &FreeVirtualFunctionsInfo{HostName: domain, FreeVirtualFunctions: map[string]int{}}
+	}
+
 	return &selectPCIAddressServer{
-		config:           config,
-		connectedPCIAddr: map[string]string{},
-		freeVFInfo:       &FreeVirtualFunctionsInfo{FreeVirtualFunctions: make(map[string]int)},
-		selector:         NewRoundRobinSelector(),
-		pciAddrKey:       pciAddrKey,
+		config:        config,
+		connectedHost: map[string]connectionInfo{},
+		freeVFInfo:    freeVFInfo,
+		pciAddrKey:    pciAddrKey,
+		decider:       &roundrobin.IndexedDecider,
 	}
 }
 
 // Search pci device in config
-// TODO add hostName, capability as parameters for filtering
-func isSupportedPci(pciAddress string, domains []sriov.ResourceDomain) bool {
-	for _, domain := range domains {
-		for _, pciDevice := range domain.PCIDevices {
-			if pciDevice.PCIAddress == pciAddress {
-				return true
-			}
+func (s *selectPCIAddressServer) isSupportedPci(pciAddress string, domainName string) bool {
+	for _, pciDevice := range s.config.Domains[domainName] {
+		if pciDevice.PCIAddress == pciAddress {
+			return true
 		}
 	}
 
 	return false
 }
 
-// check on
-func (s *selectPCIAddressServer) isChecked(pciAddress string, cntFreeVF int) bool {
+// check on available virtual functions for pciAddress
+func (s *selectPCIAddressServer) isAvailableVF(pciAddress string, domainName string, cntFreeVF int) bool {
 	if cntFreeVF > 0 {
 		// get corresponding num of free virtual function on endpoint side
-		cntEP, ok := s.freeVFInfo.FreeVirtualFunctions[pciAddress]
-		if !ok { // first request
-			s.freeVFInfo.FreeVirtualFunctions[pciAddress] = cntFreeVF
-			return true
-		} else if cntEP == cntFreeVF {
-			return true
+		freeVF, ok := s.freeVFInfo[domainName]
+		if ok {
+			cntEP, ok := freeVF.FreeVirtualFunctions[pciAddress]
+			if !ok { // first request
+				s.freeVFInfo[domainName].FreeVirtualFunctions[pciAddress] = cntFreeVF
+				return true
+			} else if cntEP == cntFreeVF {
+				return true
+			}
 		}
 	}
 
@@ -130,10 +140,8 @@ func isRequestValid(request *networkservice.NetworkServiceRequest) error {
 func (s *selectPCIAddressServer) filterPCIAddr(freeVFInfo *FreeVirtualFunctionsInfo) ([]string, error) {
 	var pciAddrList []string
 	for pciAddr, cntFreeVF := range freeVFInfo.FreeVirtualFunctions {
-		if isSupportedPci(pciAddr, s.config.Domains) {
-			if s.isChecked(pciAddr, cntFreeVF) {
-				pciAddrList = append(pciAddrList, pciAddr)
-			}
+		if s.isSupportedPci(pciAddr, freeVFInfo.HostName) && s.isAvailableVF(pciAddr, freeVFInfo.HostName, cntFreeVF) {
+			pciAddrList = append(pciAddrList, pciAddr)
 		}
 	}
 
@@ -145,8 +153,8 @@ func (s *selectPCIAddressServer) filterPCIAddr(freeVFInfo *FreeVirtualFunctionsI
 }
 
 func (s *selectPCIAddressServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
-	s.Lock()
-	defer s.Unlock()
+	s.lock.Lock()
+	defer s.lock.Unlock()
 
 	if err := isRequestValid(request); err != nil {
 		return nil, err
@@ -164,7 +172,8 @@ func (s *selectPCIAddressServer) Request(ctx context.Context, request *networkse
 		return nil, err
 	}
 
-	pciAddr := s.selector.SelectStringItem(pciAddrList)
+	selector := NewSelector(decider, pciAddrList)
+	pciAddr, _ := selector.Select()
 
 	connection, err := next.Server(ctx).Request(ctx, request)
 
@@ -175,25 +184,27 @@ func (s *selectPCIAddressServer) Request(ctx context.Context, request *networkse
 		}
 		request.GetConnection().GetMechanism().GetParameters()[s.pciAddrKey] = pciAddr
 		// mark connection Id with corresponding pci address
-		s.connectedPCIAddr[connection.GetId()] = pciAddr
+		connInfo := connectionInfo{pciAddress: pciAddr, hostName: freeVirtualFunctionsInfo.HostName}
+		s.connectedHost[connection.GetId()] = connInfo
 		// decrement
-		s.freeVFInfo.FreeVirtualFunctions[pciAddr]--
+		s.freeVFInfo[freeVirtualFunctionsInfo.HostName].FreeVirtualFunctions[pciAddr]--
 	}
 
 	return connection, err
 }
 
 func (s *selectPCIAddressServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {
-	s.Lock()
-	defer s.Unlock()
+	s.lock.Lock()
+	defer s.lock.Unlock()
 	emptyValue, err := next.Server(ctx).Close(ctx, conn)
 	if err == nil {
-		if pciAddr, ok := s.connectedPCIAddr[conn.GetId()]; ok {
+		if connInfo, ok := s.connectedHost[conn.GetId()]; ok {
+
 			// increment counter
-			s.freeVFInfo.FreeVirtualFunctions[pciAddr]++
+			s.freeVFInfo[connInfo.hostName].FreeVirtualFunctions[connInfo.pciAddress]++
 
 			// delete
-			delete(s.connectedPCIAddr, conn.GetId())
+			delete(s.connectedHost, conn.GetId())
 		}
 	}
 

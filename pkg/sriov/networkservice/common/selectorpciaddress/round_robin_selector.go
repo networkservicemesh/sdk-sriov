@@ -14,35 +14,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package selectorpciaddress provides a selection networkservice mechanism by round robins algorithm
+// Package selectorpciaddress provides a selection pci address by round robin algorithm
 package selectorpciaddress
 
 import (
-	"sync/atomic"
+	"github.com/networkservicemesh/sdk/pkg/tools/algorithm/roundrobin"
+	"github.com/networkservicemesh/sdk/pkg/tools/selector"
 )
 
-// RoundRobinSelector contains index for selecting
-type RoundRobinSelector struct {
-	index int32
+// supported data
+type stringArray struct {
+	items []string
+}
+
+func (a stringArray) GetOptions() ([]interface{}, error) {
+	result := make([]interface{}, 0)
+	for _, item := range a.items {
+		result = append(result, item)
+	}
+	return result, nil
 }
 
 // NewRoundRobinSelector create new selector
-func NewRoundRobinSelector() *RoundRobinSelector {
-	return &RoundRobinSelector{index: 0}
-}
-
-// SelectStringItem select item drom list
-func (rr *RoundRobinSelector) SelectStringItem(items []string) string {
-	if rr == nil || len(items) == 0 {
-		return ""
+func NewSelector(decider *roundrobin.IndexedDecider, strs []string) *selector.Selector {
+	return &selector.New{
+		decider,
+		&stringArray{items: strs},
 	}
-
-	idx := atomic.LoadInt32(&rr.index) % int32(len(items))
-	item := items[idx]
-	if item == "" {
-		return ""
-	}
-	atomic.AddInt32(&rr.index, 1)
-
-	return item
 }

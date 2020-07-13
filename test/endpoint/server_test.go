@@ -53,7 +53,7 @@ func getConnectionSetting(id string) *networkservice.Connection {
 		NetworkService: "my-service",
 		Context: &networkservice.ConnectionContext{
 			ExtraContext: map[string]string{
-				selectorpciaddress.FreeVirtualFunctionsInfoKey: "FreeVirtualFunctions:\n  \"0000:01:00:0\": 2\n  \"0000:02:00:0\": 1\n  \"0000:03:00:0\": 0\n",
+				selectorpciaddress.FreeVirtualFunctionsInfoKey: "HostName: service1.example.com\nFreeVirtualFunctions:\n  \"0000:01:00:0\": 2\n  \"0000:02:00:0\": 1\n  \"0000:03:00:0\": 0\n",
 			},
 		},
 		Path: &networkservice.Path{

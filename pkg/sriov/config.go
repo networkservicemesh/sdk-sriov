@@ -50,7 +50,7 @@ type ResourceDomain struct {
 
 // Config contains list of configuration for each host
 type Config struct {
-	Domains []ResourceDomain `yaml:"domains"`
+	Domains map[string][]PCIDevice `yaml:"domains"`
 }
 
 // ReadConfig reads configuration from file
