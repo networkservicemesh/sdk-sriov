@@ -20,8 +20,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/vishvananda/netns"
-
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	kernelMech "github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/kernel"
@@ -51,16 +49,6 @@ func (m mockedEndpoint) Request(context.Context, *networkservice.NetworkServiceR
 
 func (m mockedEndpoint) Close(context.Context, *networkservice.Connection) (*empty.Empty, error) {
 	return &empty.Empty{}, nil
-}
-
-type mockedKernelProvider struct{}
-
-func (m mockedKernelProvider) MoveInterfaceToAnotherNamespace(string, netns.NsHandle, netns.NsHandle) error {
-	return nil
-}
-
-func (m mockedKernelProvider) GetNSHandleFromInode(string) (netns.NsHandle, error) {
-	return 0, nil
 }
 
 func initVfs() (vf1, vf2 *sriov.VirtualFunction) {
@@ -112,7 +100,7 @@ func TestNewServer_SelectVirtualFunction(t *testing.T) {
 		},
 	}
 
-	server := next.NewNetworkServiceServer(kernel.NewServer(resourcePool, mockedKernelProvider{}), mockedEndpoint{conn: fromEndpoint})
+	server := next.NewNetworkServiceServer(kernel.NewServer(resourcePool), mockedEndpoint{conn: fromEndpoint})
 	conn, err := server.Request(context.Background(), &networkservice.NetworkServiceRequest{})
 	assert.Nil(t, err)
 	assert.Equal(t, expected, conn)
@@ -148,7 +136,7 @@ func TestNewServer_NoFreeVirtualFunctions(t *testing.T) {
 		},
 	}
 
-	server := next.NewNetworkServiceServer(kernel.NewServer(resourcePool, mockedKernelProvider{}), mockedEndpoint{conn: fromEndpoint})
+	server := next.NewNetworkServiceServer(kernel.NewServer(resourcePool), mockedEndpoint{conn: fromEndpoint})
 	conn, err := server.Request(context.Background(), &networkservice.NetworkServiceRequest{})
 	assert.Nil(t, conn)
 	assert.NotNil(t, err)
@@ -182,7 +170,7 @@ func TestNewServer_ReleaseVirtualFunctions(t *testing.T) {
 		},
 	}
 
-	client := next.NewNetworkServiceServer(kernel.NewServer(resourcePool, mockedKernelProvider{}))
+	client := next.NewNetworkServiceServer(kernel.NewServer(resourcePool))
 	_, err := client.Close(context.Background(), conn)
 	assert.Nil(t, err)
 

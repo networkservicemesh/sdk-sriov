@@ -20,11 +20,6 @@ package kernel
 import (
 	"context"
 
-	"github.com/networkservicemesh/sdk/pkg/tools/log"
-	"github.com/vishvananda/netns"
-
-	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/utils"
-
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/kernel"
 	"github.com/pkg/errors"
 
@@ -36,62 +31,51 @@ import (
 )
 
 type kernelServer struct {
-	resourcePool   *sriov.NetResourcePool
-	kernelProvider utils.KernelProvider
+	resourcePool *sriov.NetResourcePool
 }
 
 // NewServer return a NetworkServiceServer chain element that correctly handles the kernel Mechanism
-func NewServer(resourcePool *sriov.NetResourcePool, kernelProvider utils.KernelProvider) networkservice.NetworkServiceServer {
+func NewServer(resourcePool *sriov.NetResourcePool) networkservice.NetworkServiceServer {
 	return &kernelServer{
-		resourcePool:   resourcePool,
-		kernelProvider: kernelProvider,
+		resourcePool: resourcePool,
 	}
 }
 
-func (k *kernelServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
-	conn, err := next.Server(ctx).Request(ctx, request)
+func (k *kernelServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (conn *networkservice.Connection, err error) {
+	defer func() {
+		if err != nil {
+			// don't forget to call Close to release allocated resources on Endpoint side
+			_, _ = next.Server(ctx).Close(ctx, conn)
+		}
+	}()
+
+	conn, err = next.Server(ctx).Request(ctx, request)
 	if err != nil {
 		return nil, err
 	}
 
 	pciAddress, ok := conn.GetMechanism().GetParameters()[kernel.PCIAddress]
 	if !ok {
-		_, _ = next.Server(ctx).Close(ctx, conn)
 		return nil, errors.Errorf("No selected physical function provided")
 	}
 
 	selectedVf, err := k.resourcePool.SelectVirtualFunction(pciAddress)
 	if err != nil {
-		_, _ = next.Server(ctx).Close(ctx, conn)
 		return nil, err
 	}
-	ifaceName := selectedVf.NetInterfaceName
-	conn.GetMechanism().GetParameters()[kernel.InterfaceNameKey] = ifaceName
-
-	forwarderNetNSHandle, err := netns.Get()
-	if err != nil {
-		_, _ = next.Server(ctx).Close(ctx, conn)
-		return nil, errors.Wrapf(err, "Unable to obtain Forwarder's network namespace handle")
-	}
-
-	clientNetNSHandle, err := k.getClientNetNSHandle(conn)
-	if err != nil {
-		_, _ = next.Server(ctx).Close(ctx, conn)
-		return nil, errors.Wrapf(err, "Unable to obtain Client's network namespace handle")
-	}
-
-	err = k.kernelProvider.MoveInterfaceToAnotherNamespace(ifaceName, forwarderNetNSHandle, clientNetNSHandle)
-	if err != nil {
-		_, _ = next.Server(ctx).Close(ctx, conn)
-		return nil, errors.Wrapf(err, "Unable to move network interface %s into the Client's namespace", ifaceName)
-	}
-	log.Entry(ctx).Infof("Moved network interface %s into the Client's namespace for connection %s", ifaceName, request.GetConnection().GetId())
+	conn.GetMechanism().GetParameters()[kernel.InterfaceNameKey] = selectedVf.NetInterfaceName
 
 	return conn, nil
 }
 
-func (k *kernelServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {
-	_, errFromNext := next.Server(ctx).Close(ctx, conn)
+func (k *kernelServer) Close(ctx context.Context, conn *networkservice.Connection) (_ *empty.Empty, err error) {
+	_, err2 := next.Server(ctx).Close(ctx, conn)
+	defer func() {
+		if err2 != nil {
+			// we want to return initial error, not the latest one
+			err = err2
+		}
+	}()
 
 	pciAddress, ok := conn.GetMechanism().GetParameters()[kernel.PCIAddress]
 	if !ok {
@@ -103,35 +87,10 @@ func (k *kernelServer) Close(ctx context.Context, conn *networkservice.Connectio
 		return nil, errors.Errorf("No net interface name found")
 	}
 
-	forwarderNetNSHandle, err := netns.Get()
-	if err != nil {
-		return nil, errors.Wrapf(err, "Unable to obtain Forwarder's network namespace handle")
-	}
-
-	clientNetNSHandle, err := k.getClientNetNSHandle(conn)
-	if err != nil {
-		return nil, errors.Wrapf(err, "Unable to obtain Client's network namespace handle")
-	}
-
-	err = k.kernelProvider.MoveInterfaceToAnotherNamespace(ifaceName, clientNetNSHandle, forwarderNetNSHandle)
-	if err != nil {
-		return nil, errors.Wrapf(err, "Unable to move network interface %s into the Forwarder's namespace", ifaceName)
-	}
-	log.Entry(ctx).Infof("Moved network interface %s into the Forwarder's namespace for connection %s", ifaceName, conn.GetId())
-
 	err = k.resourcePool.ReleaseVirtualFunction(pciAddress, ifaceName)
 	if err != nil {
 		return nil, err
 	}
 
-	return &empty.Empty{}, errFromNext
-}
-
-func (k *kernelServer) getClientNetNSHandle(conn *networkservice.Connection) (netns.NsHandle, error) {
-	clientNetNSInode := conn.GetMechanism().GetParameters()[kernel.NetNSInodeKey]
-	if clientNetNSInode == "" {
-		return 0, errors.New("Client's pod net ns inode is not found")
-	}
-
-	return k.kernelProvider.GetNSHandleFromInode(clientNetNSInode)
+	return
 }

@@ -93,6 +93,25 @@ func (n *NetResourcePool) ReleaseVirtualFunction(pfPCIAddr, vfNetIfaceName strin
 	return errors.Errorf("no physical function with PCI address %s found", pfPCIAddr)
 }
 
+// GetFreeVirtualFunctionsInfo returns map containing number of free virtual functions for each physical function
+// in the pool keyed by physical function's PCI address
+func (n *NetResourcePool) GetFreeVirtualFunctionsInfo() *FreeVirtualFunctionsInfo {
+	n.lock.Lock()
+	defer n.lock.Unlock()
+
+	info := &FreeVirtualFunctionsInfo{
+		FreeVirtualFunctions: map[string]int{},
+	}
+
+	for _, netResource := range n.Resources {
+		pf := netResource.PhysicalFunction
+		freeVfs := pf.GetFreeVirtualFunctionsNumber()
+		info.FreeVirtualFunctions[pf.PCIAddress] = freeVfs
+	}
+
+	return info
+}
+
 // NetResource contains information about net device
 type NetResource struct {
 	Capability       string
@@ -118,6 +137,17 @@ func (p *PhysicalFunction) SetVirtualFunctionState(vf *VirtualFunction, state Vi
 	}
 	p.VirtualFunctions[vf] = state
 	return nil
+}
+
+// GetFreeVirtualFunctionsNumber returns number of virtual functions that have FreeVirtualFunction state
+func (p *PhysicalFunction) GetFreeVirtualFunctionsNumber() int {
+	freeVfs := 0
+	for _, state := range p.VirtualFunctions {
+		if state == FreeVirtualFunction {
+			freeVfs++
+		}
+	}
+	return freeVfs
 }
 
 // VirtualFunction contains information about virtual function
