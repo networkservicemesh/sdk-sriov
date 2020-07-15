@@ -34,6 +34,7 @@ const (
 
 // NetResourcePool provides contains information about net devices
 type NetResourcePool struct {
+	HostName  string
 	Resources []*NetResource
 	lock      sync.Mutex
 }
@@ -45,6 +46,7 @@ func (n *NetResourcePool) GetFreeVirtualFunctionsInfo() *FreeVirtualFunctionsInf
 	defer n.lock.Unlock()
 
 	info := &FreeVirtualFunctionsInfo{
+		HostName:             n.HostName,
 		FreeVirtualFunctions: map[string]int{},
 	}
 

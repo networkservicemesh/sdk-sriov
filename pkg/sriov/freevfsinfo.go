@@ -28,6 +28,7 @@ const FreeVirtualFunctionsInfoKey string = "FreeVFs"
 // FreeVirtualFunctionsInfo contains information about number of free virtual functions per physical function keyed
 // by its PCI address for specified host
 type FreeVirtualFunctionsInfo struct {
+	HostName             string         `yaml:"hostname"`
 	FreeVirtualFunctions map[string]int `yaml:"free_vfs"`
 }
 
