@@ -20,12 +20,13 @@ package kernel
 import (
 	"context"
 
+	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/kernel"
 	"github.com/pkg/errors"
 
-	"github.com/golang/protobuf/ptypes/empty"
-	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
+	"github.com/networkservicemesh/sdk/pkg/tools/log"
 
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov"
 )
@@ -45,7 +46,10 @@ func (k *kernelServer) Request(ctx context.Context, request *networkservice.Netw
 	defer func() {
 		if err != nil {
 			// don't forget to call Close to release allocated resources on Endpoint side
-			_, _ = next.Server(ctx).Close(ctx, conn)
+			_, errOnClose := next.Server(ctx).Close(ctx, conn)
+			if errOnClose != nil {
+				log.Entry(ctx).Error(errOnClose)
+			}
 		}
 	}()
 
@@ -69,11 +73,11 @@ func (k *kernelServer) Request(ctx context.Context, request *networkservice.Netw
 }
 
 func (k *kernelServer) Close(ctx context.Context, conn *networkservice.Connection) (_ *empty.Empty, err error) {
-	_, err2 := next.Server(ctx).Close(ctx, conn)
+	_, errFromNext := next.Server(ctx).Close(ctx, conn)
 	defer func() {
-		if err2 != nil {
+		if errFromNext != nil {
 			// we want to return initial error, not the latest one
-			err = err2
+			err = errFromNext
 		}
 	}()
 
