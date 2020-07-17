@@ -35,6 +35,7 @@ func TestNewClient_AddFreeVirtualFunctionsInfo(t *testing.T) {
 	defer goleak.VerifyNone(t)
 
 	resourcePool := &sriov.NetResourcePool{
+		HostName: "example.com",
 		Resources: []*sriov.NetResource{
 			{
 				PhysicalFunction: &sriov.PhysicalFunction{
@@ -72,7 +73,7 @@ func TestNewClient_AddFreeVirtualFunctionsInfo(t *testing.T) {
 		Connection: &networkservice.Connection{
 			Context: &networkservice.ConnectionContext{
 				ExtraContext: map[string]string{
-					sriov.FreeVirtualFunctionsInfoKey: "FreeVirtualFunctions:\n  \"0000:00:01:0\": 2\n  \"0000:00:02:0\": 1\n  \"0000:00:03:0\": 0\n",
+					sriov.FreeVirtualFunctionsInfoKey: "FreeVirtualFunctions:\n  \"0000:00:01:0\": 2\n  \"0000:00:02:0\": 1\n  \"0000:00:03:0\": 0\nHostName: example.com\n",
 				},
 			},
 		},
