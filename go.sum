@@ -103,8 +103,8 @@ github.com/nats-io/nuid v1.0.1/go.mod h1:19wcPz3Ph3q0Jbyiqsd0kePYG7A95tJPxeL+1OS
 github.com/nats-io/stan.go v0.6.0/go.mod h1:eIcD5bi3pqbHT/xIIvXMwvzXYElgouBvaVRftaE+eac=
 github.com/networkservicemesh/api v0.0.0-20200626035416-b2c37e63dc22 h1:k1iryme3ckQpHc3w2Ry5n+UBs1W3ivKxOsfxSGYaBk0=
 github.com/networkservicemesh/api v0.0.0-20200626035416-b2c37e63dc22/go.mod h1:6hH0TfujZVin9W/6rWY7JnmNBNRvUrgXhr1aWyKuQKI=
-github.com/networkservicemesh/sdk v0.0.0-20200707071838-06fc56186b09 h1:yUEQYq7P6gBJQ6cJGBJbqbUh3vIBIu0yfBxdwgX4pCY=
-github.com/networkservicemesh/sdk v0.0.0-20200707071838-06fc56186b09/go.mod h1:DJ4hkVnXOIyJqqJbOTmZTLhCLlkEjCOcvSp++OCPfOs=
+github.com/networkservicemesh/sdk v0.0.0-20200714062039-c7eada33195c h1:20R8A1IO6wpoywCJ7ZiAQtV/OKHpalf+7e+GfNZPi4k=
+github.com/networkservicemesh/sdk v0.0.0-20200714062039-c7eada33195c/go.mod h1:DJ4hkVnXOIyJqqJbOTmZTLhCLlkEjCOcvSp++OCPfOs=
 github.com/olekukonko/tablewriter v0.0.1/go.mod h1:vsDQFd/mU46D+Z4whnwzcISnGGzXWMclvtLoiIKAKIo=
 github.com/open-policy-agent/opa v0.16.1/go.mod h1:P0xUE/GQAAgnvV537GzA0Ikw4+icPELRT327QJPkaKY=
 github.com/opentracing/opentracing-go v1.1.0/go.mod h1:UkNAQd3GIcIGf0SeVgPpRdFStlNbqXla1AfSYxPUl2o=

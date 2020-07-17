@@ -39,6 +39,61 @@ type NetResourcePool struct {
 	lock      sync.Mutex
 }
 
+// SelectVirtualFunction marks one of the free virtual functions for specified physical function as in-use and returns it
+func (n *NetResourcePool) SelectVirtualFunction(pfPCIAddr string) (selectedVf *VirtualFunction, err error) {
+	n.lock.Lock()
+	defer n.lock.Unlock()
+
+	for _, netResource := range n.Resources {
+		pf := netResource.PhysicalFunction
+		if pf.PCIAddress != pfPCIAddr {
+			continue
+		}
+
+		// select the first free virtual function
+		for vf, state := range pf.VirtualFunctions {
+			if state == FreeVirtualFunction {
+				selectedVf = vf
+				break
+			}
+		}
+		if selectedVf == nil {
+			return nil, errors.Errorf("no free virtual function found for device %s", pfPCIAddr)
+		}
+
+		// mark it as in use
+		err = pf.SetVirtualFunctionState(selectedVf, UsedVirtualFunction)
+		if err != nil {
+			return nil, err
+		}
+
+		return selectedVf, nil
+	}
+
+	return nil, errors.Errorf("no physical function with PCI address %s found", pfPCIAddr)
+}
+
+// ReleaseVirtualFunction marks given virtual function as free
+func (n *NetResourcePool) ReleaseVirtualFunction(pfPCIAddr, vfNetIfaceName string) error {
+	n.lock.Lock()
+	defer n.lock.Unlock()
+
+	for _, netResource := range n.Resources {
+		pf := netResource.PhysicalFunction
+		if pf.PCIAddress != pfPCIAddr {
+			continue
+		}
+
+		for vf := range pf.VirtualFunctions {
+			if vf.NetInterfaceName == vfNetIfaceName {
+				return pf.SetVirtualFunctionState(vf, FreeVirtualFunction)
+			}
+		}
+		return errors.Errorf("no virtual function with net interface name %s found", vfNetIfaceName)
+	}
+	return errors.Errorf("no physical function with PCI address %s found", pfPCIAddr)
+}
+
 // GetFreeVirtualFunctionsInfo returns map containing number of free virtual functions for each physical function
 // in the pool keyed by physical function's PCI address
 func (n *NetResourcePool) GetFreeVirtualFunctionsInfo() *FreeVirtualFunctionsInfo {
