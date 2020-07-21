@@ -17,6 +17,11 @@
 package sriov
 
 import (
+	"context"
+	"fmt"
+	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/utils"
+	"github.com/sirupsen/logrus"
+	"github.com/vishvananda/netlink"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -114,6 +119,107 @@ func (n *NetResourcePool) GetFreeVirtualFunctionsInfo() *FreeVirtualFunctionsInf
 	return info
 }
 
+func (n *NetResourcePool) AddNetDevices(config *ResourceDomain) error {
+	n.lock.Lock()
+	defer n.lock.Unlock()
+
+	sriovProvider := utils.NewSriovProvider(utils.SysfsDevicesPath)
+	ctx := context.Background()
+
+	for _, device := range config.PCIDevices {
+		pfPciAddr := device.PCIAddress
+
+		err := n.validateDevice(pfPciAddr)
+		if err != nil {
+			return fmt.Errorf("invalid device: %v", err)
+		}
+
+		exists, err := sriovProvider.IsDeviceExists(ctx, pfPciAddr)
+		if err != nil {
+			return err
+		}
+		if !exists {
+			return errors.Errorf("Unable to find device: %s", pfPciAddr)
+		}
+		vfCapacity, err := sriovProvider.GetSriovVirtualFunctionsCapacity(ctx, pfPciAddr)
+		if err != nil {
+			return errors.Wrapf(err, "Unable to determine virtual functions capacity for device: %s", pfPciAddr)
+		}
+
+		physfun := &PhysicalFunction{
+			PCIAddress:               pfPciAddr,
+			VirtualFunctionsCapacity: vfCapacity,
+			NetInterfaceName:         "",
+			VirtualFunctions:         map[*VirtualFunction]VirtualFunctionState{},
+		}
+
+		pfIfaceNames, err := sriovProvider.GetNetInterfacesNames(ctx, pfPciAddr)
+		if err != nil {
+			return fmt.Errorf("unable to determine net interface name for device %s: %v", pfPciAddr, err)
+		}
+		physfun.NetInterfaceName = pfIfaceNames[0]
+
+		err = sriovProvider.CreateVirtualFunctions(ctx, pfPciAddr, physfun.VirtualFunctionsCapacity)
+		if err != nil {
+			return fmt.Errorf("unable to create vitual functions for device %s: %v", pfPciAddr, err)
+		}
+
+		vfs, err := sriovProvider.GetVirtualFunctionsList(ctx, pfPciAddr)
+		if err != nil {
+			return fmt.Errorf("unable to discover vitual functions for device %s: %v", pfPciAddr, err)
+		}
+
+		for _, vfPciAddr := range vfs {
+			vfIfaceNames, err := sriovProvider.GetNetInterfacesNames(ctx, vfPciAddr)
+			if err != nil {
+				return fmt.Errorf("unable to determine net interface name for device %s: %v", vfPciAddr, err)
+			}
+			vf := &VirtualFunction{
+				PCIAddress:       vfPciAddr,
+				NetInterfaceName: vfIfaceNames[0],
+			}
+			physfun.VirtualFunctions[vf] = FreeVirtualFunction
+		}
+
+		netRes := &NetResource{
+			// TODO also check capability by checking device.GetLinkSpeed???
+			Capability:       "",
+			PhysicalFunction: physfun,
+		}
+		n.Resources = append(n.Resources, netRes)
+	}
+	return nil
+}
+
+func (rp *NetResourcePool) validateDevice(pciAddr string) error {
+	sriovProvider := utils.NewSriovProvider(utils.SysfsDevicesPath)
+	ctx := context.Background()
+
+	if exists, err := sriovProvider.IsDeviceExists(ctx, pciAddr); err != nil || !exists {
+		return err
+	}
+
+	if !sriovProvider.IsDeviceSriovCapable(ctx, pciAddr) {
+		return fmt.Errorf("device %s is not SR-IOV capable", pciAddr)
+	}
+
+	// TODO think about what we do with already configured devices
+	if sriovProvider.IsSriovConfigured(ctx, pciAddr) {
+		return fmt.Errorf("device %s is alredy configured", pciAddr)
+	}
+
+	ifaceNames, err := sriovProvider.GetNetInterfacesNames(ctx, pciAddr)
+	if err != nil {
+		return fmt.Errorf("unable to determine net interface name for device %s: %v", pciAddr, err)
+	}
+	// exclude net device in-use in host
+	if isDefaultRoute, _ := isDefaultRoute(ifaceNames); isDefaultRoute {
+		return fmt.Errorf("device %s is in-use in host", pciAddr)
+	}
+
+	return nil
+}
+
 // NetResource contains information about net device
 type NetResource struct {
 	Capability       string
@@ -156,4 +262,31 @@ func (p *PhysicalFunction) GetFreeVirtualFunctionsNumber() int {
 type VirtualFunction struct {
 	PCIAddress       string
 	NetInterfaceName string
+}
+
+// IsDefaultRoute returns true if PCI network device is default route interface
+func isDefaultRoute(ifNames []string) (bool, error) {
+	if len(ifNames) > 0 { // there's at least one interface name found
+		for _, ifName := range ifNames {
+			link, err := netlink.LinkByName(ifName)
+			if err != nil {
+				logrus.Errorf("expected to get valid host interface with name %s: %q", ifName, err)
+				continue
+			}
+
+			routes, err := netlink.RouteList(link, netlink.FAMILY_V4) // IPv6 routes: all interface has at least one link local route entry
+			if err != nil {
+				logrus.Errorf("expected to get valid routes for interface with name %s: %q", ifName, err)
+				continue
+			}
+
+			for idx := range routes {
+				if routes[idx].Dst == nil {
+					logrus.Infof("excluding interface %s: default route found: %+v", ifName, routes[idx])
+					return true, nil
+				}
+			}
+		}
+	}
+	return false, nil
 }

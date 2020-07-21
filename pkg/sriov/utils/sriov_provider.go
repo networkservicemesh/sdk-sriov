@@ -34,6 +34,7 @@ import (
 )
 
 const (
+	SysfsDevicesPath     = "/sys/bus/pci/devices/"
 	totalVfFile          = "sriov_totalvfs"
 	configuredVfFile     = "sriov_numvfs"
 	physicalFunctionPath = "physfn"

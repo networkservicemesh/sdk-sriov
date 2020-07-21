@@ -9,5 +9,6 @@ require (
 	github.com/networkservicemesh/sdk v0.0.0-20200714062039-c7eada33195c
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.5.1
+	github.com/vishvananda/netlink v1.1.0
 	go.uber.org/goleak v1.0.0
 )
