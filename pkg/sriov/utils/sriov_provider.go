@@ -34,6 +34,7 @@ import (
 )
 
 const (
+	// SysfsDevicesPath is path to the devices info in Linux sysfs pseudo file system
 	SysfsDevicesPath     = "/sys/bus/pci/devices/"
 	totalVfFile          = "sriov_totalvfs"
 	configuredVfFile     = "sriov_numvfs"
