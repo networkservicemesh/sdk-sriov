@@ -18,7 +18,6 @@ package sriov
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/sirupsen/logrus"
@@ -214,10 +213,10 @@ func (n *NetResourcePool) validateDevice(ctx context.Context, sriovProvider util
 	// exclude net device in-use in host
 	ifaceNames, err := sriovProvider.GetNetInterfacesNames(ctx, pciAddr)
 	if err != nil {
-		return fmt.Errorf("unable to determine net interface name for device %s: %v", pciAddr, err)
+		return errors.Wrapf(err, "unable to determine net interface name for device %s", pciAddr)
 	}
 	if isDefaultRoute := isDefaultRoute(ifaceNames); isDefaultRoute {
-		return fmt.Errorf("device %s is in-use in host", pciAddr)
+		return errors.Errorf("device %s is in-use in host", pciAddr)
 	}
 
 	return nil
