@@ -27,13 +27,13 @@ import (
 	"github.com/pkg/errors"
 )
 
-// TargetAddress contains mac address and additional information
+// TargetAddress contains PCI address and additional information
 type TargetAddress struct {
-	MACAddress string            `yaml:"macAddress"`
+	PCIAddress string            `yaml:"pciAddress"`
 	Labels     map[string]string `yaml:"labels"`
 }
 
-// PCIDevice contains config for each device and corresponding mac address on endpoint side
+// PCIDevice contains config for each device and corresponding PCI address on endpoint side
 type PCIDevice struct {
 	PCIAddress string            `yaml:"pciAddress"`
 	Capability string            `yaml:"capability"`
