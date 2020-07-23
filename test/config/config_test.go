@@ -26,10 +26,10 @@ import (
 )
 
 const (
-	hostName   = "service1.example.com"
-	pciAddress = "0000:01:00:0"
-	capability = "10G"
-	macAddress = "00:0a:95:9d:68:16"
+	hostName         = "service1.example.com"
+	pciAddress       = "0000:01:00:0"
+	capability       = "10G"
+	targetPCIAddress = "0000:02:00:0"
 
 	configFileName = "config.yml"
 )
@@ -44,5 +44,5 @@ func TestReadConfigFile(t *testing.T) {
 	pciDevice := resConfig.PCIDevices[0]
 	assert.Equal(t, pciAddress, pciDevice.PCIAddress)
 	assert.Equal(t, capability, pciDevice.Capability)
-	assert.Equal(t, macAddress, pciDevice.Target.MACAddress)
+	assert.Equal(t, targetPCIAddress, pciDevice.Target.PCIAddress)
 }
