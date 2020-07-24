@@ -55,9 +55,9 @@ type NetResourcePool struct {
 // InitResourcePool configures devices, specified in provided config and initializes resource pool with that devices
 func InitResourcePool(ctx context.Context, config *ResourceDomain) (*NetResourcePool, error) {
 	resourcePool := &NetResourcePool{
-		HostName:  config.HostName,
-		Resources: nil,
-		lock:      sync.Mutex{},
+		HostName:          config.HostName,
+		PhysicalFunctions: nil,
+		lock:              sync.Mutex{},
 	}
 	sriovProvider := utils.NewSriovProvider(sysfsDevicesPath)
 
@@ -84,7 +84,8 @@ func InitResourcePool(ctx context.Context, config *ResourceDomain) (*NetResource
 
 		physfun := &PhysicalFunction{
 			PCIAddress:               pfPciAddr,
-			TargetPCIAddress:         device.Target.MACAddress,
+			TargetPCIAddress:         device.Target.PCIAddress,
+			Capability:               device.Capability,
 			VirtualFunctionsCapacity: vfCapacity,
 			NetInterfaceName:         pfIfaceNames[0],
 			VirtualFunctions:         map[*VirtualFunction]VirtualFunctionState{},
@@ -118,11 +119,7 @@ func InitResourcePool(ctx context.Context, config *ResourceDomain) (*NetResource
 			physfun.VirtualFunctions[vf] = FreeVirtualFunction
 		}
 
-		res := &NetResource{
-			Capability:       device.Capability,
-			PhysicalFunction: physfun,
-		}
-		resourcePool.Resources = append(resourcePool.Resources, res)
+		resourcePool.PhysicalFunctions = append(resourcePool.PhysicalFunctions, physfun)
 	}
 	return resourcePool, nil
 }
@@ -202,8 +199,8 @@ func (n *NetResourcePool) GetFreeVirtualFunctionsInfo() *FreeVirtualFunctionsInf
 // PhysicalFunction contains information about physical function
 type PhysicalFunction struct {
 	PCIAddress               string
-	Capability               string
 	TargetPCIAddress         string
+	Capability               string
 	VirtualFunctionsCapacity int
 	NetInterfaceName         string
 	VirtualFunctions         map[*VirtualFunction]VirtualFunctionState
