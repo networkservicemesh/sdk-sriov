@@ -47,17 +47,17 @@ const (
 
 // NetResourcePool provides contains information about net devices
 type NetResourcePool struct {
-	HostName  string
-	Resources []*NetResource
-	lock      sync.Mutex
+	HostName          string
+	PhysicalFunctions []*PhysicalFunction
+	lock              sync.Mutex
 }
 
 // InitResourcePool configures devices, specified in provided config and initializes resource pool with that devices
 func InitResourcePool(ctx context.Context, config *ResourceDomain) (*NetResourcePool, error) {
 	resourcePool := &NetResourcePool{
-		HostName:  config.HostName,
-		Resources: nil,
-		lock:      sync.Mutex{},
+		HostName:          config.HostName,
+		PhysicalFunctions: nil,
+		lock:              sync.Mutex{},
 	}
 	sriovProvider := utils.NewSriovProvider(sysfsDevicesPath)
 
@@ -84,7 +84,8 @@ func InitResourcePool(ctx context.Context, config *ResourceDomain) (*NetResource
 
 		physfun := &PhysicalFunction{
 			PCIAddress:               pfPciAddr,
-			TargetPCIAddress:         device.Target.MACAddress,
+			TargetPCIAddress:         device.Target.PCIAddress,
+			Capability:               device.Capability,
 			VirtualFunctionsCapacity: vfCapacity,
 			NetInterfaceName:         pfIfaceNames[0],
 			VirtualFunctions:         map[*VirtualFunction]VirtualFunctionState{},
@@ -118,11 +119,7 @@ func InitResourcePool(ctx context.Context, config *ResourceDomain) (*NetResource
 			physfun.VirtualFunctions[vf] = FreeVirtualFunction
 		}
 
-		res := &NetResource{
-			Capability:       device.Capability,
-			PhysicalFunction: physfun,
-		}
-		resourcePool.Resources = append(resourcePool.Resources, res)
+		resourcePool.PhysicalFunctions = append(resourcePool.PhysicalFunctions, physfun)
 	}
 	return resourcePool, nil
 }
@@ -132,8 +129,7 @@ func (n *NetResourcePool) SelectVirtualFunction(pfPCIAddr string) (selectedVf *V
 	n.lock.Lock()
 	defer n.lock.Unlock()
 
-	for _, netResource := range n.Resources {
-		pf := netResource.PhysicalFunction
+	for _, pf := range n.PhysicalFunctions {
 		if pf.PCIAddress != pfPCIAddr {
 			continue
 		}
@@ -166,8 +162,7 @@ func (n *NetResourcePool) ReleaseVirtualFunction(pfPCIAddr, vfNetIfaceName strin
 	n.lock.Lock()
 	defer n.lock.Unlock()
 
-	for _, netResource := range n.Resources {
-		pf := netResource.PhysicalFunction
+	for _, pf := range n.PhysicalFunctions {
 		if pf.PCIAddress != pfPCIAddr {
 			continue
 		}
@@ -193,8 +188,7 @@ func (n *NetResourcePool) GetFreeVirtualFunctionsInfo() *FreeVirtualFunctionsInf
 		FreeVirtualFunctions: map[string]int{},
 	}
 
-	for _, netResource := range n.Resources {
-		pf := netResource.PhysicalFunction
+	for _, pf := range n.PhysicalFunctions {
 		freeVfs := pf.GetFreeVirtualFunctionsNumber()
 		info.FreeVirtualFunctions[pf.PCIAddress] = freeVfs
 	}
@@ -202,16 +196,11 @@ func (n *NetResourcePool) GetFreeVirtualFunctionsInfo() *FreeVirtualFunctionsInf
 	return info
 }
 
-// NetResource contains information about net device
-type NetResource struct {
-	Capability       string
-	PhysicalFunction *PhysicalFunction
-}
-
 // PhysicalFunction contains information about physical function
 type PhysicalFunction struct {
 	PCIAddress               string
 	TargetPCIAddress         string
+	Capability               string
 	VirtualFunctionsCapacity int
 	NetInterfaceName         string
 	VirtualFunctions         map[*VirtualFunction]VirtualFunctionState

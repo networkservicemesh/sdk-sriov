@@ -68,14 +68,12 @@ func TestNewServer_SelectVirtualFunction(t *testing.T) {
 
 	vf1, vf2 := initVfs()
 	resourcePool := &sriov.NetResourcePool{
-		Resources: []*sriov.NetResource{
+		PhysicalFunctions: []*sriov.PhysicalFunction{
 			{
-				PhysicalFunction: &sriov.PhysicalFunction{
-					PCIAddress: pfPCIAddress,
-					VirtualFunctions: map[*sriov.VirtualFunction]sriov.VirtualFunctionState{
-						vf1: sriov.UsedVirtualFunction,
-						vf2: sriov.FreeVirtualFunction,
-					},
+				PCIAddress: pfPCIAddress,
+				VirtualFunctions: map[*sriov.VirtualFunction]sriov.VirtualFunctionState{
+					vf1: sriov.UsedVirtualFunction,
+					vf2: sriov.FreeVirtualFunction,
 				},
 			},
 		},
@@ -105,7 +103,7 @@ func TestNewServer_SelectVirtualFunction(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, expected, conn)
 
-	selectedVfState := resourcePool.Resources[0].PhysicalFunction.VirtualFunctions[vf2]
+	selectedVfState := resourcePool.PhysicalFunctions[0].VirtualFunctions[vf2]
 	assert.Equal(t, sriov.UsedVirtualFunction, selectedVfState)
 }
 
@@ -114,14 +112,12 @@ func TestNewServer_NoFreeVirtualFunctions(t *testing.T) {
 
 	vf1, vf2 := initVfs()
 	resourcePool := &sriov.NetResourcePool{
-		Resources: []*sriov.NetResource{
+		PhysicalFunctions: []*sriov.PhysicalFunction{
 			{
-				PhysicalFunction: &sriov.PhysicalFunction{
-					PCIAddress: pfPCIAddress,
-					VirtualFunctions: map[*sriov.VirtualFunction]sriov.VirtualFunctionState{
-						vf1: sriov.UsedVirtualFunction,
-						vf2: sriov.UsedVirtualFunction,
-					},
+				PCIAddress: pfPCIAddress,
+				VirtualFunctions: map[*sriov.VirtualFunction]sriov.VirtualFunctionState{
+					vf1: sriov.UsedVirtualFunction,
+					vf2: sriov.UsedVirtualFunction,
 				},
 			},
 		},
@@ -147,14 +143,12 @@ func TestNewServer_ReleaseVirtualFunctions(t *testing.T) {
 
 	vf1, vf2 := initVfs()
 	resourcePool := &sriov.NetResourcePool{
-		Resources: []*sriov.NetResource{
+		PhysicalFunctions: []*sriov.PhysicalFunction{
 			{
-				PhysicalFunction: &sriov.PhysicalFunction{
-					PCIAddress: pfPCIAddress,
-					VirtualFunctions: map[*sriov.VirtualFunction]sriov.VirtualFunctionState{
-						vf1: sriov.UsedVirtualFunction,
-						vf2: sriov.UsedVirtualFunction,
-					},
+				PCIAddress: pfPCIAddress,
+				VirtualFunctions: map[*sriov.VirtualFunction]sriov.VirtualFunctionState{
+					vf1: sriov.UsedVirtualFunction,
+					vf2: sriov.UsedVirtualFunction,
 				},
 			},
 		},
@@ -174,6 +168,6 @@ func TestNewServer_ReleaseVirtualFunctions(t *testing.T) {
 	_, err := client.Close(context.Background(), conn)
 	assert.Nil(t, err)
 
-	freedVfState := resourcePool.Resources[0].PhysicalFunction.VirtualFunctions[vf1]
+	freedVfState := resourcePool.PhysicalFunctions[0].VirtualFunctions[vf1]
 	assert.Equal(t, sriov.FreeVirtualFunction, freedVfState)
 }

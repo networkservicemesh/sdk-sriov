@@ -36,32 +36,26 @@ func TestNewClient_AddFreeVirtualFunctionsInfo(t *testing.T) {
 
 	resourcePool := &sriov.NetResourcePool{
 		HostName: "example.com",
-		Resources: []*sriov.NetResource{
+		PhysicalFunctions: []*sriov.PhysicalFunction{
 			{
-				PhysicalFunction: &sriov.PhysicalFunction{
-					PCIAddress: "0000:00:01:0",
-					VirtualFunctions: map[*sriov.VirtualFunction]sriov.VirtualFunctionState{
-						{}: sriov.FreeVirtualFunction,
-						{}: sriov.FreeVirtualFunction,
-					},
+				PCIAddress: "0000:00:01:0",
+				VirtualFunctions: map[*sriov.VirtualFunction]sriov.VirtualFunctionState{
+					{}: sriov.FreeVirtualFunction,
+					{}: sriov.FreeVirtualFunction,
 				},
 			},
 			{
-				PhysicalFunction: &sriov.PhysicalFunction{
-					PCIAddress: "0000:00:02:0",
-					VirtualFunctions: map[*sriov.VirtualFunction]sriov.VirtualFunctionState{
-						{}: sriov.FreeVirtualFunction,
-						{}: sriov.UsedVirtualFunction,
-					},
+				PCIAddress: "0000:00:02:0",
+				VirtualFunctions: map[*sriov.VirtualFunction]sriov.VirtualFunctionState{
+					{}: sriov.FreeVirtualFunction,
+					{}: sriov.UsedVirtualFunction,
 				},
 			},
 			{
-				PhysicalFunction: &sriov.PhysicalFunction{
-					PCIAddress: "0000:00:03:0",
-					VirtualFunctions: map[*sriov.VirtualFunction]sriov.VirtualFunctionState{
-						{}: sriov.UsedVirtualFunction,
-						{}: sriov.UsedVirtualFunction,
-					},
+				PCIAddress: "0000:00:03:0",
+				VirtualFunctions: map[*sriov.VirtualFunction]sriov.VirtualFunctionState{
+					{}: sriov.UsedVirtualFunction,
+					{}: sriov.UsedVirtualFunction,
 				},
 			},
 		},
