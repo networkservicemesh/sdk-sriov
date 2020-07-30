@@ -38,16 +38,26 @@ const (
 	sriovTestDir         = "nsm/sriov/test"
 	pciAddr              = "0000:01:00:0"
 	pciAddrShortForm     = "01:00:0"
+	pciAddr2             = "0000:02:00:0"
+	iommuGroupNumber     = 42
+	driverName           = "i40e"
 )
 
 var (
-	sysfsDevicesPath = filepath.Join(os.TempDir(), sriovTestDir)
-	devicePath       = filepath.Join(sysfsDevicesPath, pciAddr)
+	pciDevicesPath = filepath.Join(os.TempDir(), sriovTestDir, "devices")
+	pciDriversPath = filepath.Join(os.TempDir(), sriovTestDir, "drivers")
+	iommuPath      = filepath.Join(os.TempDir(), sriovTestDir, "iommu_groups")
+
+	devicePath            = filepath.Join(pciDevicesPath, pciAddr)
+	iommuGroupPath        = filepath.Join(iommuPath, strconv.Itoa(iommuGroupNumber))
+	iommuGroupDevicesPath = filepath.Join(iommuGroupPath, "devices")
+	driverPath            = filepath.Join(pciDriversPath, driverName)
+
 	configuredVfPath = filepath.Join(devicePath, configuredVfFile)
 )
 
 func Test_IsDeviceSriovCapable(t *testing.T) {
-	u := utils.NewSriovProvider(sysfsDevicesPath)
+	u := utils.NewSriovProvider(pciDevicesPath, pciDriversPath, iommuPath)
 
 	err := os.RemoveAll(devicePath)
 	assert.Nil(t, err)
@@ -69,7 +79,7 @@ func Test_IsDeviceSriovCapable(t *testing.T) {
 }
 
 func Test_IsSriovVirtualFunction(t *testing.T) {
-	u := utils.NewSriovProvider(sysfsDevicesPath)
+	u := utils.NewSriovProvider(pciDevicesPath, pciDriversPath, iommuPath)
 
 	err := os.RemoveAll(devicePath)
 	assert.Nil(t, err)
@@ -91,7 +101,7 @@ func Test_IsSriovVirtualFunction(t *testing.T) {
 }
 
 func Test_GetConfiguredVirtualFunctionsNumber(t *testing.T) {
-	u := utils.NewSriovProvider(sysfsDevicesPath)
+	u := utils.NewSriovProvider(pciDevicesPath, pciDriversPath, iommuPath)
 
 	err := os.RemoveAll(devicePath)
 	assert.Nil(t, err)
@@ -124,7 +134,7 @@ func Test_GetConfiguredVirtualFunctionsNumber(t *testing.T) {
 }
 
 func Test_IsSriovConfigured(t *testing.T) {
-	u := utils.NewSriovProvider(sysfsDevicesPath)
+	u := utils.NewSriovProvider(pciDevicesPath, pciDriversPath, iommuPath)
 
 	err := os.RemoveAll(devicePath)
 	assert.Nil(t, err)
@@ -156,7 +166,7 @@ func Test_IsSriovConfigured(t *testing.T) {
 }
 
 func Test_GetSriovVirtualFunctionsCapacity(t *testing.T) {
-	u := utils.NewSriovProvider(sysfsDevicesPath)
+	u := utils.NewSriovProvider(pciDevicesPath, pciDriversPath, iommuPath)
 
 	err := os.RemoveAll(devicePath)
 	assert.Nil(t, err)
@@ -190,7 +200,7 @@ func Test_GetSriovVirtualFunctionsCapacity(t *testing.T) {
 }
 
 func Test_IsDeviceExists(t *testing.T) {
-	u := utils.NewSriovProvider(sysfsDevicesPath)
+	u := utils.NewSriovProvider(pciDevicesPath, pciDriversPath, iommuPath)
 
 	err := os.RemoveAll(devicePath)
 	assert.Nil(t, err)
@@ -222,7 +232,7 @@ func Test_IsDeviceExists(t *testing.T) {
 }
 
 func Test_GetNetInterfacesNames(t *testing.T) {
-	u := utils.NewSriovProvider(sysfsDevicesPath)
+	u := utils.NewSriovProvider(pciDevicesPath, pciDriversPath, iommuPath)
 
 	err := os.RemoveAll(devicePath)
 	assert.Nil(t, err)
@@ -260,7 +270,7 @@ func Test_GetNetInterfacesNames(t *testing.T) {
 }
 
 func Test_CreateVirtualFunctions(t *testing.T) {
-	u := utils.NewSriovProvider(sysfsDevicesPath)
+	u := utils.NewSriovProvider(pciDevicesPath, pciDriversPath, iommuPath)
 
 	err := os.RemoveAll(devicePath)
 	assert.Nil(t, err)
@@ -296,7 +306,7 @@ func Test_CreateVirtualFunctions(t *testing.T) {
 }
 
 func Test_GetVirtualFunctionsList(t *testing.T) {
-	u := utils.NewSriovProvider(sysfsDevicesPath)
+	u := utils.NewSriovProvider(pciDevicesPath, pciDriversPath, iommuPath)
 
 	err := os.RemoveAll(devicePath)
 	assert.Nil(t, err)
@@ -312,7 +322,7 @@ func Test_GetVirtualFunctionsList(t *testing.T) {
 	assert.Empty(t, vfs)
 
 	vf1PciAddr := "0000:01:00:1"
-	vf1Path := filepath.Join(sysfsDevicesPath, vf1PciAddr)
+	vf1Path := filepath.Join(pciDevicesPath, vf1PciAddr)
 	err = os.Mkdir(vf1Path, 0750)
 	assert.Nil(t, err)
 	err = os.Symlink(vf1Path, filepath.Join(devicePath, "virtfn1"))
@@ -323,7 +333,7 @@ func Test_GetVirtualFunctionsList(t *testing.T) {
 	assert.Equal(t, []string{vf1PciAddr}, vfs)
 
 	vf2PciAddr := "0000:01:00:2"
-	vf2Path := filepath.Join(sysfsDevicesPath, vf2PciAddr)
+	vf2Path := filepath.Join(pciDevicesPath, vf2PciAddr)
 	err = os.Mkdir(vf2Path, 0750)
 	assert.Nil(t, err)
 	err = os.Symlink(vf2Path, filepath.Join(devicePath, "virtfn2"))
@@ -338,5 +348,175 @@ func Test_GetVirtualFunctionsList(t *testing.T) {
 	err = os.RemoveAll(vf1Path)
 	assert.Nil(t, err)
 	err = os.RemoveAll(vf2Path)
+	assert.Nil(t, err)
+}
+
+func Test_GetIommuGroupNumber(t *testing.T) {
+	u := utils.NewSriovProvider(pciDevicesPath, pciDriversPath, iommuPath)
+
+	err := os.RemoveAll(devicePath)
+	assert.Nil(t, err)
+	err = os.RemoveAll(iommuGroupPath)
+	assert.Nil(t, err)
+
+	_, err = u.GetIommuGroupNumber(context.Background(), pciAddr)
+	assert.NotNil(t, err)
+
+	err = os.MkdirAll(devicePath, 0750)
+	assert.Nil(t, err)
+
+	_, err = u.GetIommuGroupNumber(context.Background(), pciAddr)
+	assert.NotNil(t, err)
+
+	err = os.MkdirAll(iommuGroupPath, 0750)
+	assert.Nil(t, err)
+	err = os.Symlink(iommuGroupPath, filepath.Join(devicePath, "iommu_group"))
+	assert.Nil(t, err)
+
+	groupNumber, err := u.GetIommuGroupNumber(context.Background(), pciAddr)
+	assert.Nil(t, err)
+	assert.Equal(t, iommuGroupNumber, groupNumber)
+
+	err = os.RemoveAll(devicePath)
+	assert.Nil(t, err)
+	err = os.RemoveAll(iommuGroupPath)
+	assert.Nil(t, err)
+}
+
+func Test_GetIommuGroupDevices(t *testing.T) {
+	u := utils.NewSriovProvider(pciDevicesPath, pciDriversPath, iommuPath)
+
+	err := os.RemoveAll(iommuGroupPath)
+	assert.Nil(t, err)
+
+	_, err = u.GetIommuGroupDevices(context.Background(), iommuGroupNumber)
+	assert.NotNil(t, err)
+
+	err = os.MkdirAll(iommuGroupDevicesPath, 0750)
+	assert.Nil(t, err)
+
+	devices, err := u.GetIommuGroupDevices(context.Background(), iommuGroupNumber)
+	assert.Nil(t, err)
+	assert.Empty(t, devices)
+
+	// can use any existing location instead of sriovTestDir, link won't be evaluated
+	err = os.Symlink(sriovTestDir, filepath.Join(iommuGroupDevicesPath, pciAddr))
+	assert.Nil(t, err)
+
+	devices, err = u.GetIommuGroupDevices(context.Background(), iommuGroupNumber)
+	assert.Nil(t, err)
+	assert.Equal(t, []string{pciAddr}, devices)
+
+	err = os.Symlink(sriovTestDir, filepath.Join(iommuGroupDevicesPath, pciAddr2))
+	assert.Nil(t, err)
+
+	devices, err = u.GetIommuGroupDevices(context.Background(), iommuGroupNumber)
+	assert.Nil(t, err)
+	assert.Equal(t, []string{pciAddr, pciAddr2}, devices)
+
+	err = os.RemoveAll(iommuGroupPath)
+	assert.Nil(t, err)
+}
+
+func Test_GetBoundDriver(t *testing.T) {
+	u := utils.NewSriovProvider(pciDevicesPath, pciDriversPath, iommuPath)
+
+	err := os.RemoveAll(devicePath)
+	assert.Nil(t, err)
+	err = os.RemoveAll(driverPath)
+	assert.Nil(t, err)
+
+	_, err = u.GetBoundDriver(context.Background(), pciAddr)
+	assert.NotNil(t, err)
+
+	err = os.MkdirAll(devicePath, 0750)
+	assert.Nil(t, err)
+
+	driver, err := u.GetBoundDriver(context.Background(), pciAddr)
+	assert.Nil(t, err)
+	assert.Equal(t, "", driver)
+
+	err = os.MkdirAll(driverPath, 0750)
+	assert.Nil(t, err)
+	err = os.Symlink(driverPath, filepath.Join(devicePath, "driver"))
+	assert.Nil(t, err)
+
+	driver, err = u.GetBoundDriver(context.Background(), pciAddr)
+	assert.Nil(t, err)
+	assert.Equal(t, driverName, driver)
+
+	err = os.RemoveAll(devicePath)
+	assert.Nil(t, err)
+	err = os.RemoveAll(driverPath)
+	assert.Nil(t, err)
+}
+
+func Test_UnbindDriver(t *testing.T) {
+	u := utils.NewSriovProvider(pciDevicesPath, pciDriversPath, iommuPath)
+
+	err := os.RemoveAll(devicePath)
+	assert.Nil(t, err)
+	err = os.RemoveAll(driverPath)
+	assert.Nil(t, err)
+
+	err = u.UnbindDriver(context.Background(), pciAddr)
+	assert.NotNil(t, err)
+
+	err = os.MkdirAll(devicePath, 0750)
+	assert.Nil(t, err)
+
+	err = u.UnbindDriver(context.Background(), pciAddr)
+	assert.Nil(t, err)
+
+	err = os.MkdirAll(driverPath, 0750)
+	assert.Nil(t, err)
+	err = os.Symlink(driverPath, filepath.Join(devicePath, "driver"))
+	assert.Nil(t, err)
+
+	err = u.UnbindDriver(context.Background(), pciAddr)
+	assert.Nil(t, err)
+
+	addrBytes, err := ioutil.ReadFile(filepath.Clean(filepath.Join(driverPath, "unbind")))
+	assert.Nil(t, err)
+	addr := string(bytes.TrimSpace(addrBytes))
+	assert.Equal(t, pciAddr, addr)
+
+	err = os.RemoveAll(devicePath)
+	assert.Nil(t, err)
+	err = os.RemoveAll(driverPath)
+	assert.Nil(t, err)
+}
+
+func Test_BindDriver(t *testing.T) {
+	u := utils.NewSriovProvider(pciDevicesPath, pciDriversPath, iommuPath)
+
+	err := os.RemoveAll(driverPath)
+	assert.Nil(t, err)
+	err = os.RemoveAll(devicePath)
+	assert.Nil(t, err)
+
+	err = u.BindDriver(context.Background(), pciAddr, driverName)
+	assert.NotNil(t, err)
+
+	err = os.MkdirAll(devicePath, 0750)
+	assert.Nil(t, err)
+
+	err = u.BindDriver(context.Background(), pciAddr, driverName)
+	assert.NotNil(t, err)
+
+	err = os.MkdirAll(driverPath, 0750)
+	assert.Nil(t, err)
+
+	err = u.BindDriver(context.Background(), pciAddr, driverName)
+	assert.Nil(t, err)
+
+	addrBytes, err := ioutil.ReadFile(filepath.Clean(filepath.Join(driverPath, "bind")))
+	assert.Nil(t, err)
+	addr := string(bytes.TrimSpace(addrBytes))
+	assert.Equal(t, pciAddr, addr)
+
+	err = os.RemoveAll(driverPath)
+	assert.Nil(t, err)
+	err = os.RemoveAll(devicePath)
 	assert.Nil(t, err)
 }
