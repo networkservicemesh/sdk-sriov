@@ -32,49 +32,50 @@ type VirtualFunctionState string
 type DriverType string
 
 const (
-	sysfsDevicesPath = "/sys/bus/pci/devices/"
-
 	// UsedVirtualFunction is virtual function is use state
 	UsedVirtualFunction VirtualFunctionState = "used"
 	// FreeVirtualFunction is virtual function free state
 	FreeVirtualFunction VirtualFunctionState = "free"
 
+	// NoDriver is no driver type
+	NoDriver DriverType = "no-driver"
 	// KernelDriver is kernel driver type
 	KernelDriver DriverType = "kernel"
-	// VfioPCI is vfio-pci driver type
-	VfioPCI DriverType = "vfio-pci"
+	// VfioPCIDriver is vfio-pci driver type
+	VfioPCIDriver DriverType = "vfio-pci"
 )
 
 // NetResourcePool provides contains information about net devices
 type NetResourcePool struct {
 	HostName          string
 	PhysicalFunctions []*PhysicalFunction
+	IommuGroups       map[int]DriverType
 	lock              sync.Mutex
 }
 
 // InitResourcePool configures devices, specified in provided config and initializes resource pool with that devices
-func InitResourcePool(ctx context.Context, config *ResourceDomain) (*NetResourcePool, error) {
-	resourcePool := &NetResourcePool{
+func InitResourcePool(ctx context.Context, config *ResourceDomain, provider utils.SriovProvider) (*NetResourcePool, error) {
+	rp := &NetResourcePool{
 		HostName:          config.HostName,
 		PhysicalFunctions: nil,
+		IommuGroups:       map[int]DriverType{},
 		lock:              sync.Mutex{},
 	}
-	sriovProvider := utils.NewSriovProvider(sysfsDevicesPath)
 
 	for _, device := range config.PCIDevices {
 		pfPciAddr := device.PCIAddress
 
-		err := validateDevice(ctx, sriovProvider, pfPciAddr)
+		err := validateDevice(ctx, pfPciAddr, provider)
 		if err != nil {
 			return nil, errors.Wrap(err, "invalid device provided")
 		}
 
-		vfCapacity, err := sriovProvider.GetSriovVirtualFunctionsCapacity(ctx, pfPciAddr)
+		vfCapacity, err := provider.GetSriovVirtualFunctionsCapacity(ctx, pfPciAddr)
 		if err != nil {
 			return nil, errors.Wrapf(err, "Unable to determine virtual functions capacity for device: %s", pfPciAddr)
 		}
 
-		pfIfaceNames, err := sriovProvider.GetNetInterfacesNames(ctx, pfPciAddr)
+		pfIfaceNames, err := provider.GetNetInterfacesNames(ctx, pfPciAddr)
 		if err != nil {
 			return nil, errors.Wrapf(err, "unable to determine net interface name for device %s", pfPciAddr)
 		}
@@ -82,27 +83,41 @@ func InitResourcePool(ctx context.Context, config *ResourceDomain) (*NetResource
 			return nil, errors.Errorf("expected 1 network interface name, actual: %d", len(pfIfaceNames))
 		}
 
+		pfKernelDriverName, err := provider.GetBoundDriver(ctx, pfIfaceNames[0])
+		if err != nil {
+			return nil, errors.Wrapf(err, "unable to determine kernel driver name for physical function: %s", pfPciAddr)
+		}
+
+		pfIommuGroup, err := provider.GetIommuGroupNumber(ctx, pfIfaceNames[0])
+		if err != nil {
+			return nil, errors.Wrapf(err, "unable to determine iommu group number for physical function: %s", pfPciAddr)
+		}
+		rp.IommuGroups[pfIommuGroup] = NoDriver
+
 		physfun := &PhysicalFunction{
 			PCIAddress:               pfPciAddr,
+			BoundDriver:              KernelDriver, // Kernel driver is bound by default
+			KernelDriverName:         pfKernelDriverName,
+			IommuGroup:               pfIommuGroup,
+			NetInterfaceName:         pfIfaceNames[0],
 			TargetPCIAddress:         device.Target.PCIAddress,
 			Capability:               device.Capability,
 			VirtualFunctionsCapacity: vfCapacity,
-			NetInterfaceName:         pfIfaceNames[0],
 			VirtualFunctions:         map[*VirtualFunction]VirtualFunctionState{},
 		}
 
-		err = sriovProvider.CreateVirtualFunctions(ctx, pfPciAddr, physfun.VirtualFunctionsCapacity)
+		err = provider.CreateVirtualFunctions(ctx, pfPciAddr, physfun.VirtualFunctionsCapacity)
 		if err != nil {
 			return nil, errors.Wrapf(err, "unable to create virtual functions for device %s", pfPciAddr)
 		}
 
-		vfs, err := sriovProvider.GetVirtualFunctionsList(ctx, pfPciAddr)
+		vfs, err := provider.GetVirtualFunctionsList(ctx, pfPciAddr)
 		if err != nil {
 			return nil, errors.Wrapf(err, "unable to discover virtual functions for device %s", pfPciAddr)
 		}
 
 		for _, vfPciAddr := range vfs {
-			vfIfaceNames, err := sriovProvider.GetNetInterfacesNames(ctx, vfPciAddr)
+			vfIfaceNames, err := provider.GetNetInterfacesNames(ctx, vfPciAddr)
 			if err != nil {
 				return nil, errors.Wrapf(err, "unable to determine net interface name for device %s", vfPciAddr)
 			}
@@ -110,18 +125,31 @@ func InitResourcePool(ctx context.Context, config *ResourceDomain) (*NetResource
 				return nil, errors.Errorf("expected 1 network interface name, actual: %d", len(vfIfaceNames))
 			}
 
+			vfKernelDriverName, err := provider.GetBoundDriver(ctx, vfIfaceNames[0])
+			if err != nil {
+				return nil, errors.Wrapf(err, "unable to kernel driver name for virtual function: %s", vfPciAddr)
+			}
+
+			vfIommuGroup, err := provider.GetIommuGroupNumber(ctx, vfIfaceNames[0])
+			if err != nil {
+				return nil, errors.Wrapf(err, "unable to determine iommu group number for virtual function: %s", vfPciAddr)
+			}
+			rp.IommuGroups[vfIommuGroup] = NoDriver
+
 			vf := &VirtualFunction{
 				PCIAddress:       vfPciAddr,
 				BoundDriver:      KernelDriver, // Kernel driver is bound by default
+				KernelDriverName: vfKernelDriverName,
+				IommuGroup:       vfIommuGroup,
 				NetInterfaceName: vfIfaceNames[0],
 			}
 
 			physfun.VirtualFunctions[vf] = FreeVirtualFunction
 		}
 
-		resourcePool.PhysicalFunctions = append(resourcePool.PhysicalFunctions, physfun)
+		rp.PhysicalFunctions = append(rp.PhysicalFunctions, physfun)
 	}
-	return resourcePool, nil
+	return rp, nil
 }
 
 // SelectVirtualFunction marks one of the free virtual functions for specified physical function as in-use and returns it
@@ -199,10 +227,13 @@ func (n *NetResourcePool) GetFreeVirtualFunctionsInfo() *FreeVirtualFunctionsInf
 // PhysicalFunction contains information about physical function
 type PhysicalFunction struct {
 	PCIAddress               string
+	BoundDriver              DriverType
+	KernelDriverName         string
+	IommuGroup               int
+	NetInterfaceName         string
 	TargetPCIAddress         string
 	Capability               string
 	VirtualFunctionsCapacity int
-	NetInterfaceName         string
 	VirtualFunctions         map[*VirtualFunction]VirtualFunctionState
 }
 
@@ -234,11 +265,13 @@ func (p *PhysicalFunction) GetFreeVirtualFunctionsNumber() int {
 type VirtualFunction struct {
 	PCIAddress       string
 	BoundDriver      DriverType
+	KernelDriverName string
+	IommuGroup       int
 	NetInterfaceName string
 }
 
-func validateDevice(ctx context.Context, sriovProvider utils.SriovProvider, pciAddr string) error {
-	exists, err := sriovProvider.IsDeviceExists(ctx, pciAddr)
+func validateDevice(ctx context.Context, pciAddr string, provider utils.SriovProvider) error {
+	exists, err := provider.IsDeviceExists(ctx, pciAddr)
 	if err != nil {
 		return err
 	}
@@ -246,12 +279,12 @@ func validateDevice(ctx context.Context, sriovProvider utils.SriovProvider, pciA
 		return errors.Errorf("Unable to find device: %s", pciAddr)
 	}
 
-	if !sriovProvider.IsDeviceSriovCapable(ctx, pciAddr) {
+	if !provider.IsDeviceSriovCapable(ctx, pciAddr) {
 		return errors.Errorf("device %s is not SR-IOV capable", pciAddr)
 	}
 
 	// TODO think about what we do with already configured devices
-	if sriovProvider.IsSriovConfigured(ctx, pciAddr) {
+	if provider.IsSriovConfigured(ctx, pciAddr) {
 		return errors.Errorf("device %s is already configured", pciAddr)
 	}
 

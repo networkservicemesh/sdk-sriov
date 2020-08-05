@@ -39,6 +39,11 @@ const (
 	physicalFunctionPath = "physfn"
 	netInterfacesPath    = "net"
 	bdfDomain            = "0000:"
+	iommuGroup           = "iommu_group"
+	iommuDevicesPath     = "devices"
+	boundDriverPath      = "driver"
+	bindDriverPath       = "bind"
+	unbindDriverPath     = "unbind"
 )
 
 var (
@@ -81,23 +86,42 @@ type SriovProvider interface {
 
 	// GetVirtualFunctionsList returns a List containing PCI addr for all VF discovered in a given PF
 	GetVirtualFunctionsList(ctx context.Context, pfPciAddr string) (vfList []string, err error)
+
+	// GetIommuGroupNumber returns a iommu group number specified device assigned to
+	GetIommuGroupNumber(ctx context.Context, pciAddr string) (int, error)
+
+	// GetIommuGroupDevices returns PCI addresses of all devices assigned to iommu group with specified number
+	GetIommuGroupDevices(ctx context.Context, iommuGroupNumber int) (devices []string, err error)
+
+	// GetBoundDriver returns driver name that is bound to specified device, if no driver bound, returns ""
+	GetBoundDriver(ctx context.Context, pciAddr string) (string, error)
+
+	// BindDriver unbinds currently bound driver and binds specified driver to specified device
+	BindDriver(ctx context.Context, pciAddr string, driverName string) error
+
+	// UnbindDriver unbinds currently bound driver from specified device
+	UnbindDriver(ctx context.Context, pciAddr string) error
 }
 
 type sriovProvider struct {
-	sysfsDevicesPath string
+	pciDevicesPath  string
+	pciDriversPath  string
+	iommuGroupsPath string
 }
 
 // NewSriovProvider returns new SriovProvider instance
-// 			- sysfsDevicesPath - path to directory where sysfs PCI device files are placed. Usually /sys/bus/pci/devices/
-func NewSriovProvider(sysfsDevicesPath string) SriovProvider {
+// 			- pciDevicesPath - path to directory where sysfs PCI device files are placed. Usually /sys/bus/pci/devices/
+func NewSriovProvider(pciDevicesPath, pciDriversPath, iommuGroupsPath string) SriovProvider {
 	return &sriovProvider{
-		sysfsDevicesPath: sysfsDevicesPath,
+		pciDevicesPath:  pciDevicesPath,
+		pciDriversPath:  pciDriversPath,
+		iommuGroupsPath: iommuGroupsPath,
 	}
 }
 
 func (u *sriovProvider) IsDeviceSriovCapable(ctx context.Context, pciAddr string) bool {
 	// sriov_totalvfs file exists -> sriov capable
-	if u.isFileExists(filepath.Join(u.sysfsDevicesPath, pciAddr, totalVfFile)) {
+	if u.isFileExists(filepath.Join(u.pciDevicesPath, pciAddr, totalVfFile)) {
 		log.Entry(ctx).Infof("Device %s is SR-IOV capable", pciAddr)
 		return true
 	}
@@ -106,7 +130,7 @@ func (u *sriovProvider) IsDeviceSriovCapable(ctx context.Context, pciAddr string
 }
 
 func (u *sriovProvider) IsSriovVirtualFunction(ctx context.Context, pciAddr string) bool {
-	if u.isFileExists(filepath.Join(u.sysfsDevicesPath, pciAddr, physicalFunctionPath)) {
+	if u.isFileExists(filepath.Join(u.pciDevicesPath, pciAddr, physicalFunctionPath)) {
 		log.Entry(ctx).Infof("Device %s is SR-IOV virtual function", pciAddr)
 		return true
 	}
@@ -115,7 +139,7 @@ func (u *sriovProvider) IsSriovVirtualFunction(ctx context.Context, pciAddr stri
 }
 
 func (u *sriovProvider) GetConfiguredVirtualFunctionsNumber(ctx context.Context, pfPciAddr string) (int, error) {
-	configuredVfPath := filepath.Join(u.sysfsDevicesPath, pfPciAddr, configuredVfFile)
+	configuredVfPath := filepath.Join(u.pciDevicesPath, pfPciAddr, configuredVfFile)
 	vfs, err := ioutil.ReadFile(filepath.Clean(configuredVfPath))
 	if err != nil {
 		return 0, errors.Wrapf(err, "unable to locate sriov_numvfs file for device %s", pfPciAddr)
@@ -138,7 +162,7 @@ func (u *sriovProvider) IsSriovConfigured(ctx context.Context, pciAddr string) b
 }
 
 func (u *sriovProvider) GetSriovVirtualFunctionsCapacity(ctx context.Context, pfPciAddr string) (int, error) {
-	totalVfFilePath := filepath.Join(u.sysfsDevicesPath, pfPciAddr, totalVfFile)
+	totalVfFilePath := filepath.Join(u.pciDevicesPath, pfPciAddr, totalVfFile)
 	vfs, err := ioutil.ReadFile(filepath.Clean(totalVfFilePath))
 	if err != nil {
 		return 0, errors.Wrapf(err, "unable to locate sriov_totalvfs file for device %s", pfPciAddr)
@@ -163,7 +187,7 @@ func (u *sriovProvider) IsDeviceExists(ctx context.Context, pciAddr string) (boo
 		pciAddr = bdfDomain + pciAddr // convert short form to sysfs long form representation
 	}
 	if validLongPCIAddr.MatchString(pciAddr) {
-		devicePath := filepath.Join(u.sysfsDevicesPath, pciAddr)
+		devicePath := filepath.Join(u.pciDevicesPath, pciAddr)
 		if u.isFileOrLinkExists(devicePath) {
 			log.Entry(ctx).Infof("Found device %s", pciAddr)
 			return true, nil
@@ -175,7 +199,7 @@ func (u *sriovProvider) IsDeviceExists(ctx context.Context, pciAddr string) (boo
 }
 
 func (u *sriovProvider) GetNetInterfacesNames(ctx context.Context, pciAddr string) (names []string, err error) {
-	netDir := filepath.Join(u.sysfsDevicesPath, pciAddr, netInterfacesPath)
+	netDir := filepath.Join(u.pciDevicesPath, pciAddr, netInterfacesPath)
 	if !u.isFileOrLinkExists(netDir) {
 		return nil, errors.Errorf("no net directory for pci device %s", pciAddr)
 	}
@@ -199,7 +223,7 @@ func (u *sriovProvider) CreateVirtualFunctions(ctx context.Context, pfPciAddr st
 	if u.IsSriovConfigured(ctx, pfPciAddr) {
 		return errors.Errorf("virtual functions are already exist for device: %s", pfPciAddr)
 	}
-	configuredVfPath := filepath.Join(u.sysfsDevicesPath, pfPciAddr, configuredVfFile)
+	configuredVfPath := filepath.Join(u.pciDevicesPath, pfPciAddr, configuredVfFile)
 	err := ioutil.WriteFile(configuredVfPath, []byte(strconv.FormatInt(int64(vfNumber), 10)), 0600)
 	if err != nil {
 		return errors.Wrapf(err, "failed to write virtual functions number for device %s", pfPciAddr)
@@ -209,7 +233,7 @@ func (u *sriovProvider) CreateVirtualFunctions(ctx context.Context, pfPciAddr st
 }
 
 func (u *sriovProvider) GetVirtualFunctionsList(ctx context.Context, pfPciAddr string) (vfList []string, err error) {
-	pfDir := filepath.Join(u.sysfsDevicesPath, pfPciAddr)
+	pfDir := filepath.Join(u.pciDevicesPath, pfPciAddr)
 	if !u.isFileOrLinkExists(pfDir) {
 		err = errors.Errorf("could not get physical function directory information for device %s", pfPciAddr)
 		return
@@ -236,6 +260,107 @@ func (u *sriovProvider) GetVirtualFunctionsList(ctx context.Context, pfPciAddr s
 	return
 }
 
+func (u *sriovProvider) GetIommuGroupNumber(ctx context.Context, pciAddr string) (int, error) {
+	deviceDir := filepath.Join(u.pciDevicesPath, pciAddr)
+	if !u.isFileOrLinkExists(deviceDir) {
+		return 0, errors.Errorf("could not get directory information for device %s", pciAddr)
+	}
+
+	iommuGroupLink := filepath.Join(deviceDir, iommuGroup)
+	iommuGroupNumberStr, err := u.evalSymlinkAndGetBaseName(iommuGroupLink)
+	if err != nil {
+		return 0, errors.Wrapf(err, "error evaluating iommu group symlink: %s", iommuGroupLink)
+	}
+
+	iommuGroupNumber, err := strconv.Atoi(iommuGroupNumberStr)
+	if err != nil {
+		return 0, errors.Wrapf(err, "unable to convert iommu group number string to int: %s", iommuGroupNumberStr)
+	}
+
+	return iommuGroupNumber, nil
+}
+
+func (u *sriovProvider) GetIommuGroupDevices(ctx context.Context, iommuGroupNumber int) (devices []string, err error) {
+	devicesDir := filepath.Join(u.iommuGroupsPath, strconv.Itoa(iommuGroupNumber), iommuDevicesPath)
+	if !u.isFileOrLinkExists(devicesDir) {
+		return nil, errors.Errorf("could not get devices directory information for iommu group %d", iommuGroupNumber)
+	}
+
+	files, err := ioutil.ReadDir(devicesDir)
+	if err != nil {
+		return nil, errors.Wrapf(err, "unable to get contents of the directory: %s", devicesDir)
+	}
+
+	for _, file := range files {
+		devices = append(devices, file.Name())
+	}
+
+	return
+}
+
+func (u *sriovProvider) GetBoundDriver(ctx context.Context, pciAddr string) (string, error) {
+	exists, err := u.IsDeviceExists(ctx, pciAddr)
+	if err != nil || !exists {
+		return "", errors.Errorf("unable to find specified device: %s", pciAddr)
+	}
+
+	if !u.isAnyDriverBound(pciAddr) {
+		return "", nil
+	}
+
+	driverLink := filepath.Join(u.pciDevicesPath, pciAddr, boundDriverPath)
+	driverName, err := u.evalSymlinkAndGetBaseName(driverLink)
+	if err != nil {
+		return "", errors.Wrapf(err, "error evaluating bound driver symlink: %s", driverLink)
+	}
+
+	return driverName, nil
+}
+
+func (u *sriovProvider) BindDriver(ctx context.Context, pciAddr, driverName string) error {
+	exists, err := u.IsDeviceExists(ctx, pciAddr)
+	if err != nil || !exists {
+		return errors.Errorf("unable to find specified device: %s", pciAddr)
+	}
+
+	err = u.UnbindDriver(ctx, pciAddr)
+	if err != nil {
+		return errors.Wrapf(err, "unable to unbind currently bound driver for device: %s", pciAddr)
+	}
+
+	bindPath := filepath.Join(u.pciDriversPath, driverName, bindDriverPath)
+	err = ioutil.WriteFile(bindPath, []byte(pciAddr), 0600)
+	if err != nil {
+		return errors.Wrapf(err, "failed to write device PCI address %s into the file: %s", pciAddr, bindPath)
+	}
+
+	return nil
+}
+
+func (u *sriovProvider) UnbindDriver(ctx context.Context, pciAddr string) error {
+	exists, err := u.IsDeviceExists(ctx, pciAddr)
+	if err != nil || !exists {
+		return errors.Errorf("unable to find specified device: %s", pciAddr)
+	}
+
+	if !u.isAnyDriverBound(pciAddr) {
+		return nil // the driver is already unbound
+	}
+
+	unbindPath := filepath.Join(u.pciDevicesPath, pciAddr, boundDriverPath, unbindDriverPath)
+	err = ioutil.WriteFile(unbindPath, []byte(pciAddr), 0600)
+	if err != nil {
+		return errors.Wrapf(err, "failed to write device PCI address %s into the file: %s", pciAddr, unbindPath)
+	}
+
+	return nil
+}
+
+func (u *sriovProvider) isAnyDriverBound(pciAddr string) bool {
+	boundDriverPath := filepath.Join(u.pciDevicesPath, pciAddr, boundDriverPath)
+	return u.isFileOrLinkExists(boundDriverPath)
+}
+
 func (u *sriovProvider) isFileExists(filePath string) bool {
 	_, err := os.Stat(filePath)
 	if err != nil {
@@ -250,4 +375,23 @@ func (u *sriovProvider) isFileOrLinkExists(filePath string) bool {
 		return os.IsExist(err)
 	}
 	return true
+}
+
+func (u *sriovProvider) evalSymlinkAndGetBaseName(path string) (string, error) {
+	fileInfo, err := os.Lstat(path)
+	if err != nil {
+		return "", errors.Wrapf(err, "error getting info about specified file: %s", path)
+	}
+	if fileInfo.Mode()&os.ModeSymlink == 0 {
+		return "", errors.Errorf("specified file is not a symbolic link: %s", path)
+	}
+
+	realPath, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		return "", errors.Wrapf(err, "error evaluating symbolic link: %s", path)
+	}
+
+	realPathBase := filepath.Base(realPath)
+
+	return realPathBase, nil
 }
