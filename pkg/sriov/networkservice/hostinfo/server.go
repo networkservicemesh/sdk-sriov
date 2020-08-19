@@ -14,46 +14,47 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package freevfsinfo contains chain element for adding to Connection info about free virtual functions on the host
-package freevfsinfo
+// Package hostinfo contains chain element for adding to Connection info about host SR-IOV state
+package hostinfo
 
 import (
 	"context"
 
+	"github.com/ghodss/yaml"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 	"github.com/pkg/errors"
 
-	"github.com/networkservicemesh/sdk-sriov/pkg/sriov"
+	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/api/resourcepool"
 )
 
-type freeVirtualFunctionsInfoServer struct {
-	resourcePool *sriov.NetResourcePool
+type hostInfoServer struct {
+	hostInfoProvider resourcepool.HostInfoProvider
 }
 
-// NewServer - returns a new networkservicemesh.NetworkServiceServer for adding free virtual functions info
-func NewServer(resourcePool *sriov.NetResourcePool) networkservice.NetworkServiceServer {
-	return &freeVirtualFunctionsInfoServer{
-		resourcePool: resourcePool,
+// NewServer - returns a new networkservicemesh.NetworkServiceServer for adding host info
+func NewServer(hostInfoProvider resourcepool.HostInfoProvider) networkservice.NetworkServiceServer {
+	return &hostInfoServer{
+		hostInfoProvider: hostInfoProvider,
 	}
 }
 
-func (a *freeVirtualFunctionsInfoServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
-	conn, err := a.addFreeVirtualFunctionsInfo(ctx, request.GetConnection())
+func (a *hostInfoServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
+	conn, err := a.addHostInfo(ctx, request.GetConnection())
 	if err != nil {
-		return nil, errors.Wrap(err, "Unable to write info about free virtual functions into the connection context")
+		return nil, errors.Wrap(err, "Unable to write host info into the connection context")
 	}
 	request.Connection = conn
 	return next.Server(ctx).Request(ctx, request)
 }
 
-func (a *freeVirtualFunctionsInfoServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {
+func (a *hostInfoServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {
 	return next.Server(ctx).Close(ctx, conn)
 }
 
-func (a *freeVirtualFunctionsInfoServer) addFreeVirtualFunctionsInfo(ctx context.Context, conn *networkservice.Connection) (*networkservice.Connection, error) {
+func (a *hostInfoServer) addHostInfo(ctx context.Context, conn *networkservice.Connection) (*networkservice.Connection, error) {
 	if conn.GetContext() == nil {
 		conn.Context = &networkservice.ConnectionContext{}
 	}
@@ -61,13 +62,13 @@ func (a *freeVirtualFunctionsInfoServer) addFreeVirtualFunctionsInfo(ctx context
 		conn.Context.ExtraContext = map[string]string{}
 	}
 
-	info := a.resourcePool.GetFreeVirtualFunctionsInfo()
-	yamlInfo, err := info.Marshall()
+	info := a.hostInfoProvider.GetHostInfo()
+	yamlInfo, err := yaml.Marshal(info)
 	if err != nil {
 		return nil, err
 	}
 
-	conn.GetContext().GetExtraContext()[sriov.FreeVirtualFunctionsInfoKey] = yamlInfo
+	conn.GetContext().GetExtraContext()[resourcepool.HostInfoKey] = string(yamlInfo)
 	log.Entry(ctx).Infof("Added info about free virtual functions into the ExtraContext for connection %s: %s", conn.GetId(), yamlInfo)
 
 	return conn, nil

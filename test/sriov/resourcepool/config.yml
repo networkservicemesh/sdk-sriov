@@ -1,0 +1,6 @@
+---
+hostName: service1.example.com
+physicalFunctions:
+  0000:01:00.0: 10G
+  0000:02:00.0: 20G
+  0000:03:00.0: 30G
