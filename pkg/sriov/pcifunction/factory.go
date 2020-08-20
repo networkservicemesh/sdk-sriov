@@ -39,7 +39,7 @@ type Factory struct {
 }
 
 // NewFactory returns a new Factory
-func NewFactory(pciDevicesPath, pciDriversPath, iommuGroupsPath string) api.Factory {
+func NewFactory(pciDevicesPath, pciDriversPath, iommuGroupsPath string) *Factory {
 	return &Factory{
 		paths: paths{
 			pciDevices:  pciDevicesPath,
