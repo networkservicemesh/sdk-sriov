@@ -19,20 +19,20 @@ package resourcepool
 import (
 	"github.com/pkg/errors"
 
-	"github.com/networkservicemesh/sdk-sriov/pkg/tools/api/pcifunction"
-	api "github.com/networkservicemesh/sdk-sriov/pkg/tools/api/resourcepool"
+	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/types/pcifunction"
+	types "github.com/networkservicemesh/sdk-sriov/pkg/sriov/types/resourcepool"
 )
 
 // IommuGroup contains information about IOMMU group
 type IommuGroup struct {
 	ID           uint
-	BoundDriver  api.DriverType
+	BoundDriver  types.DriverType
 	PCIFunctions []*PCIFunction
 }
 
 // PhysicalFunction contains information about physical PCI function
 type PhysicalFunction struct {
-	Capability       api.Capability
+	Capability       types.Capability
 	VirtualFunctions map[uint][]*VirtualFunction
 
 	PCIFunction

@@ -17,7 +17,7 @@
 // Package resourcepool provides types for the PCI resource pool api
 package resourcepool
 
-import "github.com/networkservicemesh/sdk-sriov/pkg/tools/api/pcifunction"
+import "github.com/networkservicemesh/sdk-sriov/pkg/sriov/types/pcifunction"
 
 // HostInfoProvider provides host info
 type HostInfoProvider interface {

@@ -23,8 +23,8 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 	"github.com/pkg/errors"
 
-	"github.com/networkservicemesh/sdk-sriov/pkg/tools/api/pcifunction"
-	api "github.com/networkservicemesh/sdk-sriov/pkg/tools/api/resourcepool"
+	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/types/pcifunction"
+	types "github.com/networkservicemesh/sdk-sriov/pkg/sriov/types/resourcepool"
 )
 
 // ResourcePool manages host SR-IOV state
@@ -115,7 +115,7 @@ func (rp *ResourcePool) addPCIFunction(pcif *PCIFunction, apiPcif pcifunction.Bi
 	if !ok {
 		ig = &IommuGroup{
 			ID:           igid,
-			BoundDriver:  api.NoDriver,
+			BoundDriver:  types.NoDriver,
 			PCIFunctions: []*PCIFunction{pcif},
 		}
 		rp.iommuGroups[igid] = ig
@@ -128,20 +128,20 @@ func (rp *ResourcePool) addPCIFunction(pcif *PCIFunction, apiPcif pcifunction.Bi
 }
 
 // GetHostInfo returns host SR-IOV state
-func (rp *ResourcePool) GetHostInfo() *api.HostInfo {
-	host := &api.HostInfo{
+func (rp *ResourcePool) GetHostInfo() *types.HostInfo {
+	host := &types.HostInfo{
 		HostName:          rp.hostName,
-		PhysicalFunctions: make(map[string]*api.PhysicalFunctionInfo, len(rp.physicalFunctions)),
+		PhysicalFunctions: make(map[string]*types.PhysicalFunctionInfo, len(rp.physicalFunctions)),
 	}
 
 	for pciAddr, pf := range rp.physicalFunctions {
-		pfInfo := &api.PhysicalFunctionInfo{
+		pfInfo := &types.PhysicalFunctionInfo{
 			Capability:  pf.Capability,
-			IommuGroups: make(map[uint]*api.IommuGroupInfo, len(pf.VirtualFunctions)),
+			IommuGroups: make(map[uint]*types.IommuGroupInfo, len(pf.VirtualFunctions)),
 		}
 		for igid := range pf.VirtualFunctions {
 			totalVfs, freeVfs := pf.GetVirtualFunctionsInfo(igid)
-			pfInfo.IommuGroups[igid] = &api.IommuGroupInfo{
+			pfInfo.IommuGroups[igid] = &types.IommuGroupInfo{
 				DriverType:            rp.iommuGroups[igid].BoundDriver,
 				TotalVirtualFunctions: totalVfs,
 				FreeVirtualFunctions:  freeVfs,
@@ -155,7 +155,7 @@ func (rp *ResourcePool) GetHostInfo() *api.HostInfo {
 
 // Select selects a virtual function for the given physical function and IOMMU group,
 // binds it to the given driver type and marks it as "in-use"
-func (rp *ResourcePool) Select(pfPciAddr string, igid uint, driverType api.DriverType) (pcifunction.PCIFunction, error) {
+func (rp *ResourcePool) Select(pfPciAddr string, igid uint, driverType types.DriverType) (pcifunction.PCIFunction, error) {
 	return rp.selectVF(pfPciAddr, func(pf *PhysicalFunction) (*VirtualFunction, error) {
 		return pf.SelectVirtualFunction(igid)
 	}, driverType)
@@ -163,7 +163,7 @@ func (rp *ResourcePool) Select(pfPciAddr string, igid uint, driverType api.Drive
 
 // SelectAny selects a virtual function for the given physical function, binds it to the
 // given driver type and marks it as "in-use"
-func (rp *ResourcePool) SelectAny(pfPciAddr string, driverType api.DriverType) (pcifunction.PCIFunction, error) {
+func (rp *ResourcePool) SelectAny(pfPciAddr string, driverType types.DriverType) (pcifunction.PCIFunction, error) {
 	return rp.selectVF(pfPciAddr, func(pf *PhysicalFunction) (*VirtualFunction, error) {
 		return pf.SelectAnyVirtualFunction()
 	}, driverType)
@@ -171,7 +171,7 @@ func (rp *ResourcePool) SelectAny(pfPciAddr string, driverType api.DriverType) (
 
 type vfSelector func(*PhysicalFunction) (*VirtualFunction, error)
 
-func (rp *ResourcePool) selectVF(pfPciAddr string, vfSelect vfSelector, driverType api.DriverType) (*VirtualFunction, error) {
+func (rp *ResourcePool) selectVF(pfPciAddr string, vfSelect vfSelector, driverType types.DriverType) (*VirtualFunction, error) {
 	pf, ok := rp.physicalFunctions[pfPciAddr]
 	if !ok {
 		return nil, errors.Errorf("trying to select for not existing PF PCI address = %v", pfPciAddr)
@@ -183,7 +183,7 @@ func (rp *ResourcePool) selectVF(pfPciAddr string, vfSelect vfSelector, driverTy
 	}
 
 	switch vf.IommuGroup.BoundDriver {
-	case api.NoDriver:
+	case types.NoDriver:
 		if err := rp.bindDriver(vf.IommuGroup, driverType); err != nil {
 			return nil, err
 		}
@@ -215,23 +215,23 @@ func (rp *ResourcePool) Free(vfPciAddr string) {
 		}
 	}
 
-	vf.IommuGroup.BoundDriver = api.NoDriver
-	if err := rp.bindDriver(vf.IommuGroup, api.NoDriver); err != nil {
+	vf.IommuGroup.BoundDriver = types.NoDriver
+	if err := rp.bindDriver(vf.IommuGroup, types.NoDriver); err != nil {
 		logEntry.Warnf("failed to unbound driver for %v: %+v", vfPciAddr, err)
 	}
 }
 
-func (rp *ResourcePool) bindDriver(ig *IommuGroup, driverType api.DriverType) error {
+func (rp *ResourcePool) bindDriver(ig *IommuGroup, driverType types.DriverType) error {
 	switch driverType {
-	case api.NoDriver, api.KernelDriver:
+	case types.NoDriver, types.KernelDriver:
 		for _, pcif := range ig.PCIFunctions {
 			if err := pcif.BindDriver(pcif.KernelDriverName); err != nil {
 				return err
 			}
 		}
-	case api.VfioPCIDriver:
+	case types.VfioPCIDriver:
 		for _, pcif := range ig.PCIFunctions {
-			if err := pcif.BindDriver(string(api.VfioPCIDriver)); err != nil {
+			if err := pcif.BindDriver(string(types.VfioPCIDriver)); err != nil {
 				return err
 			}
 		}

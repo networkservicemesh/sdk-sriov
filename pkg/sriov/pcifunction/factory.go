@@ -23,7 +23,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	api "github.com/networkservicemesh/sdk-sriov/pkg/tools/api/pcifunction"
+	types "github.com/networkservicemesh/sdk-sriov/pkg/sriov/types/pcifunction"
 )
 
 const (
@@ -50,12 +50,12 @@ func NewFactory(pciDevicesPath, pciDriversPath, iommuGroupsPath string) *Factory
 }
 
 // NewConfigurablePhysicalFunction returns a new api.ConfigurablePhysicalFunction
-func (f *Factory) NewConfigurablePhysicalFunction(pciAddress string) (api.ConfigurablePhysicalFunction, error) {
+func (f *Factory) NewConfigurablePhysicalFunction(pciAddress string) (types.ConfigurablePhysicalFunction, error) {
 	return f.newPhysicalFunction(pciAddress)
 }
 
 // NewPhysicalFunction returns a new api.PhysicalFunction
-func (f *Factory) NewPhysicalFunction(pciAddress string) (api.PhysicalFunction, error) {
+func (f *Factory) NewPhysicalFunction(pciAddress string) (types.PhysicalFunction, error) {
 	return f.newPhysicalFunction(pciAddress)
 }
 

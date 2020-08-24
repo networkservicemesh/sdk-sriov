@@ -24,7 +24,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	api "github.com/networkservicemesh/sdk-sriov/pkg/tools/api/pcifunction"
+	types "github.com/networkservicemesh/sdk-sriov/pkg/sriov/types/pcifunction"
 )
 
 const (
@@ -56,13 +56,13 @@ func (pf *PhysicalFunction) CreateVirtualFunctions(vfCount uint) error {
 }
 
 // GetVirtualFunctions returns all virtual functions discovered for the pf
-func (pf *PhysicalFunction) GetVirtualFunctions() ([]api.BindablePCIFunction, error) {
+func (pf *PhysicalFunction) GetVirtualFunctions() ([]types.BindablePCIFunction, error) {
 	vfDirs, err := filepath.Glob(filepath.Join(pf.paths.pciDevices, pf.address, virtualFunctionPattern))
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to find virtual function directories for the device: %v", pf.address)
 	}
 
-	var pcifs []api.BindablePCIFunction
+	var pcifs []types.BindablePCIFunction
 	for _, dir := range vfDirs {
 		dirInfo, err := os.Lstat(dir)
 		if err == nil && (dirInfo.Mode()&os.ModeSymlink != 0) {

@@ -22,14 +22,14 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 	"github.com/pkg/errors"
 
-	api "github.com/networkservicemesh/sdk-sriov/pkg/tools/api/resourcepool"
+	types "github.com/networkservicemesh/sdk-sriov/pkg/sriov/types/resourcepool"
 	"github.com/networkservicemesh/sdk-sriov/pkg/tools/yamlhelper"
 )
 
 // Config contains list of available physical functions and their capabilities
 type Config struct {
-	HostName          string                    `yaml:"hostName"`
-	PhysicalFunctions map[string]api.Capability `yaml:"physicalFunctions"`
+	HostName          string                      `yaml:"hostName"`
+	PhysicalFunctions map[string]types.Capability `yaml:"physicalFunctions"`
 }
 
 // ReadConfig reads configuration from file

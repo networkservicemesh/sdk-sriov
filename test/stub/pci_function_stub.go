@@ -20,7 +20,7 @@ package stub
 import (
 	"github.com/pkg/errors"
 
-	"github.com/networkservicemesh/sdk-sriov/pkg/tools/api/pcifunction"
+	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/types/pcifunction"
 )
 
 // PCIFunctionFactory is a stub for pcifunction.Factory
