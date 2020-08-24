@@ -34,6 +34,11 @@ type vfioClient struct {
 	cgroupDir string
 }
 
+const (
+	mkdirPerm = 0750
+	mknodPerm = 0666
+)
+
 // NewClient returns a new VFIO client chain element
 func NewClient(vfioDir, cgroupDir string) networkservice.NetworkServiceClient {
 	return &vfioClient{
@@ -52,11 +57,14 @@ func (c *vfioClient) Request(ctx context.Context, request *networkservice.Networ
 		return nil, err
 	}
 
-	_ = os.Mkdir(c.vfioDir, 0600)
+	if err := os.Mkdir(c.vfioDir, mkdirPerm); err != nil && !os.IsExist(err) {
+		logEntry.Error("failed to create vfio directory")
+		return nil, err
+	}
 
 	if err := unix.Mknod(
 		path.Join(c.vfioDir, vfioDevice),
-		unix.S_IFCHR|0666,
+		unix.S_IFCHR|mknodPerm,
 		int(unix.Mkdev(atou(conn.Mechanism.Parameters[vfioMajorKey]), atou(conn.Mechanism.Parameters[vfioMinorKey]))),
 	); err != nil && !os.IsExist(err) {
 		logEntry.Errorf("failed to mknod device: %v", vfioDevice)
@@ -66,7 +74,7 @@ func (c *vfioClient) Request(ctx context.Context, request *networkservice.Networ
 	igid := conn.Mechanism.Parameters[IommuGroupKey]
 	if err := unix.Mknod(
 		path.Join(c.vfioDir, igid),
-		unix.S_IFCHR|0666,
+		unix.S_IFCHR|mknodPerm,
 		int(unix.Mkdev(atou(conn.Mechanism.Parameters[deviceMajorKey]), atou(conn.Mechanism.Parameters[deviceMinorKey]))),
 	); err != nil && !os.IsExist(err) {
 		logEntry.Errorf("failed to mknod device: %v", vfioDevice)

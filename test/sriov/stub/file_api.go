@@ -27,13 +27,13 @@ import (
 )
 
 const (
-	modeReadWrite = 0666
+	mkfifoPerm = 0666
 )
 
 // InputFileAPI calls consumer when someone writes into filePath File
 func InputFileAPI(ctx context.Context, filePath string, consumer func(string)) error {
 	_ = os.Remove(filePath)
-	err := unix.Mkfifo(filePath, modeReadWrite)
+	err := unix.Mkfifo(filePath, mkfifoPerm)
 	if err != nil {
 		return err
 	}
