@@ -53,22 +53,34 @@ func NewServer(vfioDir, cgroupBaseDir string) networkservice.NetworkServiceServe
 	}
 }
 
-func (s *vfioServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
+func (s *vfioServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (conn *networkservice.Connection, err error) {
 	logEntry := log.Entry(ctx).WithField("vfioServer", "Request")
 
-	connection, err := next.Server(ctx).Request(ctx, request)
+	conn, err = next.Server(ctx).Request(ctx, request)
 	if err != nil {
 		return nil, err
 	}
 
-	vfioMajor, vfioMinor, err := s.getDeviceNumbers(path.Join(s.vfioDir, vfioDevice))
+	defer func() {
+		if err != nil {
+			// don't forget to call Close to release allocated resources on Endpoint side
+			_, errOnClose := next.Server(ctx).Close(ctx, conn)
+			if errOnClose != nil {
+				logEntry.Error(errOnClose)
+			}
+		}
+	}()
+
+	var vfioMajor, vfioMinor uint32
+	vfioMajor, vfioMinor, err = s.getDeviceNumbers(path.Join(s.vfioDir, vfioDevice))
 	if err != nil {
 		logEntry.Errorf("failed to get device numbers for the device: %v", vfioDevice)
 		return nil, err
 	}
 
-	igid := connection.Mechanism.Parameters[IommuGroupKey]
-	deviceMajor, deviceMinor, err := s.getDeviceNumbers(path.Join(s.vfioDir, igid))
+	var deviceMajor, deviceMinor uint32
+	igid := conn.Mechanism.Parameters[IommuGroupKey]
+	deviceMajor, deviceMinor, err = s.getDeviceNumbers(path.Join(s.vfioDir, igid))
 	if err != nil {
 		logEntry.Errorf("failed to get device numbers for the device: %v", igid)
 		return nil, err
@@ -79,22 +91,22 @@ func (s *vfioServer) Request(ctx context.Context, request *networkservice.Networ
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	if err := s.deviceAllow(cgroupDir, vfioMajor, vfioMinor); err != nil {
+	if err = s.deviceAllow(cgroupDir, vfioMajor, vfioMinor); err != nil {
 		logEntry.Errorf("failed to allow device for the client: %v", vfioDevice)
 		return nil, err
 	}
-	connection.Mechanism.Parameters[vfioMajorKey] = utoa(vfioMajor)
-	connection.Mechanism.Parameters[vfioMinorKey] = utoa(vfioMinor)
+	conn.Mechanism.Parameters[vfioMajorKey] = utoa(vfioMajor)
+	conn.Mechanism.Parameters[vfioMinorKey] = utoa(vfioMinor)
 
-	if err := s.deviceAllow(cgroupDir, deviceMajor, deviceMinor); err != nil {
+	if err = s.deviceAllow(cgroupDir, deviceMajor, deviceMinor); err != nil {
 		logEntry.Errorf("failed to allow device for the client: %v", igid)
 		_ = s.deviceDeny(cgroupDir, vfioMajor, vfioMinor)
 		return nil, err
 	}
-	connection.Mechanism.Parameters[deviceMajorKey] = utoa(deviceMajor)
-	connection.Mechanism.Parameters[deviceMinorKey] = utoa(deviceMinor)
+	conn.Mechanism.Parameters[deviceMajorKey] = utoa(deviceMajor)
+	conn.Mechanism.Parameters[deviceMinorKey] = utoa(deviceMinor)
 
-	return connection, nil
+	return conn, nil
 }
 
 func (s *vfioServer) getDeviceNumbers(deviceFile string) (major, minor uint32, err error) {
