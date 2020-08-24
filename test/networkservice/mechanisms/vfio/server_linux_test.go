@@ -35,8 +35,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/sys/unix"
 
-	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/networkservice/mechanisms/vfio"
-	"github.com/networkservicemesh/sdk-sriov/test/sriov/stub"
+	"github.com/networkservicemesh/sdk-sriov/pkg/networkservice/mechanisms/vfio"
+	"github.com/networkservicemesh/sdk-sriov/test/tools/stub"
 )
 
 const (

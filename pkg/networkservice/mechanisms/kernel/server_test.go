@@ -27,8 +27,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/goleak"
 
+	"github.com/networkservicemesh/sdk-sriov/pkg/networkservice/mechanisms/kernel"
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov"
-	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/networkservice/mechanisms/kernel"
 )
 
 const (
