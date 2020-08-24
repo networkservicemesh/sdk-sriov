@@ -10,4 +10,6 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.5.1
 	go.uber.org/goleak v1.0.1-0.20200717213025-100c34bdc9d6
+	golang.org/x/sys v0.0.0-20200610111108-226ff32320da
+	google.golang.org/grpc v1.29.1
 )

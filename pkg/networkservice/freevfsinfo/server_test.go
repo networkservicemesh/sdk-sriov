@@ -20,7 +20,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/networkservice/freevfsinfo"
+	"github.com/networkservicemesh/sdk-sriov/pkg/networkservice/freevfsinfo"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
