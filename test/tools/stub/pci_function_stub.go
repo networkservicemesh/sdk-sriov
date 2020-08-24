@@ -14,22 +14,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package api_test provides stubs for the api/...
-package api_test
+// Package stub provides stubs for testing
+package stub
 
 import (
 	"github.com/pkg/errors"
 
-	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/api/pcifunction"
+	"github.com/networkservicemesh/sdk-sriov/pkg/tools/api/pcifunction"
 )
 
-// PCIFunctionFactoryStub is a stub for pcifunction.Factory
-type PCIFunctionFactoryStub struct {
-	Pfs []*PCIPhysicalFunctionStub `yaml:"pfs"`
+// PCIFunctionFactory is a stub for pcifunction.Factory
+type PCIFunctionFactory struct {
+	Pfs []*PCIPhysicalFunction `yaml:"pfs"`
 }
 
-// NewPhysicalFunction returns a PCIPhysicalFunctionStub with the given pciAddress
-func (pciff *PCIFunctionFactoryStub) NewPhysicalFunction(pciAddress string) (pcifunction.PhysicalFunction, error) {
+// NewPhysicalFunction returns a PCIPhysicalFunction with the given pciAddress
+func (pciff *PCIFunctionFactory) NewPhysicalFunction(pciAddress string) (pcifunction.PhysicalFunction, error) {
 	for _, pf := range pciff.Pfs {
 		if pf.Addr == pciAddress {
 			return pf, nil
@@ -38,16 +38,16 @@ func (pciff *PCIFunctionFactoryStub) NewPhysicalFunction(pciAddress string) (pci
 	return nil, errors.Errorf("device doesn't exist: %v", pciAddress)
 }
 
-// PCIPhysicalFunctionStub is a stub for pcifunction.PhysicalFunction
-type PCIPhysicalFunctionStub struct {
-	Capacity int                `yaml:"capacity"`
-	Vfs      []*PCIFunctionStub `yaml:"vfs"`
+// PCIPhysicalFunction is a stub for pcifunction.PhysicalFunction
+type PCIPhysicalFunction struct {
+	Capacity int            `yaml:"capacity"`
+	Vfs      []*PCIFunction `yaml:"vfs"`
 
-	PCIFunctionStub
+	PCIFunction
 }
 
 // GetVirtualFunctions returns pcipf.Vfs
-func (pcipf *PCIPhysicalFunctionStub) GetVirtualFunctions() ([]pcifunction.BindablePCIFunction, error) {
+func (pcipf *PCIPhysicalFunction) GetVirtualFunctions() ([]pcifunction.BindablePCIFunction, error) {
 	var vfs []pcifunction.BindablePCIFunction
 	for _, vf := range pcipf.Vfs {
 		vfs = append(vfs, vf)
@@ -55,8 +55,8 @@ func (pcipf *PCIPhysicalFunctionStub) GetVirtualFunctions() ([]pcifunction.Binda
 	return vfs, nil
 }
 
-// PCIFunctionStub is a stub for pcifunction.BindableFunction
-type PCIFunctionStub struct {
+// PCIFunction is a stub for pcifunction.BindableFunction
+type PCIFunction struct {
 	Addr       string `yaml:"addr"`
 	IfName     string `yaml:"ifName"`
 	IommuGroup uint   `yaml:"iommuGroup"`
@@ -64,27 +64,27 @@ type PCIFunctionStub struct {
 }
 
 // GetPCIAddress returns pcif.Addr
-func (pcif *PCIFunctionStub) GetPCIAddress() string {
+func (pcif *PCIFunction) GetPCIAddress() string {
 	return pcif.Addr
 }
 
 // GetNetInterfaceName returns pcif.IfName
-func (pcif *PCIFunctionStub) GetNetInterfaceName() (string, error) {
+func (pcif *PCIFunction) GetNetInterfaceName() (string, error) {
 	return pcif.IfName, nil
 }
 
 // GetIommuGroupID returns pcif.IommuGroup
-func (pcif *PCIFunctionStub) GetIommuGroupID() (uint, error) {
+func (pcif *PCIFunction) GetIommuGroupID() (uint, error) {
 	return pcif.IommuGroup, nil
 }
 
 // GetBoundDriver returns pcif.Driver
-func (pcif *PCIFunctionStub) GetBoundDriver() (string, error) {
+func (pcif *PCIFunction) GetBoundDriver() (string, error) {
 	return pcif.Driver, nil
 }
 
 // BindDriver sets pcif.Driver = driver
-func (pcif *PCIFunctionStub) BindDriver(driver string) error {
+func (pcif *PCIFunction) BindDriver(driver string) error {
 	pcif.Driver = driver
 	return nil
 }

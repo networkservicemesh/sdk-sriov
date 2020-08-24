@@ -14,19 +14,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package resourcepool provides types for the PCI resource pool api
-package resourcepool
-
-import "github.com/networkservicemesh/sdk-sriov/pkg/sriov/api/pcifunction"
-
-// HostInfoProvider provides host info
-type HostInfoProvider interface {
-	GetHostInfo() *HostInfo
-}
-
-// ResourcePool provides methods to select and free PCI functions
-type ResourcePool interface {
-	Select(pfPciAddr string, igid uint, driverType DriverType) (pcifunction.PCIFunction, error)
-	SelectAny(pfPciAddr string, driverType DriverType) (pcifunction.PCIFunction, error)
-	Free(vfPciAddr string)
-}
+// Package hostinfo enables code coverage tools work
+package hostinfo

@@ -24,7 +24,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	api "github.com/networkservicemesh/sdk-sriov/pkg/sriov/api/pcifunction"
+	api "github.com/networkservicemesh/sdk-sriov/pkg/tools/api/pcifunction"
 )
 
 const (

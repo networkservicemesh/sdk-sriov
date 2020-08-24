@@ -23,14 +23,14 @@ import (
 	"github.com/ghodss/yaml"
 	"github.com/stretchr/testify/mock"
 
-	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/api/resourcepool"
-	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/networkservice/hostinfo"
-
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/checks/checkrequest"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/goleak"
+
+	"github.com/networkservicemesh/sdk-sriov/pkg/networkservice/hostinfo"
+	"github.com/networkservicemesh/sdk-sriov/pkg/tools/api/resourcepool"
 )
 
 func TestNewClient_AddHostInfo(t *testing.T) {

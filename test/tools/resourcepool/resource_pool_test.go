@@ -22,11 +22,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/api/pcifunction"
-	resourcepoolapi "github.com/networkservicemesh/sdk-sriov/pkg/sriov/api/resourcepool"
-	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/resourcepool"
+	"github.com/networkservicemesh/sdk-sriov/pkg/tools/api/pcifunction"
+	resourcepoolapi "github.com/networkservicemesh/sdk-sriov/pkg/tools/api/resourcepool"
+	"github.com/networkservicemesh/sdk-sriov/pkg/tools/resourcepool"
 	"github.com/networkservicemesh/sdk-sriov/pkg/tools/yamlhelper"
-	api_test "github.com/networkservicemesh/sdk-sriov/test/sriov/api"
+	"github.com/networkservicemesh/sdk-sriov/test/tools/stub"
 )
 
 const (
@@ -39,8 +39,8 @@ const (
 	vf32Driver                 = "vf-3-2-driver"
 )
 
-func testPCIFunctionFactory() *api_test.PCIFunctionFactoryStub {
-	pciff := &api_test.PCIFunctionFactoryStub{}
+func testPCIFunctionFactory() *stub.PCIFunctionFactory {
+	pciff := &stub.PCIFunctionFactory{}
 	_ = yamlhelper.UnmarshalFile(pciFunctionFactoryFilename, pciff)
 	return pciff
 }
@@ -51,7 +51,7 @@ func testHostInfo() *resourcepoolapi.HostInfo {
 	return host
 }
 
-func initResourcePool(t *testing.T) (rp *resourcepool.ResourcePool, pciff *api_test.PCIFunctionFactoryStub) {
+func initResourcePool(t *testing.T) (rp *resourcepool.ResourcePool, pciff *stub.PCIFunctionFactory) {
 	pciff = testPCIFunctionFactory()
 
 	config, err := resourcepool.ReadConfig(context.TODO(), configFileName)
@@ -74,7 +74,7 @@ func TestResourcePool_Select(t *testing.T) {
 
 	vf, err := rp.Select(pf1PciAddr, 2, resourcepoolapi.VfioPCIDriver)
 	assert.Nil(t, err)
-	assertPCIFunctionEqual(t, &api_test.PCIFunctionStub{
+	assertPCIFunctionEqual(t, &stub.PCIFunction{
 		Addr:       vf11PciAddr,
 		IfName:     vf11IfName,
 		IommuGroup: 2,
@@ -98,7 +98,7 @@ func TestResourcePool_SelectAny(t *testing.T) {
 
 	vf, err := rp.SelectAny(pf1PciAddr, resourcepoolapi.VfioPCIDriver)
 	assert.Nil(t, err)
-	assertPCIFunctionEqual(t, &api_test.PCIFunctionStub{
+	assertPCIFunctionEqual(t, &stub.PCIFunction{
 		Addr:       vf11PciAddr,
 		IfName:     vf11IfName,
 		IommuGroup: 2,

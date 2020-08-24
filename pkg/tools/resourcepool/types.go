@@ -19,8 +19,8 @@ package resourcepool
 import (
 	"github.com/pkg/errors"
 
-	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/api/pcifunction"
-	api "github.com/networkservicemesh/sdk-sriov/pkg/sriov/api/resourcepool"
+	"github.com/networkservicemesh/sdk-sriov/pkg/tools/api/pcifunction"
+	api "github.com/networkservicemesh/sdk-sriov/pkg/tools/api/resourcepool"
 )
 
 // IommuGroup contains information about IOMMU group

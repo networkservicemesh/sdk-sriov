@@ -27,7 +27,7 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 	"github.com/pkg/errors"
 
-	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/api/resourcepool"
+	"github.com/networkservicemesh/sdk-sriov/pkg/tools/api/resourcepool"
 )
 
 type hostInfoServer struct {

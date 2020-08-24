@@ -22,7 +22,7 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 	"github.com/pkg/errors"
 
-	api "github.com/networkservicemesh/sdk-sriov/pkg/sriov/api/resourcepool"
+	api "github.com/networkservicemesh/sdk-sriov/pkg/tools/api/resourcepool"
 	"github.com/networkservicemesh/sdk-sriov/pkg/tools/yamlhelper"
 )
 

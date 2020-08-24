@@ -22,8 +22,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	resourcepoolapi "github.com/networkservicemesh/sdk-sriov/pkg/sriov/api/resourcepool"
-	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/resourcepool"
+	resourcepoolapi "github.com/networkservicemesh/sdk-sriov/pkg/tools/api/resourcepool"
+	"github.com/networkservicemesh/sdk-sriov/pkg/tools/resourcepool"
 )
 
 const (

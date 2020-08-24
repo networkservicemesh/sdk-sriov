@@ -23,8 +23,8 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 	"github.com/pkg/errors"
 
-	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/api/pcifunction"
-	api "github.com/networkservicemesh/sdk-sriov/pkg/sriov/api/resourcepool"
+	"github.com/networkservicemesh/sdk-sriov/pkg/tools/api/pcifunction"
+	api "github.com/networkservicemesh/sdk-sriov/pkg/tools/api/resourcepool"
 )
 
 // ResourcePool manages host SR-IOV state
