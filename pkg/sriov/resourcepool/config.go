@@ -19,17 +19,18 @@ package resourcepool
 import (
 	"context"
 
-	"github.com/networkservicemesh/sdk/pkg/tools/log"
 	"github.com/pkg/errors"
 
-	types "github.com/networkservicemesh/sdk-sriov/pkg/sriov/types/resourcepool"
+	"github.com/networkservicemesh/sdk/pkg/tools/log"
+
+	"github.com/networkservicemesh/sdk-sriov/pkg/sriov"
 	"github.com/networkservicemesh/sdk-sriov/pkg/tools/yamlhelper"
 )
 
 // Config contains list of available physical functions and their capabilities
 type Config struct {
 	HostName          string                      `yaml:"hostName"`
-	PhysicalFunctions map[string]types.Capability `yaml:"physicalFunctions"`
+	PhysicalFunctions map[string]sriov.Capability `yaml:"physicalFunctions"`
 }
 
 // ReadConfig reads configuration from file

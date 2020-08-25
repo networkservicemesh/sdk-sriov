@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package resourcepool
+package sriov
 
 // TODO: think about moving HostInfo to the api repository
 

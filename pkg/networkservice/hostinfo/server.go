@@ -22,20 +22,26 @@ import (
 
 	"github.com/ghodss/yaml"
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/pkg/errors"
+
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
-	"github.com/pkg/errors"
 
-	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/types/resourcepool"
+	"github.com/networkservicemesh/sdk-sriov/pkg/sriov"
 )
 
+// Provider provides sriov.HostInfo
+type Provider interface {
+	GetHostInfo() *sriov.HostInfo
+}
+
 type hostInfoServer struct {
-	hostInfoProvider resourcepool.HostInfoProvider
+	hostInfoProvider Provider
 }
 
 // NewServer - returns a new networkservicemesh.NetworkServiceServer for adding host info
-func NewServer(hostInfoProvider resourcepool.HostInfoProvider) networkservice.NetworkServiceServer {
+func NewServer(hostInfoProvider Provider) networkservice.NetworkServiceServer {
 	return &hostInfoServer{
 		hostInfoProvider: hostInfoProvider,
 	}
@@ -68,7 +74,7 @@ func (a *hostInfoServer) addHostInfo(ctx context.Context, conn *networkservice.C
 		return nil, err
 	}
 
-	conn.GetContext().GetExtraContext()[resourcepool.HostInfoKey] = string(yamlInfo)
+	conn.GetContext().GetExtraContext()[sriov.HostInfoKey] = string(yamlInfo)
 	log.Entry(ctx).Infof("Added info about free virtual functions into the ExtraContext for connection %s: %s", conn.GetId(), yamlInfo)
 
 	return conn, nil

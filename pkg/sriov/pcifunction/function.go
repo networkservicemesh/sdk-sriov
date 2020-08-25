@@ -34,8 +34,30 @@ const (
 
 // Function describes Linux PCI function
 type Function struct {
-	address string
-	paths   paths
+	address         string
+	kernelDriver    string
+	pciDevicesPath  string
+	pciDriversPath  string
+	iommuGroupsPath string
+}
+
+func newFunction(pciAddress, pciDevicesPath, pciDriversPath, iommuGroupsPath string) (*Function, error) {
+	f := &Function{
+		address:         pciAddress,
+		pciDevicesPath:  pciDevicesPath,
+		pciDriversPath:  pciDriversPath,
+		iommuGroupsPath: iommuGroupsPath,
+	}
+
+	switch kernelDriver, err := f.GetBoundDriver(); {
+	case err != nil:
+		return nil, err
+	case kernelDriver == "":
+		return nil, errors.Errorf("no driver bound found for the device: %v", pciAddress)
+	default:
+		f.kernelDriver = kernelDriver
+		return f, nil
+	}
 }
 
 // GetPCIAddress returns f PCI address
@@ -45,7 +67,7 @@ func (f *Function) GetPCIAddress() string {
 
 // GetNetInterfaceName returns f net interface name
 func (f *Function) GetNetInterfaceName() (string, error) {
-	fInfos, err := ioutil.ReadDir(filepath.Join(f.paths.pciDevices, f.address, netInterfacesPath))
+	fInfos, err := ioutil.ReadDir(filepath.Join(f.pciDevicesPath, f.address, netInterfacesPath))
 	if err != nil {
 		return "", errors.Wrapf(err, "failed to read net directory for the device: %v", f.address)
 	}
@@ -59,7 +81,7 @@ func (f *Function) GetNetInterfaceName() (string, error) {
 
 // GetIommuGroupID returns f IOMMU group id
 func (f *Function) GetIommuGroupID() (uint, error) {
-	stringIgid, err := evalSymlinkAndGetBaseName(filepath.Join(f.paths.pciDevices, f.address, iommuGroup))
+	stringIgid, err := evalSymlinkAndGetBaseName(filepath.Join(f.pciDevicesPath, f.address, iommuGroup))
 	if err != nil {
 		return 0, errors.Wrapf(err, "error evaluating IOMMU group id for the device: %v", f.address)
 	}
@@ -75,7 +97,7 @@ func (f *Function) GetBoundDriver() (string, error) {
 		return "", nil
 	}
 
-	driver, err := evalSymlinkAndGetBaseName(filepath.Join(f.paths.pciDevices, f.address, boundDriverPath))
+	driver, err := evalSymlinkAndGetBaseName(filepath.Join(f.pciDevicesPath, f.address, boundDriverPath))
 	if err != nil {
 		return "", errors.Wrapf(err, "error evaluating bound driver for the device: %v", f.address)
 	}
@@ -86,13 +108,13 @@ func (f *Function) GetBoundDriver() (string, error) {
 // BindDriver unbinds currently bound driver and binds the given driver to f
 func (f *Function) BindDriver(driver string) error {
 	if f.isAnyDriverBound() {
-		unbindPath := filepath.Join(f.paths.pciDevices, f.address, boundDriverPath, unbindDriverPath)
+		unbindPath := filepath.Join(f.pciDevicesPath, f.address, boundDriverPath, unbindDriverPath)
 		if err := ioutil.WriteFile(unbindPath, []byte(f.address), 0); err != nil {
 			return errors.Wrapf(err, "failed to unbind driver from the device: %v", f.address)
 		}
 	}
 
-	bindPath := filepath.Join(f.paths.pciDrivers, driver, bindDriverPath)
+	bindPath := filepath.Join(f.pciDriversPath, driver, bindDriverPath)
 	if err := ioutil.WriteFile(bindPath, []byte(f.address), 0); err != nil {
 		return errors.Wrapf(err, "failed to bind the driver to the device: %v %v", f.address, driver)
 	}
@@ -100,6 +122,11 @@ func (f *Function) BindDriver(driver string) error {
 	return nil
 }
 
+// UnbindDriver unbinds currently bound driver and binds the default driver to f
+func (f *Function) UnbindDriver() error {
+	return f.BindDriver(f.kernelDriver)
+}
+
 func (f *Function) isAnyDriverBound() bool {
-	return isFileExists(filepath.Join(f.paths.pciDevices, f.address, boundDriverPath))
+	return isFileExists(filepath.Join(f.pciDevicesPath, f.address, boundDriverPath))
 }

@@ -22,131 +22,95 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/networkservicemesh/sdk-sriov/pkg/sriov"
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/resourcepool"
-	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/types/pcifunction"
-	types "github.com/networkservicemesh/sdk-sriov/pkg/sriov/types/resourcepool"
 	"github.com/networkservicemesh/sdk-sriov/pkg/tools/yamlhelper"
 	"github.com/networkservicemesh/sdk-sriov/test/stub"
 )
 
 const (
-	pciFunctionFactoryFilename = "pci_function_factory.yml"
-	hostInfoFileName           = "host_info.yml"
-	vf11PciAddr                = "0000:01:00.1"
-	vf11IfName                 = "vf-1-1-ifname"
-	vf11Driver                 = "vf-1-1-driver"
-	vf22Driver                 = "vf-2-2-driver"
-	vf32Driver                 = "vf-3-2-driver"
+	physicalFunctionsFilename = "physical_functions.yml"
+	hostInfoFileName          = "host_info.yml"
+	vf11PciAddr               = "0000:01:00.1"
 )
 
-func testPCIFunctionFactory() *stub.PCIFunctionFactory {
-	pciff := &stub.PCIFunctionFactory{}
-	_ = yamlhelper.UnmarshalFile(pciFunctionFactoryFilename, pciff)
-	return pciff
-}
-
-func testHostInfo() *types.HostInfo {
-	host := &types.HostInfo{}
+func testHostInfo() *sriov.HostInfo {
+	host := &sriov.HostInfo{}
 	_ = yamlhelper.UnmarshalFile(hostInfoFileName, host)
 	return host
 }
 
-func initResourcePool(t *testing.T) (rp *resourcepool.ResourcePool, pciff *stub.PCIFunctionFactory) {
-	pciff = testPCIFunctionFactory()
+func initResourcePool(t *testing.T) *resourcepool.ResourcePool {
+	var pfs []*stub.PCIPhysicalFunction
+	_ = yamlhelper.UnmarshalFile(physicalFunctionsFilename, &pfs)
+
+	var vfs []*resourcepool.VirtualFunction
+	for _, pf := range pfs {
+		for _, vf := range pf.Vfs {
+			vfs = append(vfs, &resourcepool.VirtualFunction{
+				PCIAddress:                 vf.Addr,
+				PhysicalFunctionPCIAddress: pf.Addr,
+				IommuGroupID:               vf.IommuGroup,
+			})
+		}
+	}
 
 	config, err := resourcepool.ReadConfig(context.TODO(), configFileName)
 	assert.Nil(t, err)
 
-	rp, err = resourcepool.NewResourcePool(context.TODO(), pciff, config)
-	assert.Nil(t, err)
-
-	return rp, pciff
+	return resourcepool.NewResourcePool(context.TODO(), vfs, config)
 }
 
 func TestResourcePool_GetHostInfo(t *testing.T) {
-	rp, _ := initResourcePool(t)
+	rp := initResourcePool(t)
 
 	assert.Equal(t, testHostInfo(), rp.GetHostInfo())
 }
 
 func TestResourcePool_Select(t *testing.T) {
-	rp, pciff := initResourcePool(t)
+	rp := initResourcePool(t)
 
-	vf, err := rp.Select(pf1PciAddr, 2, types.VfioPCIDriver)
+	vf, err := rp.Select(pf1PciAddr, 2, sriov.VfioPCIDriver)
 	assert.Nil(t, err)
-	assertPCIFunctionEqual(t, &stub.PCIFunction{
-		Addr:       vf11PciAddr,
-		IfName:     vf11IfName,
-		IommuGroup: 2,
-		Driver:     string(types.VfioPCIDriver),
+	assert.Equal(t, &resourcepool.VirtualFunction{
+		PCIAddress:                 vf11PciAddr,
+		PhysicalFunctionPCIAddress: pf1PciAddr,
+		IommuGroupID:               2,
 	}, vf)
 
 	host := testHostInfo()
-	host.PhysicalFunctions[pf1PciAddr].IommuGroups[2].DriverType = types.VfioPCIDriver
+	host.PhysicalFunctions[pf1PciAddr].IommuGroups[2].DriverType = sriov.VfioPCIDriver
 	host.PhysicalFunctions[pf1PciAddr].IommuGroups[2].FreeVirtualFunctions = 0
-	host.PhysicalFunctions[pf2PciAddr].IommuGroups[2].DriverType = types.VfioPCIDriver
-	host.PhysicalFunctions[pf3PciAddr].IommuGroups[2].DriverType = types.VfioPCIDriver
+	host.PhysicalFunctions[pf2PciAddr].IommuGroups[2].DriverType = sriov.VfioPCIDriver
+	host.PhysicalFunctions[pf3PciAddr].IommuGroups[2].DriverType = sriov.VfioPCIDriver
 	assert.Equal(t, host, rp.GetHostInfo())
-
-	assert.Equal(t, string(types.VfioPCIDriver), pciff.Pfs[0].Vfs[0].Driver)
-	assert.Equal(t, string(types.VfioPCIDriver), pciff.Pfs[1].Vfs[1].Driver)
-	assert.Equal(t, string(types.VfioPCIDriver), pciff.Pfs[2].Vfs[1].Driver)
 }
 
 func TestResourcePool_SelectAny(t *testing.T) {
-	rp, pciff := initResourcePool(t)
+	rp := initResourcePool(t)
 
-	vf, err := rp.SelectAny(pf1PciAddr, types.VfioPCIDriver)
+	vf, err := rp.SelectAny(pf1PciAddr, sriov.VfioPCIDriver)
 	assert.Nil(t, err)
-	assertPCIFunctionEqual(t, &stub.PCIFunction{
-		Addr:       vf11PciAddr,
-		IfName:     vf11IfName,
-		IommuGroup: 2,
-		Driver:     string(types.VfioPCIDriver),
+	assert.Equal(t, &resourcepool.VirtualFunction{
+		PCIAddress:                 vf11PciAddr,
+		PhysicalFunctionPCIAddress: pf1PciAddr,
+		IommuGroupID:               2,
 	}, vf)
 
 	host := testHostInfo()
-	host.PhysicalFunctions[pf1PciAddr].IommuGroups[2].DriverType = types.VfioPCIDriver
+	host.PhysicalFunctions[pf1PciAddr].IommuGroups[2].DriverType = sriov.VfioPCIDriver
 	host.PhysicalFunctions[pf1PciAddr].IommuGroups[2].FreeVirtualFunctions = 0
-	host.PhysicalFunctions[pf2PciAddr].IommuGroups[2].DriverType = types.VfioPCIDriver
-	host.PhysicalFunctions[pf3PciAddr].IommuGroups[2].DriverType = types.VfioPCIDriver
+	host.PhysicalFunctions[pf2PciAddr].IommuGroups[2].DriverType = sriov.VfioPCIDriver
+	host.PhysicalFunctions[pf3PciAddr].IommuGroups[2].DriverType = sriov.VfioPCIDriver
 	assert.Equal(t, host, rp.GetHostInfo())
-
-	assert.Equal(t, string(types.VfioPCIDriver), pciff.Pfs[0].Vfs[0].Driver)
-	assert.Equal(t, string(types.VfioPCIDriver), pciff.Pfs[1].Vfs[1].Driver)
-	assert.Equal(t, string(types.VfioPCIDriver), pciff.Pfs[2].Vfs[1].Driver)
-}
-
-func assertPCIFunctionEqual(t *testing.T, expected, actual pcifunction.PCIFunction) {
-	assert.Equal(t, expected.GetPCIAddress(), actual.GetPCIAddress())
-
-	expectedIfName, _ := expected.GetNetInterfaceName()
-	actualIfName, err := actual.GetNetInterfaceName()
-	assert.Nil(t, err)
-	assert.Equal(t, expectedIfName, actualIfName)
-
-	expectedIgid, _ := expected.GetIommuGroupID()
-	actualIgid, err := actual.GetIommuGroupID()
-	assert.Nil(t, err)
-	assert.Equal(t, expectedIgid, actualIgid)
-
-	expectedDriver, _ := expected.GetBoundDriver()
-	actualDriver, err := actual.GetBoundDriver()
-	assert.Nil(t, err)
-	assert.Equal(t, expectedDriver, actualDriver)
 }
 
 func TestResourcePool_Free(t *testing.T) {
-	rp, pciff := initResourcePool(t)
+	rp := initResourcePool(t)
 
-	vf, err := rp.SelectAny(pf1PciAddr, types.VfioPCIDriver)
+	vf, err := rp.SelectAny(pf1PciAddr, sriov.VfioPCIDriver)
 	assert.Nil(t, err)
-	assert.NotNil(t, vf)
-	rp.Free(vf.GetPCIAddress())
+	rp.Free(vf)
 
 	assert.Equal(t, testHostInfo(), rp.GetHostInfo())
-
-	assert.Equal(t, vf11Driver, pciff.Pfs[0].Vfs[0].Driver)
-	assert.Equal(t, vf22Driver, pciff.Pfs[1].Vfs[1].Driver)
-	assert.Equal(t, vf32Driver, pciff.Pfs[2].Vfs[1].Driver)
 }

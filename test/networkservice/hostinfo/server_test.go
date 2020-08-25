@@ -21,28 +21,29 @@ import (
 	"testing"
 
 	"github.com/ghodss/yaml"
-	"github.com/networkservicemesh/api/pkg/api/networkservice"
-	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
-	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/checks/checkrequest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"go.uber.org/goleak"
 
+	"github.com/networkservicemesh/api/pkg/api/networkservice"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/checks/checkrequest"
+
 	"github.com/networkservicemesh/sdk-sriov/pkg/networkservice/hostinfo"
-	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/types/resourcepool"
+	"github.com/networkservicemesh/sdk-sriov/pkg/sriov"
 )
 
 func TestNewClient_AddHostInfo(t *testing.T) {
 	defer goleak.VerifyNone(t)
 
-	hostInfo := &resourcepool.HostInfo{
+	hostInfo := &sriov.HostInfo{
 		HostName: "example.com",
-		PhysicalFunctions: map[string]*resourcepool.PhysicalFunctionInfo{
+		PhysicalFunctions: map[string]*sriov.PhysicalFunctionInfo{
 			"0000:00:01:0": {
 				Capability: "10G",
-				IommuGroups: map[uint]*resourcepool.IommuGroupInfo{
+				IommuGroups: map[uint]*sriov.IommuGroupInfo{
 					1: {
-						DriverType:            resourcepool.NoDriver,
+						DriverType:            sriov.NoDriver,
 						TotalVirtualFunctions: 10,
 						FreeVirtualFunctions:  5,
 					},
@@ -63,7 +64,7 @@ func TestNewClient_AddHostInfo(t *testing.T) {
 		Connection: &networkservice.Connection{
 			Context: &networkservice.ConnectionContext{
 				ExtraContext: map[string]string{
-					resourcepool.HostInfoKey: string(yamlHostInfo),
+					sriov.HostInfoKey: string(yamlHostInfo),
 				},
 			},
 		},
@@ -80,7 +81,7 @@ type hostInfoProviderMock struct {
 	mock mock.Mock
 }
 
-func (hip *hostInfoProviderMock) GetHostInfo() *resourcepool.HostInfo {
+func (hip *hostInfoProviderMock) GetHostInfo() *sriov.HostInfo {
 	res := hip.mock.Called()
-	return res.Get(0).(*resourcepool.HostInfo)
+	return res.Get(0).(*sriov.HostInfo)
 }

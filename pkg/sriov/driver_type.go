@@ -14,14 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package resourcepool
-
-import (
-	"regexp"
-	"strconv"
-
-	"github.com/pkg/errors"
-)
+package sriov
 
 // DriverType is a driver type that is bound to virtual function
 type DriverType string
@@ -34,37 +27,3 @@ const (
 	// VfioPCIDriver is vfio-pci driver type
 	VfioPCIDriver DriverType = "vfio-pci"
 )
-
-// Capability is a type for PCI function capability
-type Capability string
-
-var validCapability = regexp.MustCompile(`^([1-9][0-9]*)([GMK]??)b??$`)
-
-// Validate validates Capability string
-func (c Capability) Validate() error {
-	if validCapability.MatchString(string(c)) {
-		return nil
-	}
-	return errors.Errorf("PCI capability %v expected to be in format: %v", c, validCapability)
-}
-
-// Compare compares capabilities
-func (c Capability) Compare(other Capability) int {
-	return c.toBytes() - other.toBytes()
-}
-
-func (c Capability) toBytes() int {
-	parsed := validCapability.FindStringSubmatch(string(c))
-	bytes, _ := strconv.Atoi(parsed[1])
-	switch parsed[2] {
-	case "G":
-		bytes *= 1024
-		fallthrough
-	case "M":
-		bytes *= 1024
-		fallthrough
-	case "K":
-		bytes *= 1024
-	}
-	return bytes
-}

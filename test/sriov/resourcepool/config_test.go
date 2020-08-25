@@ -22,8 +22,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/networkservicemesh/sdk-sriov/pkg/sriov"
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/resourcepool"
-	types "github.com/networkservicemesh/sdk-sriov/pkg/sriov/types/resourcepool"
 )
 
 const (
@@ -32,9 +32,9 @@ const (
 	pf1PciAddr                      = "0000:01:00.0"
 	pf2PciAddr                      = "0000:02:00.0"
 	pf3PciAddr                      = "0000:03:00.0"
-	pf1Capability  types.Capability = "10G"
-	pf2Capability  types.Capability = "20G"
-	pf3Capability  types.Capability = "30G"
+	pf1Capability  sriov.Capability = "10G"
+	pf2Capability  sriov.Capability = "20G"
+	pf3Capability  sriov.Capability = "30G"
 )
 
 // TestReadConfigFile test reading a SRIOV config file
@@ -43,7 +43,7 @@ func TestReadConfigFile(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, &resourcepool.Config{
 		HostName: hostName,
-		PhysicalFunctions: map[string]types.Capability{
+		PhysicalFunctions: map[string]sriov.Capability{
 			pf1PciAddr: pf1Capability,
 			pf2PciAddr: pf2Capability,
 			pf3PciAddr: pf3Capability,

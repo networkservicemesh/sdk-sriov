@@ -14,33 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package pcifunction provides interfaces for the OS PCI functions api
-package pcifunction
-
-// ConfigurableFactory is an abstract factory for ConfigurablePhysicalFunction
-type ConfigurableFactory interface {
-	NewConfigurablePhysicalFunction(pciAddress string) (ConfigurablePhysicalFunction, error)
-}
-
-// Factory is an abstract factory for PhysicalFunction
-type Factory interface {
-	NewPhysicalFunction(pciAddress string) (PhysicalFunction, error)
-}
-
-// ConfigurablePhysicalFunction is a PhysicalFunction with methods to configure SR-IOV on OS physical function
-type ConfigurablePhysicalFunction interface {
-	GetVirtualFunctionsCapacity() (uint, error)
-	CreateVirtualFunctions(vfCount uint) error
-
-	PhysicalFunction
-}
-
-// PhysicalFunction is a BindablePCIFunction with methods to get OS physical function virtual functions
-type PhysicalFunction interface {
-	GetVirtualFunctions() ([]BindablePCIFunction, error)
-
-	BindablePCIFunction
-}
+// Package sriov provides types for SR-IOV
+package sriov
 
 // BindablePCIFunction is a PCIFunction and a DriverBinder
 type BindablePCIFunction interface {
@@ -59,4 +34,5 @@ type PCIFunction interface {
 // DriverBinder provides a method to bind driver to OS PCI function
 type DriverBinder interface {
 	BindDriver(driver string) error
+	UnbindDriver() error
 }

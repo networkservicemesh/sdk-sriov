@@ -17,28 +17,7 @@
 // Package stub provides stubs for testing
 package stub
 
-import (
-	"github.com/pkg/errors"
-
-	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/types/pcifunction"
-)
-
-// PCIFunctionFactory is a stub for pcifunction.Factory
-type PCIFunctionFactory struct {
-	Pfs []*PCIPhysicalFunction `yaml:"pfs"`
-}
-
-// NewPhysicalFunction returns a PCIPhysicalFunction with the given pciAddress
-func (pciff *PCIFunctionFactory) NewPhysicalFunction(pciAddress string) (pcifunction.PhysicalFunction, error) {
-	for _, pf := range pciff.Pfs {
-		if pf.Addr == pciAddress {
-			return pf, nil
-		}
-	}
-	return nil, errors.Errorf("device doesn't exist: %v", pciAddress)
-}
-
-// PCIPhysicalFunction is a stub for pcifunction.PhysicalFunction
+// PCIPhysicalFunction is a test data class for pcifunction.PhysicalFunction
 type PCIPhysicalFunction struct {
 	Capacity int            `yaml:"capacity"`
 	Vfs      []*PCIFunction `yaml:"vfs"`
@@ -46,45 +25,10 @@ type PCIPhysicalFunction struct {
 	PCIFunction
 }
 
-// GetVirtualFunctions returns pcipf.Vfs
-func (pcipf *PCIPhysicalFunction) GetVirtualFunctions() ([]pcifunction.BindablePCIFunction, error) {
-	var vfs []pcifunction.BindablePCIFunction
-	for _, vf := range pcipf.Vfs {
-		vfs = append(vfs, vf)
-	}
-	return vfs, nil
-}
-
-// PCIFunction is a stub for pcifunction.BindableFunction
+// PCIFunction is a test data class for pcifunction.Function
 type PCIFunction struct {
 	Addr       string `yaml:"addr"`
 	IfName     string `yaml:"ifName"`
 	IommuGroup uint   `yaml:"iommuGroup"`
 	Driver     string `yaml:"driver"`
-}
-
-// GetPCIAddress returns pcif.Addr
-func (pcif *PCIFunction) GetPCIAddress() string {
-	return pcif.Addr
-}
-
-// GetNetInterfaceName returns pcif.IfName
-func (pcif *PCIFunction) GetNetInterfaceName() (string, error) {
-	return pcif.IfName, nil
-}
-
-// GetIommuGroupID returns pcif.IommuGroup
-func (pcif *PCIFunction) GetIommuGroupID() (uint, error) {
-	return pcif.IommuGroup, nil
-}
-
-// GetBoundDriver returns pcif.Driver
-func (pcif *PCIFunction) GetBoundDriver() (string, error) {
-	return pcif.Driver, nil
-}
-
-// BindDriver sets pcif.Driver = driver
-func (pcif *PCIFunction) BindDriver(driver string) error {
-	pcif.Driver = driver
-	return nil
 }
