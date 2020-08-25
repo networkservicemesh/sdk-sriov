@@ -70,13 +70,9 @@ func TestResourcePool_GetHostInfo(t *testing.T) {
 func TestResourcePool_Select(t *testing.T) {
 	rp := initResourcePool(t)
 
-	vf, err := rp.Select(pf1PciAddr, 2, sriov.VfioPCIDriver)
+	vfPciAddr, err := rp.Select(pf1PciAddr, 2, sriov.VfioPCIDriver)
 	assert.Nil(t, err)
-	assert.Equal(t, &resourcepool.VirtualFunction{
-		PCIAddress:                 vf11PciAddr,
-		PhysicalFunctionPCIAddress: pf1PciAddr,
-		IommuGroupID:               2,
-	}, vf)
+	assert.Equal(t, vf11PciAddr, vfPciAddr)
 
 	host := testHostInfo()
 	host.PhysicalFunctions[pf1PciAddr].IommuGroups[2].DriverType = sriov.VfioPCIDriver
@@ -89,13 +85,9 @@ func TestResourcePool_Select(t *testing.T) {
 func TestResourcePool_SelectAny(t *testing.T) {
 	rp := initResourcePool(t)
 
-	vf, err := rp.SelectAny(pf1PciAddr, sriov.VfioPCIDriver)
+	vfPciAddr, err := rp.SelectAny(pf1PciAddr, sriov.VfioPCIDriver)
 	assert.Nil(t, err)
-	assert.Equal(t, &resourcepool.VirtualFunction{
-		PCIAddress:                 vf11PciAddr,
-		PhysicalFunctionPCIAddress: pf1PciAddr,
-		IommuGroupID:               2,
-	}, vf)
+	assert.Equal(t, vf11PciAddr, vfPciAddr)
 
 	host := testHostInfo()
 	host.PhysicalFunctions[pf1PciAddr].IommuGroups[2].DriverType = sriov.VfioPCIDriver
@@ -108,9 +100,9 @@ func TestResourcePool_SelectAny(t *testing.T) {
 func TestResourcePool_Free(t *testing.T) {
 	rp := initResourcePool(t)
 
-	vf, err := rp.SelectAny(pf1PciAddr, sriov.VfioPCIDriver)
+	vfPciAddr, err := rp.SelectAny(pf1PciAddr, sriov.VfioPCIDriver)
 	assert.Nil(t, err)
-	rp.Free(vf.PCIAddress)
+	rp.Free(vfPciAddr)
 
 	assert.Equal(t, testHostInfo(), rp.GetHostInfo())
 }

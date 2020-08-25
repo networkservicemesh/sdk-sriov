@@ -108,16 +108,15 @@ func (rp *ResourcePool) GetHostInfo() *sriov.HostInfo {
 
 // Select selects a virtual function for the given physical function and IOMMU group,
 // binds it to the given driver type and marks it as "in-use"
-func (rp *ResourcePool) Select(pfPciAddr string, igid uint, driverType sriov.DriverType) (*VirtualFunction, error) {
+func (rp *ResourcePool) Select(pfPciAddr string, igid uint, driverType sriov.DriverType) (string, error) {
 	return rp.selectVF(pfPciAddr, func(pf *physicalFunction) (*VirtualFunction, error) {
 		boundDriver := rp.iommuGroups[igid]
 		if boundDriver == sriov.NoDriver || boundDriver == driverType {
 			for _, vf := range pf.virtualFunctions[igid] {
 				if rp.virtualFunctions[vf] {
 					return &VirtualFunction{
-						PCIAddress:                 vf,
-						PhysicalFunctionPCIAddress: pfPciAddr,
-						IommuGroupID:               igid,
+						PCIAddress:   vf,
+						IommuGroupID: igid,
 					}, nil
 				}
 			}
@@ -128,7 +127,7 @@ func (rp *ResourcePool) Select(pfPciAddr string, igid uint, driverType sriov.Dri
 
 // SelectAny selects a virtual function for the given physical function, binds it to the
 // given driver type and marks it as "in-use"
-func (rp *ResourcePool) SelectAny(pfPciAddr string, driverType sriov.DriverType) (*VirtualFunction, error) {
+func (rp *ResourcePool) SelectAny(pfPciAddr string, driverType sriov.DriverType) (string, error) {
 	return rp.selectVF(pfPciAddr, func(pf *physicalFunction) (*VirtualFunction, error) {
 		for igid, vfs := range pf.virtualFunctions {
 			boundDriver := rp.iommuGroups[igid]
@@ -136,9 +135,8 @@ func (rp *ResourcePool) SelectAny(pfPciAddr string, driverType sriov.DriverType)
 				for _, vf := range vfs {
 					if rp.virtualFunctions[vf] {
 						return &VirtualFunction{
-							PCIAddress:                 vf,
-							PhysicalFunctionPCIAddress: pfPciAddr,
-							IommuGroupID:               igid,
+							PCIAddress:   vf,
+							IommuGroupID: igid,
 						}, nil
 					}
 				}
@@ -150,15 +148,15 @@ func (rp *ResourcePool) SelectAny(pfPciAddr string, driverType sriov.DriverType)
 
 type vfSelector func(*physicalFunction) (*VirtualFunction, error)
 
-func (rp *ResourcePool) selectVF(pfPciAddr string, vfSelect vfSelector, driverType sriov.DriverType) (*VirtualFunction, error) {
+func (rp *ResourcePool) selectVF(pfPciAddr string, vfSelect vfSelector, driverType sriov.DriverType) (string, error) {
 	pf, ok := rp.physicalFunctions[pfPciAddr]
 	if !ok {
-		return nil, errors.Errorf("trying to select for not existing PF PCI address = %v", pfPciAddr)
+		return "", errors.Errorf("trying to select for not existing PF PCI address = %v", pfPciAddr)
 	}
 
 	vf, err := vfSelect(pf)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	switch rp.iommuGroups[vf.IommuGroupID] {
@@ -168,10 +166,10 @@ func (rp *ResourcePool) selectVF(pfPciAddr string, vfSelect vfSelector, driverTy
 	case driverType:
 		rp.virtualFunctions[vf.PCIAddress] = false
 	default:
-		return nil, errors.Errorf("trying to rebind driver for the IOMMU group: %v", vf.IommuGroupID)
+		return "", errors.Errorf("trying to rebind driver for the IOMMU group: %v", vf.IommuGroupID)
 	}
 
-	return vf, nil
+	return vf.PCIAddress, nil
 }
 
 // Free marks given virtual function as "free" and binds it to the "NoDriver" driver type
