@@ -110,7 +110,7 @@ func TestResourcePool_Free(t *testing.T) {
 
 	vf, err := rp.SelectAny(pf1PciAddr, sriov.VfioPCIDriver)
 	assert.Nil(t, err)
-	rp.Free(vf)
+	rp.Free(vf.PCIAddress)
 
 	assert.Equal(t, testHostInfo(), rp.GetHostInfo())
 }

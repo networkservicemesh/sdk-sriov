@@ -175,8 +175,14 @@ func (rp *ResourcePool) selectVF(pfPciAddr string, vfSelect vfSelector, driverTy
 }
 
 // Free marks given virtual function as "free" and binds it to the "NoDriver" driver type
-func (rp *ResourcePool) Free(vf *VirtualFunction) {
+func (rp *ResourcePool) Free(vfPciAddr string) {
 	logEntry := log.Entry(rp.ctx).WithField("ResourcePool", "Free")
+
+	vf := rp.vfByPciAddr(vfPciAddr)
+	if vf == (*VirtualFunction)(nil) {
+		logEntry.Warnf("VF doesn't exist: %v", vfPciAddr)
+		return
+	}
 
 	if rp.virtualFunctions[vf.PCIAddress] {
 		logEntry.Warnf("trying to free not selected VF: %v", vf.PCIAddress)
@@ -185,9 +191,9 @@ func (rp *ResourcePool) Free(vf *VirtualFunction) {
 	rp.virtualFunctions[vf.PCIAddress] = true
 
 	for _, pf := range rp.physicalFunctions {
-		if vfs, ok := pf.virtualFunctions[vf.IommuGroupID]; ok {
-			for _, vfPciAddr := range vfs {
-				if !rp.virtualFunctions[vfPciAddr] {
+		if vfAddrs, ok := pf.virtualFunctions[vf.IommuGroupID]; ok {
+			for _, vfAddr := range vfAddrs {
+				if !rp.virtualFunctions[vfAddr] {
 					return
 				}
 			}
@@ -195,4 +201,21 @@ func (rp *ResourcePool) Free(vf *VirtualFunction) {
 	}
 
 	rp.iommuGroups[vf.IommuGroupID] = sriov.NoDriver
+}
+
+func (rp *ResourcePool) vfByPciAddr(vfPciAddr string) *VirtualFunction {
+	for pfPciAddr, pf := range rp.physicalFunctions {
+		for igid, vfAddrs := range pf.virtualFunctions {
+			for _, vfAddr := range vfAddrs {
+				if vfAddr == vfPciAddr {
+					return &VirtualFunction{
+						PCIAddress:                 vfPciAddr,
+						PhysicalFunctionPCIAddress: pfPciAddr,
+						IommuGroupID:               igid,
+					}
+				}
+			}
+		}
+	}
+	return nil
 }
