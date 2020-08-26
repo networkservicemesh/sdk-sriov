@@ -33,7 +33,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/networkservicemesh/sdk-sriov/pkg/networkservice/mechanisms/vfio"
-	"github.com/networkservicemesh/sdk-sriov/test/sriovtest"
+	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/sriovtest"
 )
 
 const (
