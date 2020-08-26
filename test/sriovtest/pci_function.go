@@ -14,8 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package stub provides stubs for testing
-package stub
+package sriovtest
 
 // PCIPhysicalFunction is a test data class for pcifunction.PhysicalFunction
 type PCIPhysicalFunction struct {

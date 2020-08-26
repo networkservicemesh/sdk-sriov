@@ -33,7 +33,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/networkservicemesh/sdk-sriov/pkg/networkservice/mechanisms/vfio"
-	"github.com/networkservicemesh/sdk-sriov/test/stub"
+	"github.com/networkservicemesh/sdk-sriov/test/sriovtest"
 )
 
 const (
@@ -70,7 +70,7 @@ func testVfioServer(ctx context.Context, t *testing.T, allowedDevices *allowedDe
 		vfio.NewServer(tmpDir, tmpDir),
 	)
 
-	err = stub.InputFileAPI(ctx, path.Join(tmpDir, deviceAllowFile), func(s string) {
+	err = sriovtest.InputFileAPI(ctx, path.Join(tmpDir, deviceAllowFile), func(s string) {
 		var major, minor int
 		_, _ = fmt.Sscanf(s, deviceStringFormat, &major, &minor)
 		allowedDevices.Lock()
@@ -78,7 +78,7 @@ func testVfioServer(ctx context.Context, t *testing.T, allowedDevices *allowedDe
 		allowedDevices.Unlock()
 	})
 	assert.Nil(t, err)
-	err = stub.InputFileAPI(ctx, path.Join(tmpDir, deviceDenyFile), func(s string) {
+	err = sriovtest.InputFileAPI(ctx, path.Join(tmpDir, deviceDenyFile), func(s string) {
 		var major, minor int
 		_, _ = fmt.Sscanf(s, deviceStringFormat, &major, &minor)
 		allowedDevices.Lock()

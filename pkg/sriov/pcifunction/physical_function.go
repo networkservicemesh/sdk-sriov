@@ -27,7 +27,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// TODO: add unit tests with stub.FileAPI
+// TODO: add unit tests with sriovtest.FileAPI
 
 const (
 	bdfDomain              = "0000:"

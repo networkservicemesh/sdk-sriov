@@ -25,7 +25,7 @@ import (
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov"
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/resourcepool"
 	"github.com/networkservicemesh/sdk-sriov/pkg/tools/yamlhelper"
-	"github.com/networkservicemesh/sdk-sriov/test/stub"
+	"github.com/networkservicemesh/sdk-sriov/test/sriovtest"
 )
 
 const (
@@ -41,7 +41,7 @@ func testHostInfo() *sriov.HostInfo {
 }
 
 func initResourcePool(t *testing.T) *resourcepool.ResourcePool {
-	var pfs []*stub.PCIPhysicalFunction
+	var pfs []*sriovtest.PCIPhysicalFunction
 	_ = yamlhelper.UnmarshalFile(physicalFunctionsFilename, &pfs)
 
 	var vfs []*resourcepool.VirtualFunction

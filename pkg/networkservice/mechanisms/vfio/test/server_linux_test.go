@@ -36,20 +36,13 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/networkservicemesh/sdk-sriov/pkg/networkservice/mechanisms/vfio"
-	"github.com/networkservicemesh/sdk-sriov/test/stub"
+	"github.com/networkservicemesh/sdk-sriov/test/sriovtest"
 )
 
 const (
-	clientCgroupDirKey = "clientCgroupDir"
-	vfioDevice         = "vfio"
-	iommuGroup         = "1"
 	deviceAllowFile    = "devices.allow"
 	deviceDenyFile     = "devices.deny"
 	deviceStringFormat = "c %d:%d rwm"
-	vfioMajorKey       = "vfioMajor"
-	vfioMinorKey       = "vfioMinor"
-	deviceMajorKey     = "deviceMajor"
-	deviceMinorKey     = "deviceMinor"
 )
 
 func testConnection() *networkservice.Connection {
@@ -78,7 +71,7 @@ func testVfioServer(ctx context.Context, t *testing.T, allowedDevices *allowedDe
 		},
 	)
 
-	err = stub.InputFileAPI(ctx, path.Join(tmpDir, deviceAllowFile), func(s string) {
+	err = sriovtest.InputFileAPI(ctx, path.Join(tmpDir, deviceAllowFile), func(s string) {
 		var major, minor int
 		_, _ = fmt.Sscanf(s, deviceStringFormat, &major, &minor)
 		allowedDevices.Lock()
@@ -86,7 +79,7 @@ func testVfioServer(ctx context.Context, t *testing.T, allowedDevices *allowedDe
 		allowedDevices.Unlock()
 	})
 	assert.Nil(t, err)
-	err = stub.InputFileAPI(ctx, path.Join(tmpDir, deviceDenyFile), func(s string) {
+	err = sriovtest.InputFileAPI(ctx, path.Join(tmpDir, deviceDenyFile), func(s string) {
 		var major, minor int
 		_, _ = fmt.Sscanf(s, deviceStringFormat, &major, &minor)
 		allowedDevices.Lock()
