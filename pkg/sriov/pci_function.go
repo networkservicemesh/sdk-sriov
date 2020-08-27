@@ -34,5 +34,5 @@ type PCIFunction interface {
 // DriverBinder provides a method to bind driver to OS PCI function
 type DriverBinder interface {
 	BindDriver(driver string) error
-	UnbindDriver() error
+	BindKernelDriver() error
 }

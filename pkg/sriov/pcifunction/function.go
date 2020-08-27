@@ -93,7 +93,7 @@ func (f *Function) GetIommuGroupID() (uint, error) {
 
 // GetBoundDriver returns driver name that is bound to f, if no driver bound, returns ""
 func (f *Function) GetBoundDriver() (string, error) {
-	if !f.isAnyDriverBound() {
+	if !isFileExists(filepath.Join(f.pciDevicesPath, f.address, boundDriverPath)) {
 		return "", nil
 	}
 
@@ -107,7 +107,16 @@ func (f *Function) GetBoundDriver() (string, error) {
 
 // BindDriver unbinds currently bound driver and binds the given driver to f
 func (f *Function) BindDriver(driver string) error {
-	if f.isAnyDriverBound() {
+	boundDriver, err := f.GetBoundDriver()
+	if err != nil {
+		return err
+	}
+
+	if boundDriver == driver {
+		return nil
+	}
+
+	if boundDriver != "" {
 		unbindPath := filepath.Join(f.pciDevicesPath, f.address, boundDriverPath, unbindDriverPath)
 		if err := ioutil.WriteFile(unbindPath, []byte(f.address), 0); err != nil {
 			return errors.Wrapf(err, "failed to unbind driver from the device: %v", f.address)
@@ -122,11 +131,7 @@ func (f *Function) BindDriver(driver string) error {
 	return nil
 }
 
-// UnbindDriver unbinds currently bound driver and binds the default driver to f
-func (f *Function) UnbindDriver() error {
+// BindKernelDriver unbinds currently bound driver and binds the default driver to f
+func (f *Function) BindKernelDriver() error {
 	return f.BindDriver(f.kernelDriver)
-}
-
-func (f *Function) isAnyDriverBound() bool {
-	return isFileExists(filepath.Join(f.pciDevicesPath, f.address, boundDriverPath))
 }
