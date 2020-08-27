@@ -28,7 +28,8 @@ import (
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/cls"
-	vfioapi "github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/vfio"
+	vfiomech "github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/vfio"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
 	"github.com/stretchr/testify/assert"
 
@@ -37,40 +38,25 @@ import (
 )
 
 const (
-	clientCgroupDirKey = "clientCgroupDir"
 	deviceAllowFile    = "devices.allow"
 	deviceDenyFile     = "devices.deny"
 	deviceStringFormat = "c %d:%d rwm"
-	vfioMajorKey       = "vfioMajor"
-	vfioMinorKey       = "vfioMinor"
-	deviceMajorKey     = "deviceMajor"
-	deviceMinorKey     = "deviceMinor"
+	cgroupDir          = "cgroup_dir"
+	iommuGroupString   = "1"
 )
-
-func testConnection() *networkservice.Connection {
-	return &networkservice.Connection{
-		Mechanism: &networkservice.Mechanism{
-			Cls:  cls.LOCAL,
-			Type: vfioapi.MECHANISM,
-		},
-		Context: &networkservice.ConnectionContext{
-			ExtraContext: map[string]string{
-				clientCgroupDirKey: "",
-			},
-		},
-	}
-}
 
 func testVfioServer(ctx context.Context, t *testing.T, allowedDevices *allowedDevices) (server networkservice.NetworkServiceServer, tmpDir string) {
 	tmpDir = path.Join(os.TempDir(), t.Name())
-	err := os.MkdirAll(tmpDir, 0750)
+	err := os.MkdirAll(path.Join(tmpDir, cgroupDir), 0750)
 	assert.Nil(t, err)
 
 	server = chain.NewNetworkServiceServer(
-		vfio.NewServer(tmpDir, tmpDir),
+		mechanisms.NewServer(map[string]networkservice.NetworkServiceServer{
+			vfiomech.MECHANISM: vfio.NewServer(tmpDir, tmpDir),
+		}),
 	)
 
-	err = sriovtest.InputFileAPI(ctx, path.Join(tmpDir, deviceAllowFile), func(s string) {
+	err = sriovtest.InputFileAPI(ctx, path.Join(tmpDir, cgroupDir, deviceAllowFile), func(s string) {
 		var major, minor int
 		_, _ = fmt.Sscanf(s, deviceStringFormat, &major, &minor)
 		allowedDevices.Lock()
@@ -78,7 +64,7 @@ func testVfioServer(ctx context.Context, t *testing.T, allowedDevices *allowedDe
 		allowedDevices.Unlock()
 	})
 	assert.Nil(t, err)
-	err = sriovtest.InputFileAPI(ctx, path.Join(tmpDir, deviceDenyFile), func(s string) {
+	err = sriovtest.InputFileAPI(ctx, path.Join(tmpDir, cgroupDir, deviceDenyFile), func(s string) {
 		var major, minor int
 		_, _ = fmt.Sscanf(s, deviceStringFormat, &major, &minor)
 		allowedDevices.Lock()
@@ -91,7 +77,7 @@ func testVfioServer(ctx context.Context, t *testing.T, allowedDevices *allowedDe
 }
 
 func TestVfioServer_Close(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.TODO())
+	ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
 	defer cancel()
 
 	allowedDevices := &allowedDevices{
@@ -103,12 +89,19 @@ func TestVfioServer_Close(t *testing.T) {
 	server, tmpDir := testVfioServer(ctx, t, allowedDevices)
 	defer func() { _ = os.RemoveAll(tmpDir) }()
 
-	conn := testConnection()
-	conn.Mechanism.Parameters = map[string]string{
-		vfioMajorKey:   "1",
-		vfioMinorKey:   "2",
-		deviceMajorKey: "3",
-		deviceMinorKey: "4",
+	conn := &networkservice.Connection{
+		Mechanism: &networkservice.Mechanism{
+			Cls:  cls.LOCAL,
+			Type: vfiomech.MECHANISM,
+			Parameters: map[string]string{
+				vfiomech.CgroupDirKey:   cgroupDir,
+				vfiomech.IommuGroupKey:  iommuGroupString,
+				vfiomech.VfioMajorKey:   "1",
+				vfiomech.VfioMinorKey:   "2",
+				vfiomech.DeviceMajorKey: "3",
+				vfiomech.DeviceMinorKey: "4",
+			},
+		},
 	}
 
 	_, err := server.Close(ctx, conn)
@@ -119,6 +112,8 @@ func TestVfioServer_Close(t *testing.T) {
 		defer allowedDevices.Unlock()
 		return reflect.DeepEqual(map[string]bool{}, allowedDevices.devices)
 	}, time.Second, 10*time.Millisecond)
+
+	assert.Nil(t, ctx.Err())
 }
 
 type allowedDevices struct {

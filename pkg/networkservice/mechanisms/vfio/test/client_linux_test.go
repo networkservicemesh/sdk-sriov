@@ -18,20 +18,56 @@ package vfio_test
 
 import (
 	"context"
+	"net/url"
 	"os"
 	"path"
 	"testing"
+	"time"
 
-	"github.com/networkservicemesh/api/pkg/api/networkservice"
-	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
-	"github.com/stretchr/testify/assert"
 	"golang.org/x/sys/unix"
+	"google.golang.org/grpc"
+
+	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/networkservicemesh/api/pkg/api/networkservice"
+	vfiomech "github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/vfio"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
+	"github.com/networkservicemesh/sdk/pkg/tools/grpcutils"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/networkservicemesh/sdk-sriov/pkg/networkservice/mechanisms/vfio"
 )
 
+const (
+	serverSocket = "server.socket"
+)
+
+func testServer(ctx context.Context, tmpDir string) (grpc.ClientConnInterface, error) {
+	socketURL := &url.URL{
+		Scheme: "unix",
+		Path:   path.Join(tmpDir, serverSocket),
+	}
+
+	server := grpc.NewServer()
+	networkservice.RegisterNetworkServiceServer(server, mechanisms.NewServer(map[string]networkservice.NetworkServiceServer{
+		vfiomech.MECHANISM: &vfioForwarderStub{
+			iommuGroup:  iommuGroup,
+			vfioMajor:   1,
+			vfioMinor:   2,
+			deviceMajor: 3,
+			deviceMinor: 4,
+		},
+	}))
+	_ = grpcutils.ListenAndServe(ctx, socketURL, server)
+
+	<-time.After(1 * time.Millisecond) // wait for the server to start
+
+	return grpc.DialContext(ctx, socketURL.String(), grpc.WithInsecure())
+}
+
 func TestVfioClient_Request(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.TODO())
+	ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
 	defer cancel()
 
 	tmpDir := path.Join(os.TempDir(), t.Name())
@@ -39,29 +75,22 @@ func TestVfioClient_Request(t *testing.T) {
 	assert.Nil(t, err)
 	defer func() { _ = os.RemoveAll(tmpDir) }()
 
+	cc, err := testServer(ctx, tmpDir)
+	assert.Nil(t, err)
+
 	client := chain.NewNetworkServiceClient(
 		vfio.NewClient(tmpDir, cgroupDir),
+		networkservice.NewNetworkServiceClient(cc),
 	)
 
 	conn, err := client.Request(ctx, &networkservice.NetworkServiceRequest{
-		Connection: &networkservice.Connection{
-			Mechanism: &networkservice.Mechanism{
-				Parameters: map[string]string{
-					vfio.IommuGroupKey: iommuGroup,
-					vfioMajorKey:       "1",
-					vfioMinorKey:       "2",
-					deviceMajorKey:     "3",
-					deviceMinorKey:     "4",
-				},
-			},
-			Context: &networkservice.ConnectionContext{
-				ExtraContext: map[string]string{},
-			},
-		},
+		Connection: &networkservice.Connection{},
 	})
 	assert.Nil(t, err)
 
-	assert.Equal(t, cgroupDir, conn.Context.ExtraContext[clientCgroupDirKey])
+	mech := vfiomech.ToMechanism(conn.GetMechanism())
+	assert.NotNil(t, mech)
+	assert.Equal(t, cgroupDir, mech.GetCgroupDir())
 
 	info := new(unix.Stat_t)
 
@@ -70,8 +99,34 @@ func TestVfioClient_Request(t *testing.T) {
 	assert.Equal(t, uint32(1), unix.Major(info.Rdev))
 	assert.Equal(t, uint32(2), unix.Minor(info.Rdev))
 
-	err = unix.Stat(path.Join(tmpDir, iommuGroup), info)
+	err = unix.Stat(path.Join(tmpDir, iommuGroupString), info)
 	assert.Nil(t, err)
 	assert.Equal(t, uint32(3), unix.Major(info.Rdev))
 	assert.Equal(t, uint32(4), unix.Minor(info.Rdev))
+
+	assert.Nil(t, ctx.Err())
+}
+
+type vfioForwarderStub struct {
+	iommuGroup  uint
+	vfioMajor   uint32
+	vfioMinor   uint32
+	deviceMajor uint32
+	deviceMinor uint32
+}
+
+func (vf *vfioForwarderStub) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
+	if mech := vfiomech.ToMechanism(request.GetConnection().GetMechanism()); mech != nil {
+		mech.SetIommuGroup(vf.iommuGroup)
+		mech.SetVfioMajor(vf.vfioMajor)
+		mech.SetVfioMinor(vf.vfioMinor)
+		mech.SetDeviceMajor(vf.deviceMajor)
+		mech.SetDeviceMinor(vf.deviceMinor)
+	}
+
+	return next.Server(ctx).Request(ctx, request)
+}
+
+func (vf *vfioForwarderStub) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {
+	return next.Server(ctx).Close(ctx, conn)
 }

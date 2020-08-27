@@ -25,10 +25,12 @@ import (
 	"sync"
 
 	"github.com/golang/protobuf/ptypes/empty"
+	"golang.org/x/sys/unix"
+
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
+	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/vfio"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
-	"golang.org/x/sys/unix"
 )
 
 const (
@@ -53,58 +55,55 @@ func NewServer(vfioDir, cgroupBaseDir string) networkservice.NetworkServiceServe
 	}
 }
 
-func (s *vfioServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (conn *networkservice.Connection, err error) {
+func (s *vfioServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
 	logEntry := log.Entry(ctx).WithField("vfioServer", "Request")
 
-	conn, err = next.Server(ctx).Request(ctx, request)
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() {
+	if mech := vfio.ToMechanism(request.GetConnection().GetMechanism()); mech != nil {
+		vfioMajor, vfioMinor, err := s.getDeviceNumbers(path.Join(s.vfioDir, vfioDevice))
 		if err != nil {
-			// don't forget to call Close to release allocated resources on Endpoint side
-			_, errOnClose := next.Server(ctx).Close(ctx, conn)
-			if errOnClose != nil {
-				logEntry.Error(errOnClose)
-			}
+			logEntry.Errorf("failed to get device numbers for the device: %v", vfioDevice)
+			return nil, err
 		}
-	}()
 
-	var vfioMajor, vfioMinor uint32
-	vfioMajor, vfioMinor, err = s.getDeviceNumbers(path.Join(s.vfioDir, vfioDevice))
+		igid := mech.GetParameters()[vfio.IommuGroupKey]
+		deviceMajor, deviceMinor, err := s.getDeviceNumbers(path.Join(s.vfioDir, igid))
+		if err != nil {
+			logEntry.Errorf("failed to get device numbers for the device: %v", igid)
+			return nil, err
+		}
+
+		cgroupDir := path.Join(s.cgroupBaseDir, mech.GetCgroupDir())
+
+		if err := func() error {
+			s.lock.Lock()
+			defer s.lock.Unlock()
+
+			if err := s.deviceAllow(cgroupDir, vfioMajor, vfioMinor); err != nil {
+				logEntry.Errorf("failed to allow device for the client: %v", vfioDevice)
+				return err
+			}
+			mech.SetVfioMajor(vfioMajor)
+			mech.SetVfioMinor(vfioMinor)
+
+			if err := s.deviceAllow(cgroupDir, deviceMajor, deviceMinor); err != nil {
+				logEntry.Errorf("failed to allow device for the client: %v", igid)
+				_ = s.deviceDeny(cgroupDir, vfioMajor, vfioMinor)
+				return err
+			}
+			mech.SetDeviceMajor(deviceMajor)
+			mech.SetDeviceMinor(deviceMinor)
+
+			return nil
+		}(); err != nil {
+			return nil, err
+		}
+	}
+
+	conn, err := next.Server(ctx).Request(ctx, request)
 	if err != nil {
-		logEntry.Errorf("failed to get device numbers for the device: %v", vfioDevice)
+		s.close(ctx, request.GetConnection())
 		return nil, err
 	}
-
-	var deviceMajor, deviceMinor uint32
-	igid := conn.Mechanism.Parameters[IommuGroupKey]
-	deviceMajor, deviceMinor, err = s.getDeviceNumbers(path.Join(s.vfioDir, igid))
-	if err != nil {
-		logEntry.Errorf("failed to get device numbers for the device: %v", igid)
-		return nil, err
-	}
-
-	cgroupDir := path.Join(s.cgroupBaseDir, request.Connection.Context.ExtraContext[clientCgroupDirKey])
-
-	s.lock.Lock()
-	defer s.lock.Unlock()
-
-	if err = s.deviceAllow(cgroupDir, vfioMajor, vfioMinor); err != nil {
-		logEntry.Errorf("failed to allow device for the client: %v", vfioDevice)
-		return nil, err
-	}
-	conn.Mechanism.Parameters[vfioMajorKey] = utoa(vfioMajor)
-	conn.Mechanism.Parameters[vfioMinorKey] = utoa(vfioMinor)
-
-	if err = s.deviceAllow(cgroupDir, deviceMajor, deviceMinor); err != nil {
-		logEntry.Errorf("failed to allow device for the client: %v", igid)
-		_ = s.deviceDeny(cgroupDir, vfioMajor, vfioMinor)
-		return nil, err
-	}
-	conn.Mechanism.Parameters[deviceMajorKey] = utoa(deviceMajor)
-	conn.Mechanism.Parameters[deviceMinorKey] = utoa(deviceMinor)
 
 	return conn, nil
 }
@@ -135,34 +134,39 @@ func (s *vfioServer) deviceAllow(cgroupDir string, major, minor uint32) error {
 }
 
 func (s *vfioServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {
-	logEntry := log.Entry(ctx).WithField("vfioServer", "Close")
-
-	cgroupDir := path.Join(s.cgroupBaseDir, conn.Context.ExtraContext[clientCgroupDirKey])
-
-	s.lock.Lock()
-
-	if stringVfioMajor, ok := conn.Mechanism.Parameters[vfioMajorKey]; ok {
-		vfioMajor := atou(stringVfioMajor)
-		vfioMinor := atou(conn.Mechanism.Parameters[vfioMinorKey])
-		if err := s.deviceDeny(cgroupDir, vfioMajor, vfioMinor); err != nil {
-			logEntry.Warnf("failed to deny device for the client: %v", vfioDevice)
-		}
-	}
-
-	if stringDeviceMajor, ok := conn.Mechanism.Parameters[deviceMajorKey]; ok {
-		deviceMajor := atou(stringDeviceMajor)
-		deviceMinor := atou(conn.Mechanism.Parameters[deviceMinorKey])
-		if err := s.deviceDeny(cgroupDir, deviceMajor, deviceMinor); err != nil {
-			logEntry.Warnf("failed to deny device for the client: %v", conn.Mechanism.Parameters[IommuGroupKey])
-		}
-	}
-
-	s.lock.Unlock()
+	s.close(ctx, conn)
 
 	if _, err := next.Server(ctx).Close(ctx, conn); err != nil {
 		return nil, err
 	}
 	return &empty.Empty{}, nil
+}
+
+func (s *vfioServer) close(ctx context.Context, conn *networkservice.Connection) {
+	logEntry := log.Entry(ctx).WithField("vfioServer", "close")
+
+	if mech := vfio.ToMechanism(conn.GetMechanism()); mech != nil {
+		cgroupDir := path.Join(s.cgroupBaseDir, mech.GetCgroupDir())
+
+		s.lock.Lock()
+		defer s.lock.Unlock()
+
+		vfioMajor := mech.GetVfioMajor()
+		vfioMinor := mech.GetVfioMinor()
+		if !(vfioMajor == 0 && vfioMinor == 0) {
+			if err := s.deviceDeny(cgroupDir, vfioMajor, vfioMinor); err != nil {
+				logEntry.Warnf("failed to deny device for the client: %v", vfioDevice)
+			}
+		}
+
+		deviceMajor := mech.GetDeviceMajor()
+		deviceMinor := mech.GetDeviceMinor()
+		if !(deviceMajor == 0 && deviceMinor == 0) {
+			if err := s.deviceDeny(cgroupDir, deviceMajor, deviceMinor); err != nil {
+				logEntry.Warnf("failed to deny device for the client: %v", mech.GetIommuGroup())
+			}
+		}
+	}
 }
 
 func (s *vfioServer) deviceDeny(cgroupDir string, major, minor uint32) error {

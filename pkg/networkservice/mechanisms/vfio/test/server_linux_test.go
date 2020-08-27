@@ -26,14 +26,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/protobuf/ptypes/empty"
+	"golang.org/x/sys/unix"
+
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/cls"
-	vfioapi "github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/vfio"
+	vfiomech "github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/vfio"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
-	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/sys/unix"
 
 	"github.com/networkservicemesh/sdk-sriov/pkg/networkservice/mechanisms/vfio"
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/sriovtest"
@@ -45,33 +45,18 @@ const (
 	deviceStringFormat = "c %d:%d rwm"
 )
 
-func testConnection() *networkservice.Connection {
-	return &networkservice.Connection{
-		Mechanism: &networkservice.Mechanism{
-			Cls:  cls.LOCAL,
-			Type: vfioapi.MECHANISM,
-		},
-		Context: &networkservice.ConnectionContext{
-			ExtraContext: map[string]string{
-				clientCgroupDirKey: "",
-			},
-		},
-	}
-}
-
 func testVfioServer(ctx context.Context, t *testing.T, allowedDevices *allowedDevices) (server networkservice.NetworkServiceServer, tmpDir string) {
 	tmpDir = path.Join(os.TempDir(), t.Name())
-	err := os.MkdirAll(tmpDir, 0750)
+	err := os.MkdirAll(path.Join(tmpDir, cgroupDir), 0750)
 	assert.Nil(t, err)
 
 	server = chain.NewNetworkServiceServer(
-		vfio.NewServer(tmpDir, tmpDir),
-		&endpointStub{
-			igid: iommuGroup,
-		},
+		mechanisms.NewServer(map[string]networkservice.NetworkServiceServer{
+			vfiomech.MECHANISM: vfio.NewServer(tmpDir, tmpDir),
+		}),
 	)
 
-	err = sriovtest.InputFileAPI(ctx, path.Join(tmpDir, deviceAllowFile), func(s string) {
+	err = sriovtest.InputFileAPI(ctx, path.Join(tmpDir, cgroupDir, deviceAllowFile), func(s string) {
 		var major, minor int
 		_, _ = fmt.Sscanf(s, deviceStringFormat, &major, &minor)
 		allowedDevices.Lock()
@@ -79,7 +64,7 @@ func testVfioServer(ctx context.Context, t *testing.T, allowedDevices *allowedDe
 		allowedDevices.Unlock()
 	})
 	assert.Nil(t, err)
-	err = sriovtest.InputFileAPI(ctx, path.Join(tmpDir, deviceDenyFile), func(s string) {
+	err = sriovtest.InputFileAPI(ctx, path.Join(tmpDir, cgroupDir, deviceDenyFile), func(s string) {
 		var major, minor int
 		_, _ = fmt.Sscanf(s, deviceStringFormat, &major, &minor)
 		allowedDevices.Lock()
@@ -92,7 +77,7 @@ func testVfioServer(ctx context.Context, t *testing.T, allowedDevices *allowedDe
 }
 
 func TestVfioServer_Request(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.TODO())
+	ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
 	defer cancel()
 
 	allowedDevices := &allowedDevices{
@@ -103,18 +88,30 @@ func TestVfioServer_Request(t *testing.T) {
 
 	err := unix.Mknod(path.Join(tmpDir, vfioDevice), unix.S_IFCHR|0666, int(unix.Mkdev(1, 2)))
 	assert.Nil(t, err)
-	err = unix.Mknod(path.Join(tmpDir, iommuGroup), unix.S_IFCHR|0666, int(unix.Mkdev(3, 4)))
+	err = unix.Mknod(path.Join(tmpDir, iommuGroupString), unix.S_IFCHR|0666, int(unix.Mkdev(3, 4)))
 	assert.Nil(t, err)
 
 	conn, err := server.Request(ctx, &networkservice.NetworkServiceRequest{
-		Connection: testConnection(),
+		Connection: &networkservice.Connection{},
+		MechanismPreferences: []*networkservice.Mechanism{
+			{
+				Cls:  cls.LOCAL,
+				Type: vfiomech.MECHANISM,
+				Parameters: map[string]string{
+					vfiomech.CgroupDirKey:  cgroupDir,
+					vfiomech.IommuGroupKey: iommuGroupString,
+				},
+			},
+		},
 	})
 	assert.Nil(t, err)
 
-	assert.Equal(t, "1", conn.Mechanism.Parameters[vfioMajorKey])
-	assert.Equal(t, "2", conn.Mechanism.Parameters[vfioMinorKey])
-	assert.Equal(t, "3", conn.Mechanism.Parameters[deviceMajorKey])
-	assert.Equal(t, "4", conn.Mechanism.Parameters[deviceMinorKey])
+	mech := vfiomech.ToMechanism(conn.GetMechanism())
+	assert.NotNil(t, mech)
+	assert.Equal(t, uint32(1), mech.GetVfioMajor())
+	assert.Equal(t, uint32(2), mech.GetVfioMinor())
+	assert.Equal(t, uint32(3), mech.GetDeviceMajor())
+	assert.Equal(t, uint32(4), mech.GetDeviceMinor())
 
 	assert.Eventually(t, func() bool {
 		allowedDevices.Lock()
@@ -124,10 +121,12 @@ func TestVfioServer_Request(t *testing.T) {
 			"3:4": true,
 		}, allowedDevices.devices)
 	}, time.Second, 10*time.Millisecond)
+
+	assert.Nil(t, ctx.Err())
 }
 
 func TestVfioServer_Close(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.TODO())
+	ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
 	defer cancel()
 
 	allowedDevices := &allowedDevices{
@@ -139,13 +138,19 @@ func TestVfioServer_Close(t *testing.T) {
 	server, tmpDir := testVfioServer(ctx, t, allowedDevices)
 	defer func() { _ = os.RemoveAll(tmpDir) }()
 
-	conn := testConnection()
-	conn.Mechanism.Parameters = map[string]string{
-		vfio.IommuGroupKey: iommuGroup,
-		vfioMajorKey:       "1",
-		vfioMinorKey:       "2",
-		deviceMajorKey:     "3",
-		deviceMinorKey:     "4",
+	conn := &networkservice.Connection{
+		Mechanism: &networkservice.Mechanism{
+			Cls:  cls.LOCAL,
+			Type: vfiomech.MECHANISM,
+			Parameters: map[string]string{
+				vfiomech.CgroupDirKey:   cgroupDir,
+				vfiomech.IommuGroupKey:  iommuGroupString,
+				vfiomech.VfioMajorKey:   "1",
+				vfiomech.VfioMinorKey:   "2",
+				vfiomech.DeviceMajorKey: "3",
+				vfiomech.DeviceMinorKey: "4",
+			},
+		},
 	}
 
 	_, err := server.Close(ctx, conn)
@@ -156,21 +161,8 @@ func TestVfioServer_Close(t *testing.T) {
 		defer allowedDevices.Unlock()
 		return reflect.DeepEqual(map[string]bool{}, allowedDevices.devices)
 	}, time.Second, 10*time.Millisecond)
-}
 
-type endpointStub struct {
-	igid string
-}
-
-func (e *endpointStub) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
-	request.Connection.Mechanism.Parameters = map[string]string{
-		vfio.IommuGroupKey: e.igid,
-	}
-	return next.Server(ctx).Request(ctx, request)
-}
-
-func (e *endpointStub) Close(ctx context.Context, connection *networkservice.Connection) (*empty.Empty, error) {
-	return next.Server(ctx).Close(ctx, connection)
+	assert.Nil(t, ctx.Err())
 }
 
 type allowedDevices struct {
