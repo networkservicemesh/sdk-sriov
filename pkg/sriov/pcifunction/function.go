@@ -34,19 +34,17 @@ const (
 
 // Function describes Linux PCI function
 type Function struct {
-	address         string
-	kernelDriver    string
-	pciDevicesPath  string
-	pciDriversPath  string
-	iommuGroupsPath string
+	address        string
+	kernelDriver   string
+	pciDevicesPath string
+	pciDriversPath string
 }
 
-func newFunction(pciAddress, pciDevicesPath, pciDriversPath, iommuGroupsPath string) (*Function, error) {
+func newFunction(pciAddress, pciDevicesPath, pciDriversPath string) (*Function, error) {
 	f := &Function{
-		address:         pciAddress,
-		pciDevicesPath:  pciDevicesPath,
-		pciDriversPath:  pciDriversPath,
-		iommuGroupsPath: iommuGroupsPath,
+		address:        pciAddress,
+		pciDevicesPath: pciDevicesPath,
+		pciDriversPath: pciDriversPath,
 	}
 
 	switch kernelDriver, err := f.GetBoundDriver(); {

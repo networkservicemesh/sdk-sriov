@@ -47,7 +47,7 @@ type PhysicalFunction struct {
 }
 
 // NewPhysicalFunction returns a new PhysicalFunction
-func NewPhysicalFunction(pciAddress, pciDevicesPath, pciDriversPath, iommuGroupsPath string) (*PhysicalFunction, error) {
+func NewPhysicalFunction(pciAddress, pciDevicesPath, pciDriversPath string) (*PhysicalFunction, error) {
 	var bdfPCIAddress string
 	switch {
 	case validLongPCIAddr.MatchString(pciAddress):
@@ -67,7 +67,7 @@ func NewPhysicalFunction(pciAddress, pciDevicesPath, pciDriversPath, iommuGroups
 		return nil, errors.Errorf("PCI device is not SR-IOV capable: %v", bdfPCIAddress)
 	}
 
-	f, err := newFunction(bdfPCIAddress, pciDevicesPath, pciDriversPath, iommuGroupsPath)
+	f, err := newFunction(bdfPCIAddress, pciDevicesPath, pciDriversPath)
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +107,7 @@ func (pf *PhysicalFunction) GetVirtualFunctions() ([]*Function, error) {
 		if err == nil && (dirInfo.Mode()&os.ModeSymlink != 0) {
 			linkName, err := filepath.EvalSymlinks(dir)
 			if err == nil {
-				if f, err := newFunction(filepath.Base(linkName), pf.pciDevicesPath, pf.pciDriversPath, pf.iommuGroupsPath); err == nil {
+				if f, err := newFunction(filepath.Base(linkName), pf.pciDevicesPath, pf.pciDriversPath); err == nil {
 					fs = append(fs, f)
 				}
 			}
