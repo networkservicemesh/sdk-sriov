@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package vfio
+package vfio_test
 
 import (
 	"context"
@@ -28,17 +28,6 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/networkservicemesh/sdk-sriov/pkg/networkservice/mechanisms/vfio"
-)
-
-const (
-	clientCgroupDirKey = "clientCgroupDir"
-	cgroupDir          = "cgroup-dir"
-	vfioMajorKey       = "vfioMajor"
-	vfioMinorKey       = "vfioMinor"
-	deviceMajorKey     = "deviceMajor"
-	deviceMinorKey     = "deviceMinor"
-	vfioDevice         = "vfio"
-	iommuGroup         = "1"
 )
 
 func TestVfioClient_Request(t *testing.T) {

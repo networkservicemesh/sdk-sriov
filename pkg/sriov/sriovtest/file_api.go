@@ -14,8 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package stub provides stubs for testing
-package stub
+// Package sriovtest provides utils for SR-IOV testing
+package sriovtest
 
 import (
 	"bufio"

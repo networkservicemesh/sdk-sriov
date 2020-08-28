@@ -14,5 +14,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package vfio enables code coverage tools work
-package vfio
+package resourcepool
+
+// VirtualFunction is a ResourcePool virtual function description class
+type VirtualFunction struct {
+	PCIAddress                 string
+	PhysicalFunctionPCIAddress string
+	IommuGroupID               uint
+}
