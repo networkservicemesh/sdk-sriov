@@ -18,6 +18,7 @@ package resourcepool
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 
@@ -27,10 +28,23 @@ import (
 	"github.com/networkservicemesh/sdk-sriov/pkg/tools/yamlhelper"
 )
 
-// Config contains list of available physical functions and their capabilities
+// Config contains list of available physical functions
 type Config struct {
-	HostName          string                      `yaml:"hostName"`
-	PhysicalFunctions map[string]sriov.Capability `yaml:"physicalFunctions"`
+	PhysicalFunctions map[string]*PhysicalFunction `yaml:"physicalFunctions"`
+}
+
+func (c *Config) String() string {
+	out := "&{PhysicalFunctions:map["
+	for k, physicalFunction := range c.PhysicalFunctions {
+		out += fmt.Sprintf("%s:%+v ", k, physicalFunction)
+	}
+	return out + "]}"
+}
+
+// PhysicalFunction contains physical function capability and list of the available services
+type PhysicalFunction struct {
+	Capability sriov.Capability `yaml:"capability"`
+	Services   []string         `yaml:"services"`
 }
 
 // ReadConfig reads configuration from file
@@ -43,8 +57,8 @@ func ReadConfig(ctx context.Context, configFile string) (*Config, error) {
 	}
 
 	valid := true
-	for _, capability := range config.PhysicalFunctions {
-		if err := capability.Validate(); err != nil {
+	for _, physicalFunction := range config.PhysicalFunctions {
+		if err := physicalFunction.Capability.Validate(); err != nil {
 			logEntry.Error(err.Error())
 			valid = false
 		}

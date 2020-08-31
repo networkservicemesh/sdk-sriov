@@ -14,5 +14,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package resourcepool enables code coverage tools work
-package resourcepool
+package resourcepool_test
+
+import "github.com/networkservicemesh/sdk-sriov/pkg/sriov"
+
+const (
+	configFileName                  = "config.yml"
+	pf1Capability  sriov.Capability = "10G"
+	pf2Capability  sriov.Capability = "20G"
+	pf3Capability  sriov.Capability = "30G"
+	pf4Capability  sriov.Capability = "40G"
+	service1                        = "service-1"
+	service2                        = "service-2"
+)
