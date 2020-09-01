@@ -49,27 +49,28 @@ func NewResourcePool(virtualFunctions []*VirtualFunction, config *Config) *Resou
 	}
 
 	for _, vf := range virtualFunctions {
-		if physFun, ok := config.PhysicalFunctions[vf.PhysicalFunctionPCIAddress]; ok {
-			rp.virtualFunctions[vf.PCIAddress] = true
-
-			switch pf, ok := rp.physicalFunctions[vf.PhysicalFunctionPCIAddress]; {
-			case !ok:
-				pf = &physicalFunction{
-					capability:       physFun.Capability,
-					services:         map[string]bool{},
-					virtualFunctions: map[uint][]string{},
-				}
-				for _, service := range physFun.Services {
-					pf.services[service] = true
-				}
-				rp.physicalFunctions[vf.PhysicalFunctionPCIAddress] = pf
-				fallthrough
-			default:
-				pf.virtualFunctions[vf.IommuGroupID] = append(pf.virtualFunctions[vf.IommuGroupID], vf.PCIAddress)
-			}
-
-			rp.iommuGroups[vf.IommuGroupID] = sriov.NoDriver
+		physFun, ok := config.PhysicalFunctions[vf.PhysicalFunctionPCIAddress]
+		if !ok {
+			continue
 		}
+
+		rp.virtualFunctions[vf.PCIAddress] = true
+
+		pf, ok := rp.physicalFunctions[vf.PhysicalFunctionPCIAddress]
+		if !ok {
+			pf = &physicalFunction{
+				capability:       physFun.Capability,
+				services:         map[string]bool{},
+				virtualFunctions: map[uint][]string{},
+			}
+			for _, service := range physFun.Services {
+				pf.services[service] = true
+			}
+			rp.physicalFunctions[vf.PhysicalFunctionPCIAddress] = pf
+		}
+		pf.virtualFunctions[vf.IommuGroupID] = append(pf.virtualFunctions[vf.IommuGroupID], vf.PCIAddress)
+
+		rp.iommuGroups[vf.IommuGroupID] = sriov.NoDriver
 	}
 
 	for _, pf := range rp.physicalFunctions {

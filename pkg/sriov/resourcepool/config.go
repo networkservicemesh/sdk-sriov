@@ -19,6 +19,7 @@ package resourcepool
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/pkg/errors"
 
@@ -34,11 +35,13 @@ type Config struct {
 }
 
 func (c *Config) String() string {
-	out := "&{PhysicalFunctions:map["
+	sb := &strings.Builder{}
+	_, _ = sb.WriteString("&{PhysicalFunctions:map[")
 	for k, physicalFunction := range c.PhysicalFunctions {
-		out += fmt.Sprintf("%s:%+v ", k, physicalFunction)
+		_, _ = sb.WriteString(fmt.Sprintf("%s:%+v ", k, physicalFunction))
 	}
-	return out + "]}"
+	_, _ = sb.WriteString("]}")
+	return sb.String()
 }
 
 // PhysicalFunction contains physical function capability and list of the available services
