@@ -92,14 +92,17 @@ func (rp *ResourcePool) Select(driverType sriov.DriverType, service string, capa
 	sort.Slice(vfs, func(i, k int) bool {
 		iIg := rp.iommuGroups[vfs[i].IommuGroupID]
 		kIg := rp.iommuGroups[vfs[k].IommuGroupID]
-		iPf := rp.physicalFunctions[vfs[i].PhysicalFunctionPCIAddress]
-		kPf := rp.physicalFunctions[vfs[k].PhysicalFunctionPCIAddress]
-		cmp := iPf.capability.Compare(kPf.capability)
 		switch {
 		case iIg == driverType && kIg == sriov.NoDriver:
 			return true
 		case iIg == sriov.NoDriver && kIg == driverType:
 			return false
+		}
+
+		iPf := rp.physicalFunctions[vfs[i].PhysicalFunctionPCIAddress]
+		kPf := rp.physicalFunctions[vfs[k].PhysicalFunctionPCIAddress]
+		cmp := iPf.capability.Compare(kPf.capability)
+		switch {
 		case cmp < 0:
 			return true
 		case cmp > 0:
