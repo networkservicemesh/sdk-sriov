@@ -40,6 +40,13 @@ type physicalFunction struct {
 	freeVirtualFunctionsCount int
 }
 
+func (pf *physicalFunction) compare(other *physicalFunction) int {
+	if cmp := pf.capability.Compare(other.capability); cmp != 0 {
+		return cmp
+	}
+	return other.freeVirtualFunctionsCount - pf.freeVirtualFunctionsCount
+}
+
 // NewResourcePool returns a new ResourcePool
 func NewResourcePool(virtualFunctions []*VirtualFunction, config *Config) *ResourcePool {
 	rp := &ResourcePool{
@@ -92,23 +99,15 @@ func (rp *ResourcePool) Select(driverType sriov.DriverType, service string, capa
 	sort.Slice(vfs, func(i, k int) bool {
 		iIg := rp.iommuGroups[vfs[i].IommuGroupID]
 		kIg := rp.iommuGroups[vfs[k].IommuGroupID]
+		iPf := rp.physicalFunctions[vfs[i].PhysicalFunctionPCIAddress]
+		kPf := rp.physicalFunctions[vfs[k].PhysicalFunctionPCIAddress]
 		switch {
 		case iIg == driverType && kIg == sriov.NoDriver:
 			return true
 		case iIg == sriov.NoDriver && kIg == driverType:
 			return false
-		}
-
-		iPf := rp.physicalFunctions[vfs[i].PhysicalFunctionPCIAddress]
-		kPf := rp.physicalFunctions[vfs[k].PhysicalFunctionPCIAddress]
-		cmp := iPf.capability.Compare(kPf.capability)
-		switch {
-		case cmp < 0:
-			return true
-		case cmp > 0:
-			return false
 		default:
-			return iPf.freeVirtualFunctionsCount > kPf.freeVirtualFunctionsCount
+			return iPf.compare(kPf) < 0
 		}
 	})
 	vf := vfs[0]
