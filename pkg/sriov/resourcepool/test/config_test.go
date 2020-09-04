@@ -22,19 +22,15 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/networkservicemesh/sdk-sriov/pkg/sriov"
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/resourcepool"
 )
 
 const (
-	configFileName                  = "config.yml"
-	hostName                        = "service1.example.com"
-	pf1PciAddr                      = "0000:01:00.0"
-	pf2PciAddr                      = "0000:02:00.0"
-	pf3PciAddr                      = "0000:03:00.0"
-	pf1Capability  sriov.Capability = "10G"
-	pf2Capability  sriov.Capability = "20G"
-	pf3Capability  sriov.Capability = "30G"
+	pf1PciAddr = "0000:01:00.0"
+	pf2PciAddr = "0000:02:00.0"
+	pf3PciAddr = "0000:03:00.0"
+	pf4PciAddr = "0000:04:00.0"
+	pf5PciAddr = "0000:05:00.0"
 )
 
 // TestReadConfigFile test reading a SRIOV config file
@@ -42,11 +38,40 @@ func TestReadConfigFile(t *testing.T) {
 	config, err := resourcepool.ReadConfig(context.Background(), configFileName)
 	assert.Nil(t, err)
 	assert.Equal(t, &resourcepool.Config{
-		HostName: hostName,
-		PhysicalFunctions: map[string]sriov.Capability{
-			pf1PciAddr: pf1Capability,
-			pf2PciAddr: pf2Capability,
-			pf3PciAddr: pf3Capability,
+		PhysicalFunctions: map[string]*resourcepool.PhysicalFunction{
+			pf1PciAddr: {
+				Capability: pf1Capability,
+				Services: []string{
+					service1,
+				},
+			},
+			pf2PciAddr: {
+				Capability: pf2Capability,
+				Services: []string{
+					service1,
+				},
+			},
+			pf3PciAddr: {
+				Capability: pf3Capability,
+				Services: []string{
+					service1,
+					service2,
+				},
+			},
+			pf4PciAddr: {
+				Capability: pf4Capability,
+				Services: []string{
+					service1,
+					service2,
+				},
+			},
+			pf5PciAddr: {
+				Capability: pf4Capability,
+				Services: []string{
+					service1,
+					service2,
+				},
+			},
 		},
 	}, config)
 }
