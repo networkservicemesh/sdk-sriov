@@ -105,24 +105,23 @@ func (f *Function) GetBoundDriver() (string, error) {
 
 // BindDriver unbinds currently bound driver and binds the given driver to f
 func (f *Function) BindDriver(driver string) error {
-	boundDriver, err := f.GetBoundDriver()
-	if err != nil {
+	switch boundDriver, err := f.GetBoundDriver(); {
+	case err != nil:
 		return err
-	}
-
-	if boundDriver == driver {
+	case boundDriver == driver:
 		return nil
-	}
-
-	if boundDriver != "" {
+	case boundDriver != "":
 		unbindPath := filepath.Join(f.pciDevicesPath, f.address, boundDriverPath, unbindDriverPath)
 		if err := ioutil.WriteFile(unbindPath, []byte(f.address), 0); err != nil {
 			return errors.Wrapf(err, "failed to unbind driver from the device: %v", f.address)
 		}
 	}
 
+	// For some reasons write to the driver/bind file fails but binds the driver to the PCI function
+	// so we ignore error and simply compare the bound driver with the given one
 	bindPath := filepath.Join(f.pciDriversPath, driver, bindDriverPath)
-	if err := ioutil.WriteFile(bindPath, []byte(f.address), 0); err != nil {
+	err := ioutil.WriteFile(bindPath, []byte(f.address), 0)
+	if boundDriver, _ := f.GetBoundDriver(); boundDriver != driver {
 		return errors.Wrapf(err, "failed to bind the driver to the device: %v %v", f.address, driver)
 	}
 
