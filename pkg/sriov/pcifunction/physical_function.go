@@ -22,7 +22,9 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/pkg/errors"
 )
@@ -30,10 +32,10 @@ import (
 // TODO: add unit tests with sriovtest.FileAPI
 
 const (
-	bdfDomain              = "0000:"
-	totalVfFile            = "sriov_totalvfs"
-	configuredVfFile       = "sriov_numvfs"
-	virtualFunctionPattern = "virtfn*"
+	bdfDomain             = "0000:"
+	totalVfFile           = "sriov_totalvfs"
+	configuredVfFile      = "sriov_numvfs"
+	virtualFunctionPrefix = "virtfn"
 )
 
 var (
@@ -43,7 +45,7 @@ var (
 
 // PhysicalFunction describes Linux PCI physical function
 type PhysicalFunction struct {
-	Function
+	*Function
 }
 
 // NewPhysicalFunction returns a new PhysicalFunction
@@ -72,9 +74,7 @@ func NewPhysicalFunction(pciAddress, pciDevicesPath, pciDriversPath string) (*Ph
 		return nil, err
 	}
 
-	return &PhysicalFunction{
-		Function: *f,
-	}, nil
+	return &PhysicalFunction{f}, nil
 }
 
 // GetVirtualFunctionsCapacity returns count of virtual functions that can be created for the pf
@@ -96,23 +96,34 @@ func (pf *PhysicalFunction) CreateVirtualFunctions(vfCount uint) error {
 
 // GetVirtualFunctions returns all virtual functions discovered for the pf
 func (pf *PhysicalFunction) GetVirtualFunctions() ([]*Function, error) {
-	vfDirs, err := filepath.Glob(filepath.Join(pf.pciDevicesPath, pf.address, virtualFunctionPattern))
+	vfDirs, err := filepath.Glob(filepath.Join(pf.pciDevicesPath, pf.address, virtualFunctionPrefix+"*"))
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to find virtual function directories for the device: %v", pf.address)
 	}
 
-	var fs []*Function
-	for _, dir := range vfDirs {
-		dirInfo, err := os.Lstat(dir)
-		if err == nil && (dirInfo.Mode()&os.ModeSymlink != 0) {
-			linkName, err := filepath.EvalSymlinks(dir)
-			if err == nil {
-				if f, err := newFunction(filepath.Base(linkName), pf.pciDevicesPath, pf.pciDriversPath); err == nil {
-					fs = append(fs, f)
-				}
-			}
-		}
-	}
+	sort.Slice(vfDirs, func(i, k int) bool {
+		iVfNum, _ := strconv.Atoi(strings.TrimPrefix(vfDirs[i], virtualFunctionPrefix))
+		kVfNum, _ := strconv.Atoi(strings.TrimPrefix(vfDirs[k], virtualFunctionPrefix))
+		return iVfNum < kVfNum
+	})
 
+	var fs []*Function
+	for _, vfDir := range vfDirs {
+		vfDirInfo, err := os.Lstat(vfDir)
+		if err != nil || vfDirInfo.Mode()&os.ModeSymlink == 0 {
+			return nil, errors.Wrapf(err, "invalid virtual function directory: %v", vfDir)
+		}
+
+		linkName, err := filepath.EvalSymlinks(vfDir)
+		if err != nil {
+			return nil, errors.Wrapf(err, "invalid virtual function directory: %v", vfDir)
+		}
+
+		f, err := newFunction(filepath.Base(linkName), pf.pciDevicesPath, pf.pciDriversPath)
+		if err != nil {
+			return nil, err
+		}
+		fs = append(fs, f)
+	}
 	return fs, nil
 }
