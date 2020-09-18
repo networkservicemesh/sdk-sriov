@@ -14,6 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//+build !windows
+
 package vfio
 
 import (
@@ -22,12 +24,13 @@ import (
 	"path"
 
 	"github.com/golang/protobuf/ptypes/empty"
+	"golang.org/x/sys/unix"
+	"google.golang.org/grpc"
+
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/vfio"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
-	"golang.org/x/sys/unix"
-	"google.golang.org/grpc"
 )
 
 type vfioClient struct {
