@@ -96,13 +96,13 @@ func TestVfioClient_Request(t *testing.T) {
 
 	err = unix.Stat(path.Join(tmpDir, vfioDevice), info)
 	assert.Nil(t, err)
-	assert.Equal(t, uint32(1), unix.Major(info.Rdev))
-	assert.Equal(t, uint32(2), unix.Minor(info.Rdev))
+	assert.Equal(t, uint32(1), unix.Major(uint64(info.Rdev)))
+	assert.Equal(t, uint32(2), unix.Minor(uint64(info.Rdev)))
 
 	err = unix.Stat(path.Join(tmpDir, iommuGroupString), info)
 	assert.Nil(t, err)
-	assert.Equal(t, uint32(3), unix.Major(info.Rdev))
-	assert.Equal(t, uint32(4), unix.Minor(info.Rdev))
+	assert.Equal(t, uint32(3), unix.Major(uint64(info.Rdev)))
+	assert.Equal(t, uint32(4), unix.Minor(uint64(info.Rdev)))
 
 	assert.Nil(t, ctx.Err())
 }

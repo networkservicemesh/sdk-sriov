@@ -14,15 +14,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//+build !windows
+
 package vfio_test
 
 const (
-	clientCgroupDirKey = "clientCgroupDir"
-	cgroupDir          = "cgroup-dir"
-	vfioMajorKey       = "vfioMajor"
-	vfioMinorKey       = "vfioMinor"
-	deviceMajorKey     = "deviceMajor"
-	deviceMinorKey     = "deviceMinor"
-	vfioDevice         = "vfio"
-	iommuGroup         = "1"
+	cgroupDir        = "cgroup_dir"
+	vfioDevice       = "vfio"
+	iommuGroup       = 1
+	iommuGroupString = "1"
 )

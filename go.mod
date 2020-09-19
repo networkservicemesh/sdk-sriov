@@ -5,7 +5,7 @@ go 1.13
 require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/golang/protobuf v1.4.2
-	github.com/networkservicemesh/api v0.0.0-20200719005259-ed500e834d1e
+	github.com/networkservicemesh/api v0.0.0-20200915182332-e5aee3ba99ef
 	github.com/networkservicemesh/sdk v0.0.0-20200722164908-4976b3ea1273
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.5.1

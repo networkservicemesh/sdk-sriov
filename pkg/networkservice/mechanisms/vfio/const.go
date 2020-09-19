@@ -14,16 +14,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//+build !windows
+
 package vfio
 
 const (
-	// IommuGroupKey is a iommuGroup key for the Mechanism.Parameters
-	IommuGroupKey = "iommuGroup" // TODO: move to the api
-
-	clientCgroupDirKey = "clientCgroupDir"
-	vfioMajorKey       = "vfioMajor"
-	vfioMinorKey       = "vfioMinor"
-	deviceMajorKey     = "deviceMajor"
-	deviceMinorKey     = "deviceMinor"
-	vfioDevice         = "vfio"
+	vfioDevice = "vfio"
 )

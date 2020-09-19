@@ -14,6 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//+build !windows
+
 package vfio
 
 import (
@@ -22,11 +24,13 @@ import (
 	"path"
 
 	"github.com/golang/protobuf/ptypes/empty"
-	"github.com/networkservicemesh/api/pkg/api/networkservice"
-	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
-	"github.com/networkservicemesh/sdk/pkg/tools/log"
 	"golang.org/x/sys/unix"
 	"google.golang.org/grpc"
+
+	"github.com/networkservicemesh/api/pkg/api/networkservice"
+	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/vfio"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
+	"github.com/networkservicemesh/sdk/pkg/tools/log"
 )
 
 type vfioClient struct {
@@ -50,35 +54,37 @@ func NewClient(vfioDir, cgroupDir string) networkservice.NetworkServiceClient {
 func (c *vfioClient) Request(ctx context.Context, request *networkservice.NetworkServiceRequest, opts ...grpc.CallOption) (*networkservice.Connection, error) {
 	logEntry := log.Entry(ctx).WithField("vfioClient", "Request")
 
-	request.Connection.Context.ExtraContext[clientCgroupDirKey] = c.cgroupDir
+	request.MechanismPreferences = append(request.MechanismPreferences, vfio.New(c.cgroupDir))
 
 	conn, err := next.Client(ctx).Request(ctx, request, opts...)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := os.Mkdir(c.vfioDir, mkdirPerm); err != nil && !os.IsExist(err) {
-		logEntry.Error("failed to create vfio directory")
-		return nil, err
-	}
+	if mech := vfio.ToMechanism(conn.GetMechanism()); mech != nil {
+		if err := os.Mkdir(c.vfioDir, mkdirPerm); err != nil && !os.IsExist(err) {
+			logEntry.Error("failed to create vfio directory")
+			return nil, err
+		}
 
-	if err := unix.Mknod(
-		path.Join(c.vfioDir, vfioDevice),
-		unix.S_IFCHR|mknodPerm,
-		int(unix.Mkdev(atou(conn.Mechanism.Parameters[vfioMajorKey]), atou(conn.Mechanism.Parameters[vfioMinorKey]))),
-	); err != nil && !os.IsExist(err) {
-		logEntry.Errorf("failed to mknod device: %v", vfioDevice)
-		return nil, err
-	}
+		if err := unix.Mknod(
+			path.Join(c.vfioDir, vfioDevice),
+			unix.S_IFCHR|mknodPerm,
+			int(unix.Mkdev(mech.GetVfioMajor(), mech.GetVfioMinor())),
+		); err != nil && !os.IsExist(err) {
+			logEntry.Errorf("failed to mknod device: %v", vfioDevice)
+			return nil, err
+		}
 
-	igid := conn.Mechanism.Parameters[IommuGroupKey]
-	if err := unix.Mknod(
-		path.Join(c.vfioDir, igid),
-		unix.S_IFCHR|mknodPerm,
-		int(unix.Mkdev(atou(conn.Mechanism.Parameters[deviceMajorKey]), atou(conn.Mechanism.Parameters[deviceMinorKey]))),
-	); err != nil && !os.IsExist(err) {
-		logEntry.Errorf("failed to mknod device: %v", vfioDevice)
-		return nil, err
+		igid := mech.GetParameters()[vfio.IommuGroupKey]
+		if err := unix.Mknod(
+			path.Join(c.vfioDir, igid),
+			unix.S_IFCHR|mknodPerm,
+			int(unix.Mkdev(mech.GetDeviceMajor(), mech.GetDeviceMinor())),
+		); err != nil && !os.IsExist(err) {
+			logEntry.Errorf("failed to mknod device: %v", vfioDevice)
+			return nil, err
+		}
 	}
 
 	return conn, nil
