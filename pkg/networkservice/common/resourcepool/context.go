@@ -44,8 +44,8 @@ func WithResourcePool(parent context.Context, resourcePool *resourcepool.Resourc
 	})
 }
 
-// GetResourcePool returns PCIResourcePool from context
-func GetResourcePool(ctx context.Context) PCIResourcePool {
+// ResourcePool returns PCIResourcePool from context
+func ResourcePool(ctx context.Context) PCIResourcePool {
 	if rv, ok := ctx.Value(resourcePoolKey).(PCIResourcePool); ok {
 		return rv
 	}

@@ -62,6 +62,11 @@ func NewServer(driverType sriov.DriverType, functions map[sriov.PCIFunction][]sr
 func (s *resourcePoolServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
 	logEntry := log.Entry(ctx).WithField("resourcePoolServer", "Request")
 
+	resourcePool := ResourcePool(ctx)
+	if resourcePool == nil {
+		return nil, errors.New("ResourcePool not found")
+	}
+
 	service, capability, err := getServiceAndCapability(request)
 	if err != nil {
 		return nil, errors.Wrapf(err, "invalid service: %v", request.GetConnection().GetNetworkService())
@@ -69,7 +74,6 @@ func (s *resourcePoolServer) Request(ctx context.Context, request *networkservic
 
 	vfConfig := vfconfig.Config(ctx)
 	if err := func() error {
-		resourcePool := GetResourcePool(ctx)
 		resourcePool.Lock()
 		defer resourcePool.Unlock()
 
@@ -183,7 +187,7 @@ func (s *resourcePoolServer) close(ctx context.Context, conn *networkservice.Con
 	}
 	delete(s.selectedVFs, conn.GetId())
 
-	resourcePool := GetResourcePool(ctx)
+	resourcePool := ResourcePool(ctx)
 	resourcePool.Lock()
 	defer resourcePool.Unlock()
 

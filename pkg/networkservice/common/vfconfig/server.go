@@ -19,6 +19,7 @@ package vfconfig
 
 import (
 	"context"
+	"sync"
 
 	"github.com/golang/protobuf/ptypes/empty"
 
@@ -28,29 +29,25 @@ import (
 )
 
 type vfConfigServer struct {
-	configs map[string]*vfconfig.VFConfig
+	configs sync.Map
 }
 
 // NewServer returns a new vfconfig server chain element
 func NewServer() networkservice.NetworkServiceServer {
 	return &vfConfigServer{
-		configs: map[string]*vfconfig.VFConfig{},
+		configs: sync.Map{},
 	}
 }
 
 func (s *vfConfigServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
-	config, ok := s.configs[request.GetConnection().GetId()]
-	if !ok {
-		config = &vfconfig.VFConfig{}
-		s.configs[request.GetConnection().GetId()] = config
-	}
+	rawConfig, _ := s.configs.LoadOrStore(request.GetConnection().GetId(), &vfconfig.VFConfig{})
 
-	return next.Server(ctx).Request(vfconfig.WithConfig(ctx, config), request)
+	return next.Server(ctx).Request(vfconfig.WithConfig(ctx, rawConfig.(*vfconfig.VFConfig)), request)
 }
 
 func (s *vfConfigServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {
-	config := s.configs[conn.GetId()]
-	delete(s.configs, conn.GetId())
+	rawConfig, _ := s.configs.Load(conn.GetId())
+	s.configs.Delete(conn.GetId())
 
-	return next.Server(ctx).Close(vfconfig.WithConfig(ctx, config), conn)
+	return next.Server(ctx).Close(vfconfig.WithConfig(ctx, rawConfig.(*vfconfig.VFConfig)), conn)
 }

@@ -53,7 +53,7 @@ func NewInitServer(functions map[sriov.PCIFunction][]sriov.PCIFunction, config *
 }
 
 func (s *initResourcePoolServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
-	if GetResourcePool(ctx) == nil {
+	if ResourcePool(ctx) == nil {
 		ctx = WithResourcePool(ctx, s.resourcePool, &s.lock)
 	}
 	return next.Server(ctx).Request(ctx, request)
