@@ -18,30 +18,20 @@ package resourcepool
 
 import (
 	"context"
-	"sync"
-
-	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/resourcepool"
 )
 
 const (
-	resourcePoolKey Key = "resourcepool.PCIResourcePool"
+	resourcePoolKey key = "resourcepool.PCIResourcePool"
 )
 
-// Key is a key type for context value
-type Key string
+type key string
 
 // WithResourcePool returns a new context with PCIResourcePool
-func WithResourcePool(parent context.Context, resourcePool *resourcepool.ResourcePool, lock *sync.Mutex) context.Context {
+func WithResourcePool(parent context.Context, resourcePool PCIResourcePool) context.Context {
 	if parent == nil {
 		parent = context.TODO()
 	}
-	return context.WithValue(parent, resourcePoolKey, struct {
-		*resourcepool.ResourcePool
-		*sync.Mutex
-	}{
-		resourcePool,
-		lock,
-	})
+	return context.WithValue(parent, resourcePoolKey, resourcePool)
 }
 
 // ResourcePool returns PCIResourcePool from context

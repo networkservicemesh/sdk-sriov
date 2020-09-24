@@ -19,7 +19,6 @@ package resourcepool
 
 import (
 	"context"
-	"strings"
 	"sync"
 
 	"github.com/golang/protobuf/ptypes/empty"
@@ -32,6 +31,11 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov"
+)
+
+const (
+	// CapabilityLabel is a label for capability
+	CapabilityLabel = "capability"
 )
 
 // PCIResourcePool is a resourcepool.ResourcePool + sync.Locker interface
@@ -107,14 +111,21 @@ func (s *resourcePoolServer) Request(ctx context.Context, request *networkservic
 }
 
 func getServiceAndCapability(request *networkservice.NetworkServiceRequest) (string, sriov.Capability, error) {
-	splitted := strings.Split(request.GetConnection().GetNetworkService(), ":")
+	service := request.GetConnection().GetNetworkService()
 
-	capability := sriov.Capability(splitted[1])
+	var capability sriov.Capability
+	if labels := request.GetConnection().GetLabels(); labels == nil {
+		capability = sriov.ZeroCapability
+	} else if capabilityString, ok := labels[CapabilityLabel]; !ok {
+		capability = sriov.ZeroCapability
+	} else {
+		capability = sriov.Capability(capabilityString)
+	}
 	if err := capability.Validate(); err != nil {
 		return "", "", err
 	}
 
-	return splitted[0], capability, nil
+	return service, capability, nil
 }
 
 func (s *resourcePoolServer) selectVf(

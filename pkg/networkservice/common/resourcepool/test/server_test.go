@@ -18,7 +18,6 @@ package resourcepool_test
 
 import (
 	"context"
-	"strings"
 	"sync"
 	"testing"
 
@@ -37,10 +36,9 @@ import (
 )
 
 const (
-	physicalFunctionsFilename                  = "physical_functions.yml"
-	resourcePoolKey           resourcepool.Key = "resourcepool.PCIResourcePool"
-	networkService                             = "network-service"
-	capability                                 = "10G"
+	physicalFunctionsFilename = "physical_functions.yml"
+	networkService            = "network-service"
+	capability                = "10G"
 )
 
 func initResourcePoolServer(driverType sriov.DriverType) (networkservice.NetworkServiceServer, []*sriovtest.PCIPhysicalFunction) {
@@ -64,7 +62,7 @@ func Test_resourcePoolServer_Request(t *testing.T) {
 	ctx := vfconfig.WithConfig(context.TODO(), vfConfig)
 
 	resourcePool := &resourcePoolMock{}
-	ctx = context.WithValue(ctx, resourcePoolKey, resourcePool)
+	ctx = resourcepool.WithResourcePool(ctx, resourcePool)
 
 	server, pfs := initResourcePoolServer(sriov.VfioPCIDriver)
 
@@ -76,9 +74,12 @@ func Test_resourcePoolServer_Request(t *testing.T) {
 	conn, err := server.Request(ctx, &networkservice.NetworkServiceRequest{
 		Connection: &networkservice.Connection{
 			Id:             "id",
-			NetworkService: strings.Join([]string{networkService, capability}, ":"),
+			NetworkService: networkService,
 			Mechanism: &networkservice.Mechanism{
 				Type: vfio.MECHANISM,
+			},
+			Labels: map[string]string{
+				resourcepool.CapabilityLabel: capability,
 			},
 		},
 	})
