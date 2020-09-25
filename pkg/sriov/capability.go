@@ -23,6 +23,11 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	// ZeroCapability is 0 byte capability
+	ZeroCapability Capability = "0b"
+)
+
 // Capability is a type for PCI function capability
 type Capability string
 
