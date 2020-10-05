@@ -30,7 +30,7 @@ type PCIPhysicalFunction struct {
 type PCIFunction struct {
 	Addr       string `yaml:"addr"`
 	IfName     string `yaml:"ifName"`
-	IommuGroup uint   `yaml:"iommuGroup"`
+	IOMMUGroup uint   `yaml:"iommuGroup"`
 	Driver     string `yaml:"driver"`
 }
 
@@ -44,9 +44,9 @@ func (f *PCIFunction) GetNetInterfaceName() (string, error) {
 	return f.IfName, nil
 }
 
-// GetIommuGroupID returns f.IommuGroup
-func (f *PCIFunction) GetIommuGroupID() (uint, error) {
-	return f.IommuGroup, nil
+// GetIOMMUGroup returns f.IOMMUGroup
+func (f *PCIFunction) GetIOMMUGroup() (uint, error) {
+	return f.IOMMUGroup, nil
 }
 
 // GetBoundDriver returns f.Driver

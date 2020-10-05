@@ -54,9 +54,9 @@ func TestPool_Select_Service(t *testing.T) {
 
 	p := resource.NewPool(tokenPool, cfg)
 
-	vfPciAddr, err := p.Select("1", sriov.VfioPCIDriver)
+	vfPCIAddr, err := p.Select("1", sriov.VFIOPCIDriver)
 	assert.Nil(t, err)
-	assert.Equal(t, vf11PciAddr, vfPciAddr)
+	assert.Equal(t, vf11PciAddr, vfPCIAddr)
 }
 
 func TestPool_Select_Capability(t *testing.T) {
@@ -71,9 +71,9 @@ func TestPool_Select_Capability(t *testing.T) {
 
 	p := resource.NewPool(tokenPool, cfg)
 
-	vfPciAddr, err := p.Select("1", sriov.VfioPCIDriver)
+	vfPCIAddr, err := p.Select("1", sriov.VFIOPCIDriver)
 	assert.Nil(t, err)
-	assert.Equal(t, vf21PciAddr, vfPciAddr)
+	assert.Equal(t, vf21PciAddr, vfPCIAddr)
 }
 
 func TestPool_Select_DriverType(t *testing.T) {
@@ -89,13 +89,13 @@ func TestPool_Select_DriverType(t *testing.T) {
 
 	p := resource.NewPool(tokenPool, cfg)
 
-	vfPciAddr, err := p.Select("1", sriov.VfioPCIDriver)
+	vfPCIAddr, err := p.Select("1", sriov.VFIOPCIDriver)
 	assert.Nil(t, err)
-	assert.Equal(t, vf11PciAddr, vfPciAddr)
+	assert.Equal(t, vf11PciAddr, vfPCIAddr)
 
-	vfPciAddr, err = p.Select("2", sriov.KernelDriver)
+	vfPCIAddr, err = p.Select("2", sriov.KernelDriver)
 	assert.Nil(t, err)
-	assert.Equal(t, vf22PciAddr, vfPciAddr)
+	assert.Equal(t, vf22PciAddr, vfPCIAddr)
 }
 
 func TestPool_Select_FreeVFsCount(t *testing.T) {
@@ -110,9 +110,9 @@ func TestPool_Select_FreeVFsCount(t *testing.T) {
 
 	p := resource.NewPool(tokenPool, cfg)
 
-	vfPciAddr, err := p.Select("1", sriov.VfioPCIDriver)
+	vfPCIAddr, err := p.Select("1", sriov.VFIOPCIDriver)
 	assert.Nil(t, err)
-	assert.Equal(t, vf31PciAddr, vfPciAddr)
+	assert.Equal(t, vf31PciAddr, vfPCIAddr)
 }
 
 func TestPool_Free(t *testing.T) {
@@ -127,16 +127,16 @@ func TestPool_Free(t *testing.T) {
 
 	p := resource.NewPool(tokenPool, cfg)
 
-	vfPciAddr, err := p.Select("1", sriov.VfioPCIDriver)
+	vfPCIAddr, err := p.Select("1", sriov.VFIOPCIDriver)
 	assert.Nil(t, err)
-	assert.Equal(t, vf11PciAddr, vfPciAddr)
+	assert.Equal(t, vf11PciAddr, vfPCIAddr)
 
-	err = p.Free(vfPciAddr)
+	err = p.Free(vfPCIAddr)
 	assert.Nil(t, err)
 
-	vfPciAddr, err = p.Select("1", sriov.VfioPCIDriver)
+	vfPCIAddr, err = p.Select("1", sriov.VFIOPCIDriver)
 	assert.Nil(t, err)
-	assert.Equal(t, vf11PciAddr, vfPciAddr)
+	assert.Equal(t, vf11PciAddr, vfPCIAddr)
 }
 
 type tokenPoolStub struct {

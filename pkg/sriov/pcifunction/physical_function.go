@@ -33,8 +33,8 @@ import (
 
 const (
 	bdfDomain             = "0000:"
-	totalVfFile           = "sriov_totalvfs"
-	configuredVfFile      = "sriov_numvfs"
+	totalVFFile           = "sriov_totalvfs"
+	configuredVFFile      = "sriov_numvfs"
 	virtualFunctionPrefix = "virtfn"
 )
 
@@ -65,7 +65,7 @@ func NewPhysicalFunction(pciAddress, pciDevicesPath, pciDriversPath string) (*Ph
 		return nil, errors.Errorf("PCI device doesn't exist: %v", bdfPCIAddress)
 	}
 
-	if !isFileExists(filepath.Join(pciDevicePath, totalVfFile)) {
+	if !isFileExists(filepath.Join(pciDevicePath, totalVFFile)) {
 		return nil, errors.Errorf("PCI device is not SR-IOV capable: %v", bdfPCIAddress)
 	}
 
@@ -79,14 +79,14 @@ func NewPhysicalFunction(pciAddress, pciDevicesPath, pciDriversPath string) (*Ph
 
 // GetVirtualFunctionsCapacity returns count of virtual functions that can be created for the pf
 func (pf *PhysicalFunction) GetVirtualFunctionsCapacity() (uint, error) {
-	return readUintFromFile(filepath.Join(pf.pciDevicesPath, pf.address, totalVfFile))
+	return readUintFromFile(filepath.Join(pf.pciDevicesPath, pf.address, totalVFFile))
 }
 
 // CreateVirtualFunctions initializes virtual functions for the pf
 // NOTE: should fail if virtual functions are already exist
 func (pf *PhysicalFunction) CreateVirtualFunctions(vfCount uint) error {
-	configuredVfFilePath := filepath.Join(pf.pciDevicesPath, pf.address, configuredVfFile)
-	err := ioutil.WriteFile(configuredVfFilePath, []byte(strconv.Itoa(int(vfCount))), 0)
+	configuredVFFilePath := filepath.Join(pf.pciDevicesPath, pf.address, configuredVFFile)
+	err := ioutil.WriteFile(configuredVFFilePath, []byte(strconv.Itoa(int(vfCount))), 0)
 	if err != nil {
 		return errors.Wrapf(err, "failed to create virtual functions for the device: %v", pf.address)
 	}
@@ -102,9 +102,9 @@ func (pf *PhysicalFunction) GetVirtualFunctions() ([]*Function, error) {
 	}
 
 	sort.Slice(vfDirs, func(i, k int) bool {
-		iVfNum, _ := strconv.Atoi(strings.TrimPrefix(vfDirs[i], virtualFunctionPrefix))
-		kVfNum, _ := strconv.Atoi(strings.TrimPrefix(vfDirs[k], virtualFunctionPrefix))
-		return iVfNum < kVfNum
+		iVFNum, _ := strconv.Atoi(strings.TrimPrefix(vfDirs[i], virtualFunctionPrefix))
+		kVFNum, _ := strconv.Atoi(strings.TrimPrefix(vfDirs[k], virtualFunctionPrefix))
+		return iVFNum < kVFNum
 	})
 
 	var fs []*Function

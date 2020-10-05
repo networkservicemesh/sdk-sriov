@@ -24,6 +24,6 @@ const (
 	NoDriver DriverType = "no-driver"
 	// KernelDriver is kernel driver type
 	KernelDriver DriverType = "kernel"
-	// VfioPCIDriver is vfio-pci driver type
-	VfioPCIDriver DriverType = "vfio-pci"
+	// VFIOPCIDriver is vfio-pci driver type
+	VFIOPCIDriver DriverType = "vfio-pci"
 )

@@ -77,16 +77,16 @@ func (f *Function) GetNetInterfaceName() (string, error) {
 	return fInfos[0].Name(), nil
 }
 
-// GetIommuGroupID returns f IOMMU group id
-func (f *Function) GetIommuGroupID() (uint, error) {
-	stringIgid, err := evalSymlinkAndGetBaseName(filepath.Join(f.pciDevicesPath, f.address, iommuGroup))
+// GetIOMMUGroup returns f IOMMU group id
+func (f *Function) GetIOMMUGroup() (uint, error) {
+	stringIOMMUGroup, err := evalSymlinkAndGetBaseName(filepath.Join(f.pciDevicesPath, f.address, iommuGroup))
 	if err != nil {
 		return 0, errors.Wrapf(err, "error evaluating IOMMU group id for the device: %v", f.address)
 	}
 
-	igid, _ := strconv.Atoi(stringIgid)
+	iommuGroup, _ := strconv.Atoi(stringIOMMUGroup)
 
-	return uint(igid), nil
+	return uint(iommuGroup), nil
 }
 
 // GetBoundDriver returns driver name that is bound to f, if no driver bound, returns ""

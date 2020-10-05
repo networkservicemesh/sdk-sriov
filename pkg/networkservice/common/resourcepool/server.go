@@ -34,13 +34,14 @@ import (
 )
 
 const (
+	// TokenIDKey is a token ID mechanism parameter key
 	TokenIDKey = "tokenID" // TODO: move to api
 )
 
 // ResourcePool is a resource.Pool + sync.Locker interface
 type ResourcePool interface {
 	Select(tokenID string, driverType sriov.DriverType) (string, error)
-	Free(vfPciAddr string) error
+	Free(vfPCIAddr string) error
 
 	sync.Locker
 }
@@ -85,23 +86,23 @@ func (s *resourcePoolServer) Request(ctx context.Context, request *networkservic
 		defer resourcePool.Unlock()
 
 		logEntry.Infof("trying to select VF for %v", s.driverType)
-		vf, err := s.selectVf(request.GetConnection().GetId(), vfConfig, resourcePool, tokenID)
+		vf, err := s.selectVF(request.GetConnection().GetId(), vfConfig, resourcePool, tokenID)
 		if err != nil {
 			return err
 		}
 		logEntry.Infof("selected VF: %+v", vf)
 
-		igid, err := vf.GetIommuGroupID()
+		iommuGroup, err := vf.GetIOMMUGroup()
 		if err != nil {
 			return errors.Wrapf(err, "failed to get VF IOMMU group: %v", vf.GetPCIAddress())
 		}
 
-		if err := s.bindDriver(igid); err != nil {
+		if err := s.bindDriver(iommuGroup); err != nil {
 			return err
 		}
 
-		if s.driverType == sriov.VfioPCIDriver {
-			vfio.ToMechanism(request.GetConnection().GetMechanism()).SetIommuGroup(igid)
+		if s.driverType == sriov.VFIOPCIDriver {
+			vfio.ToMechanism(request.GetConnection().GetMechanism()).SetIommuGroup(iommuGroup)
 		}
 
 		return nil
@@ -113,7 +114,11 @@ func (s *resourcePoolServer) Request(ctx context.Context, request *networkservic
 	return next.Server(ctx).Request(ctx, request)
 }
 
-func (s *resourcePoolServer) selectVf(connID string, vfConfig *vfconfig.VFConfig, resourcePool ResourcePool, tokenID string,
+func (s *resourcePoolServer) selectVF(
+	connID string,
+	vfConfig *vfconfig.VFConfig,
+	resourcePool ResourcePool,
+	tokenID string,
 ) (vf sriov.PCIFunction, err error) {
 	s.selectedVFs[connID], err = resourcePool.Select(tokenID, s.driverType)
 	if err != nil {
@@ -148,8 +153,8 @@ func (s *resourcePoolServer) bindDriver(igid uint) (err error) {
 		switch s.driverType {
 		case sriov.KernelDriver:
 			err = binder.BindKernelDriver()
-		case sriov.VfioPCIDriver:
-			err = binder.BindDriver(string(sriov.VfioPCIDriver))
+		case sriov.VFIOPCIDriver:
+			err = binder.BindDriver(string(sriov.VFIOPCIDriver))
 		}
 		if err != nil {
 			return errors.Wrapf(err, "failed to bind driver to IOMMU group: %v", igid)
@@ -172,7 +177,7 @@ func (s *resourcePoolServer) Close(ctx context.Context, conn *networkservice.Con
 }
 
 func (s *resourcePoolServer) close(ctx context.Context, conn *networkservice.Connection) error {
-	vfPciAddr, ok := s.selectedVFs[conn.GetId()]
+	vfPCIAddr, ok := s.selectedVFs[conn.GetId()]
 	if !ok {
 		return nil
 	}
@@ -182,5 +187,5 @@ func (s *resourcePoolServer) close(ctx context.Context, conn *networkservice.Con
 	resourcePool.Lock()
 	defer resourcePool.Unlock()
 
-	return resourcePool.Free(vfPciAddr)
+	return resourcePool.Free(vfPCIAddr)
 }

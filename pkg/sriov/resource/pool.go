@@ -51,7 +51,7 @@ type physicalFunction struct {
 
 type virtualFunction struct {
 	pciAddr    string
-	pfPciAddr  string
+	pfPCIAddr  string
 	iommuGroup uint
 	tokenID    string
 }
@@ -65,13 +65,13 @@ func NewPool(tokenPool TokenPool, cfg *config.Config) *Pool {
 		tokenPool:         tokenPool,
 	}
 
-	for pfPciAddr, pff := range cfg.PhysicalFunctions {
+	for pfPCIAddr, pff := range cfg.PhysicalFunctions {
 		pf := &physicalFunction{
 			tokenNames:       map[string]struct{}{},
 			virtualFunctions: map[uint][]*virtualFunction{},
 			freeVFsCount:     len(pff.VirtualFunctions),
 		}
-		p.physicalFunctions[pfPciAddr] = pf
+		p.physicalFunctions[pfPCIAddr] = pf
 
 		for _, service := range pff.Services {
 			for _, capability := range pff.Capabilities {
@@ -79,13 +79,13 @@ func NewPool(tokenPool TokenPool, cfg *config.Config) *Pool {
 			}
 		}
 
-		for vfPciAddr, iommuGroup := range pff.VirtualFunctions {
+		for vfPCIAddr, iommuGroup := range pff.VirtualFunctions {
 			vf := &virtualFunction{
-				pciAddr:    vfPciAddr,
-				pfPciAddr:  pfPciAddr,
+				pciAddr:    vfPCIAddr,
+				pfPCIAddr:  pfPCIAddr,
 				iommuGroup: iommuGroup,
 			}
-			p.virtualFunctions[vfPciAddr] = vf
+			p.virtualFunctions[vfPCIAddr] = vf
 
 			pf.virtualFunctions[iommuGroup] = append(pf.virtualFunctions[iommuGroup], vf)
 			p.iommuGroups[iommuGroup] = sriov.NoDriver
@@ -110,19 +110,19 @@ func (p *Pool) Select(tokenID string, driverType sriov.DriverType) (string, erro
 	sort.Slice(vfs, func(i, k int) bool {
 		iIg := p.iommuGroups[vfs[i].iommuGroup]
 		kIg := p.iommuGroups[vfs[k].iommuGroup]
-		iPf := p.physicalFunctions[vfs[i].pfPciAddr]
-		kPf := p.physicalFunctions[vfs[k].pfPciAddr]
+		iPF := p.physicalFunctions[vfs[i].pfPCIAddr]
+		kPF := p.physicalFunctions[vfs[k].pfPCIAddr]
 		switch {
 		case iIg == driverType && kIg == sriov.NoDriver:
 			return true
 		case iIg == sriov.NoDriver && kIg == driverType:
 			return false
 		default:
-			return iPf.freeVFsCount-kPf.freeVFsCount > 0
+			return iPF.freeVFsCount-kPF.freeVFsCount > 0
 		}
 	})
 
-	if err = p.selectVF(vfs[0], tokenID, driverType); err != nil {
+	if err := p.selectVF(vfs[0], tokenID, driverType); err != nil {
 		return "", err
 	}
 
@@ -149,7 +149,7 @@ func (p *Pool) find(driverType sriov.DriverType, tokenName string) []*virtualFun
 
 func (p *Pool) selectVF(vf *virtualFunction, tokenID string, driverType sriov.DriverType) error {
 	var tokenNames []string
-	for tokenName := range p.physicalFunctions[vf.pfPciAddr].tokenNames {
+	for tokenName := range p.physicalFunctions[vf.pfPCIAddr].tokenNames {
 		tokenNames = append(tokenNames, tokenName)
 	}
 	if err := p.tokenPool.Use(tokenID, tokenNames); err != nil {
@@ -158,17 +158,17 @@ func (p *Pool) selectVF(vf *virtualFunction, tokenID string, driverType sriov.Dr
 
 	vf.tokenID = tokenID
 
-	p.physicalFunctions[vf.pfPciAddr].freeVFsCount--
+	p.physicalFunctions[vf.pfPCIAddr].freeVFsCount--
 	p.iommuGroups[vf.iommuGroup] = driverType
 
 	return nil
 }
 
 // Free marks given virtual function as "free" and binds it to the "NoDriver" driver type
-func (p *Pool) Free(vfPciAddr string) error {
-	vf, ok := p.virtualFunctions[vfPciAddr]
+func (p *Pool) Free(vfPCIAddr string) error {
+	vf, ok := p.virtualFunctions[vfPCIAddr]
 	if !ok {
-		return errors.Errorf("VF doesn't exist: %v", vfPciAddr)
+		return errors.Errorf("VF doesn't exist: %v", vfPCIAddr)
 	}
 
 	if vf.tokenID == "" {
@@ -179,7 +179,7 @@ func (p *Pool) Free(vfPciAddr string) error {
 	}
 	vf.tokenID = ""
 
-	p.physicalFunctions[vf.pfPciAddr].freeVFsCount++
+	p.physicalFunctions[vf.pfPCIAddr].freeVFsCount++
 
 	for _, pf := range p.physicalFunctions {
 		if vffs, ok := pf.virtualFunctions[vf.iommuGroup]; ok {

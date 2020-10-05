@@ -47,7 +47,7 @@ const (
 	deviceStringFormat = "c %d:%d rwm"
 )
 
-func testVfioServer(ctx context.Context, t *testing.T, allowedDevices *allowedDevices) (server networkservice.NetworkServiceServer, tmpDir string) {
+func testVFIOServer(ctx context.Context, t *testing.T, allowedDevices *allowedDevices) (server networkservice.NetworkServiceServer, tmpDir string) {
 	tmpDir = path.Join(os.TempDir(), t.Name())
 	err := os.MkdirAll(path.Join(tmpDir, cgroupDir), 0750)
 	assert.Nil(t, err)
@@ -78,14 +78,14 @@ func testVfioServer(ctx context.Context, t *testing.T, allowedDevices *allowedDe
 	return server, tmpDir
 }
 
-func TestVfioServer_Request(t *testing.T) {
+func TestVFIOServer_Request(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
 	defer cancel()
 
 	allowedDevices := &allowedDevices{
 		devices: map[string]bool{},
 	}
-	server, tmpDir := testVfioServer(ctx, t, allowedDevices)
+	server, tmpDir := testVFIOServer(ctx, t, allowedDevices)
 	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	err := unix.Mknod(path.Join(tmpDir, vfioDevice), unix.S_IFCHR|0666, int(unix.Mkdev(1, 2)))
@@ -127,7 +127,7 @@ func TestVfioServer_Request(t *testing.T) {
 	assert.Nil(t, ctx.Err())
 }
 
-func TestVfioServer_Close(t *testing.T) {
+func TestVFIOServer_Close(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
 	defer cancel()
 
@@ -137,7 +137,7 @@ func TestVfioServer_Close(t *testing.T) {
 			"3:4": true,
 		},
 	}
-	server, tmpDir := testVfioServer(ctx, t, allowedDevices)
+	server, tmpDir := testVFIOServer(ctx, t, allowedDevices)
 	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	conn := &networkservice.Connection{

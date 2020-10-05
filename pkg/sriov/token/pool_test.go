@@ -59,7 +59,7 @@ func TestPool_Use(t *testing.T) {
 
 	var tokenID string
 	for id := range p.Tokens()[path.Join(service2, capability20G)] {
-		err := p.Use(id, []string{
+		err = p.Use(id, []string{
 			path.Join(service1, capabilityIntel),
 			path.Join(service1, capability20G),
 			path.Join(service2, capabilityIntel),
@@ -71,10 +71,10 @@ func TestPool_Use(t *testing.T) {
 
 	tokens := p.Tokens()
 	require.Equal(t, 5, len(tokens))
-	require.Equal(t, 4-3, countTrue(tokens[path.Join(service1, capabilityIntel)]))
+	require.Equal(t, 1, countTrue(tokens[path.Join(service1, capabilityIntel)]))
 	require.Equal(t, 1, countTrue(tokens[path.Join(service1, capability10G)]))
-	require.Equal(t, 3-3, countTrue(tokens[path.Join(service1, capability20G)]))
-	require.Equal(t, 3-3, countTrue(tokens[path.Join(service2, capabilityIntel)]))
+	require.Equal(t, 0, countTrue(tokens[path.Join(service1, capability20G)]))
+	require.Equal(t, 0, countTrue(tokens[path.Join(service2, capabilityIntel)]))
 	require.Equal(t, 3, countTrue(tokens[path.Join(service2, capability20G)]))
 
 	err = p.StopUsing(tokenID)
@@ -82,10 +82,10 @@ func TestPool_Use(t *testing.T) {
 
 	tokens = p.Tokens()
 	require.Equal(t, 5, len(tokens))
-	require.Equal(t, 4-2, countTrue(tokens[path.Join(service1, capabilityIntel)]))
+	require.Equal(t, 2, countTrue(tokens[path.Join(service1, capabilityIntel)]))
 	require.Equal(t, 1, countTrue(tokens[path.Join(service1, capability10G)]))
-	require.Equal(t, 3-2, countTrue(tokens[path.Join(service1, capability20G)]))
-	require.Equal(t, 3-2, countTrue(tokens[path.Join(service2, capabilityIntel)]))
+	require.Equal(t, 1, countTrue(tokens[path.Join(service1, capability20G)]))
+	require.Equal(t, 1, countTrue(tokens[path.Join(service2, capabilityIntel)]))
 	require.Equal(t, 3, countTrue(tokens[path.Join(service2, capability20G)]))
 }
 

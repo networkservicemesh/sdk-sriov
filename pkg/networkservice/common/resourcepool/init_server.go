@@ -27,7 +27,6 @@ import (
 
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/config"
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/resource"
-	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/token"
 )
 
 type initResourcePoolServer struct {
@@ -36,7 +35,7 @@ type initResourcePoolServer struct {
 }
 
 // NewInitServer returns a new init resource pool server
-func NewInitServer(tokenPool *token.Pool, cfg *config.Config) networkservice.NetworkServiceServer {
+func NewInitServer(tokenPool resource.TokenPool, cfg *config.Config) networkservice.NetworkServiceServer {
 	return &initResourcePoolServer{
 		resourcePool: resource.NewPool(tokenPool, cfg),
 	}

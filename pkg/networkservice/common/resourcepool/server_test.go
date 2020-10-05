@@ -48,7 +48,7 @@ func initResourcePoolServer(driverType sriov.DriverType) (networkservice.Network
 	for _, pf := range pfs {
 		for _, vf := range pf.Vfs {
 			functions[pf] = append(functions[pf], vf)
-			binders[vf.IommuGroup] = append(binders[vf.IommuGroup], vf)
+			binders[vf.IOMMUGroup] = append(binders[vf.IOMMUGroup], vf)
 		}
 	}
 
@@ -62,11 +62,11 @@ func Test_resourcePoolServer_Request(t *testing.T) {
 	resourcePool := &resourcePoolMock{}
 	ctx = resourcepool.WithPool(ctx, resourcePool)
 
-	server, pfs := initResourcePoolServer(sriov.VfioPCIDriver)
+	server, pfs := initResourcePoolServer(sriov.VFIOPCIDriver)
 
 	// 1. Request
 
-	resourcePool.mock.On("Select", "1", sriov.VfioPCIDriver).
+	resourcePool.mock.On("Select", "1", sriov.VFIOPCIDriver).
 		Return(pfs[1].Vfs[1].Addr, nil)
 
 	conn, err := server.Request(ctx, &networkservice.NetworkServiceRequest{
@@ -84,14 +84,14 @@ func Test_resourcePoolServer_Request(t *testing.T) {
 
 	resourcePool.mock.AssertNumberOfCalls(t, "Select", 1)
 
-	require.Equal(t, pfs[1].Vfs[0].Driver, string(sriov.VfioPCIDriver))
-	require.Equal(t, pfs[1].Vfs[1].Driver, string(sriov.VfioPCIDriver))
+	require.Equal(t, pfs[1].Vfs[0].Driver, string(sriov.VFIOPCIDriver))
+	require.Equal(t, pfs[1].Vfs[1].Driver, string(sriov.VFIOPCIDriver))
 
 	require.Equal(t, vfConfig.PFInterfaceName, pfs[1].IfName)
 	require.Equal(t, vfConfig.VFInterfaceName, pfs[1].Vfs[1].IfName)
 	require.Equal(t, vfConfig.VFNum, 1)
 
-	require.Equal(t, vfio.ToMechanism(conn.Mechanism).GetIommuGroup(), pfs[1].Vfs[1].IommuGroup)
+	require.Equal(t, vfio.ToMechanism(conn.Mechanism).GetIommuGroup(), pfs[1].Vfs[1].IOMMUGroup)
 
 	// 2. Close
 
@@ -115,7 +115,7 @@ func (rp *resourcePoolMock) Select(tokenID string, driverType sriov.DriverType) 
 	return rv.String(0), rv.Error(1)
 }
 
-func (rp *resourcePoolMock) Free(vfPciAddr string) error {
-	rv := rp.mock.Called(vfPciAddr)
+func (rp *resourcePoolMock) Free(vfPCIAddr string) error {
+	rv := rp.mock.Called(vfPCIAddr)
 	return rv.Error(0)
 }
