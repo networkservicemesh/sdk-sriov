@@ -21,8 +21,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/vfio"
@@ -37,8 +37,6 @@ import (
 
 const (
 	physicalFunctionsFilename = "physical_functions.yml"
-	networkService            = "network-service"
-	capability                = "10G"
 )
 
 func initResourcePoolServer(driverType sriov.DriverType) (networkservice.NetworkServiceServer, []*sriovtest.PCIPhysicalFunction) {
@@ -62,39 +60,38 @@ func Test_resourcePoolServer_Request(t *testing.T) {
 	ctx := vfconfig.WithConfig(context.TODO(), vfConfig)
 
 	resourcePool := &resourcePoolMock{}
-	ctx = resourcepool.WithResourcePool(ctx, resourcePool)
+	ctx = resourcepool.WithPool(ctx, resourcePool)
 
 	server, pfs := initResourcePoolServer(sriov.VfioPCIDriver)
 
 	// 1. Request
 
-	resourcePool.mock.On("Select", sriov.VfioPCIDriver, networkService, sriov.Capability(capability)).
+	resourcePool.mock.On("Select", "1", sriov.VfioPCIDriver).
 		Return(pfs[1].Vfs[1].Addr, nil)
 
 	conn, err := server.Request(ctx, &networkservice.NetworkServiceRequest{
 		Connection: &networkservice.Connection{
-			Id:             "id",
-			NetworkService: networkService,
+			Id: "id",
 			Mechanism: &networkservice.Mechanism{
 				Type: vfio.MECHANISM,
-			},
-			Labels: map[string]string{
-				resourcepool.CapabilityLabel: capability,
+				Parameters: map[string]string{
+					resourcepool.TokenIDKey: "1",
+				},
 			},
 		},
 	})
-	assert.Nil(t, err)
+	require.NoError(t, err)
 
 	resourcePool.mock.AssertNumberOfCalls(t, "Select", 1)
 
-	assert.Equal(t, pfs[1].Vfs[0].Driver, string(sriov.VfioPCIDriver))
-	assert.Equal(t, pfs[1].Vfs[1].Driver, string(sriov.VfioPCIDriver))
+	require.Equal(t, pfs[1].Vfs[0].Driver, string(sriov.VfioPCIDriver))
+	require.Equal(t, pfs[1].Vfs[1].Driver, string(sriov.VfioPCIDriver))
 
-	assert.Equal(t, vfConfig.PFInterfaceName, pfs[1].IfName)
-	assert.Equal(t, vfConfig.VFInterfaceName, pfs[1].Vfs[1].IfName)
-	assert.Equal(t, vfConfig.VFNum, 1)
+	require.Equal(t, vfConfig.PFInterfaceName, pfs[1].IfName)
+	require.Equal(t, vfConfig.VFInterfaceName, pfs[1].Vfs[1].IfName)
+	require.Equal(t, vfConfig.VFNum, 1)
 
-	assert.Equal(t, vfio.ToMechanism(conn.Mechanism).GetIommuGroup(), pfs[1].Vfs[1].IommuGroup)
+	require.Equal(t, vfio.ToMechanism(conn.Mechanism).GetIommuGroup(), pfs[1].Vfs[1].IommuGroup)
 
 	// 2. Close
 
@@ -102,7 +99,7 @@ func Test_resourcePoolServer_Request(t *testing.T) {
 		Return(nil)
 
 	_, err = server.Close(ctx, conn)
-	assert.Nil(t, err)
+	require.NoError(t, err)
 
 	resourcePool.mock.AssertNumberOfCalls(t, "Free", 1)
 }
@@ -113,8 +110,8 @@ type resourcePoolMock struct {
 	sync.Mutex
 }
 
-func (rp *resourcePoolMock) Select(driverType sriov.DriverType, service string, capability sriov.Capability) (string, error) {
-	rv := rp.mock.Called(driverType, service, capability)
+func (rp *resourcePoolMock) Select(tokenID string, driverType sriov.DriverType) (string, error) {
+	rv := rp.mock.Called(tokenID, driverType)
 	return rv.String(0), rv.Error(1)
 }
 

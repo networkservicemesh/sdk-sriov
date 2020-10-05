@@ -21,22 +21,22 @@ import (
 )
 
 const (
-	resourcePoolKey key = "resourcepool.PCIResourcePool"
+	resourcePoolKey key = "resourcepool.ResourcePool"
 )
 
 type key string
 
-// WithResourcePool returns a new context with PCIResourcePool
-func WithResourcePool(parent context.Context, resourcePool PCIResourcePool) context.Context {
+// WithPool returns a new context with ResourcePool
+func WithPool(parent context.Context, resourcePool ResourcePool) context.Context {
 	if parent == nil {
 		parent = context.TODO()
 	}
 	return context.WithValue(parent, resourcePoolKey, resourcePool)
 }
 
-// ResourcePool returns PCIResourcePool from context
-func ResourcePool(ctx context.Context) PCIResourcePool {
-	if rv, ok := ctx.Value(resourcePoolKey).(PCIResourcePool); ok {
+// Pool returns ResourcePool from context
+func Pool(ctx context.Context) ResourcePool {
+	if rv, ok := ctx.Value(resourcePoolKey).(ResourcePool); ok {
 		return rv
 	}
 	return nil

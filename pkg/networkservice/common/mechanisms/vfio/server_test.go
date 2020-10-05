@@ -37,7 +37,7 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/networkservicemesh/sdk-sriov/pkg/networkservice/mechanisms/vfio"
+	"github.com/networkservicemesh/sdk-sriov/pkg/networkservice/common/mechanisms/vfio"
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/sriovtest"
 )
 
