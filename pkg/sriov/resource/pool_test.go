@@ -32,8 +32,8 @@ import (
 
 const (
 	configFileName  = "config.yml"
-	service1        = "service-1"
-	service2        = "service-2"
+	serviceDomain1  = "service.domain.1"
+	serviceDomain2  = "service.domain.2"
 	capabilityIntel = "intel"
 	capability10G   = "10G"
 	vf11PciAddr     = "0000:01:00.1"
@@ -42,10 +42,10 @@ const (
 	vf31PciAddr     = "0000:03:00.1"
 )
 
-func TestPool_Select_Service(t *testing.T) {
+func TestPool_Select_ServiceDomain(t *testing.T) {
 	tokenPool := &tokenPoolStub{
 		tokens: map[string]string{
-			"1": path.Join(service1, capabilityIntel),
+			"1": path.Join(serviceDomain1, capabilityIntel),
 		},
 	}
 
@@ -62,7 +62,7 @@ func TestPool_Select_Service(t *testing.T) {
 func TestPool_Select_Capability(t *testing.T) {
 	tokenPool := &tokenPoolStub{
 		tokens: map[string]string{
-			"1": path.Join(service2, capability10G),
+			"1": path.Join(serviceDomain2, capability10G),
 		},
 	}
 
@@ -79,8 +79,8 @@ func TestPool_Select_Capability(t *testing.T) {
 func TestPool_Select_DriverType(t *testing.T) {
 	tokenPool := &tokenPoolStub{
 		tokens: map[string]string{
-			"1": path.Join(service1, capabilityIntel),
-			"2": path.Join(service2, capabilityIntel),
+			"1": path.Join(serviceDomain1, capabilityIntel),
+			"2": path.Join(serviceDomain2, capabilityIntel),
 		},
 	}
 
@@ -101,7 +101,7 @@ func TestPool_Select_DriverType(t *testing.T) {
 func TestPool_Select_FreeVFsCount(t *testing.T) {
 	tokenPool := &tokenPoolStub{
 		tokens: map[string]string{
-			"1": path.Join(service2, capabilityIntel),
+			"1": path.Join(serviceDomain2, capabilityIntel),
 		},
 	}
 
@@ -118,7 +118,7 @@ func TestPool_Select_FreeVFsCount(t *testing.T) {
 func TestPool_Free(t *testing.T) {
 	tokenPool := &tokenPoolStub{
 		tokens: map[string]string{
-			"1": path.Join(service1, capabilityIntel),
+			"1": path.Join(serviceDomain1, capabilityIntel),
 		},
 	}
 

@@ -32,8 +32,8 @@ const (
 	capabilityIntel = "intel"
 	capability10G   = "10G"
 	capability20G   = "20G"
-	service1        = "service-1"
-	service2        = "service-2"
+	serviceDomain1  = "service.domain.1"
+	serviceDomain2  = "service.domain.2"
 	vf11PciAddr     = "0000:01:00.1"
 	vf12PciAddr     = "0000:01:00.2"
 	vf21PciAddr     = "0000:02:00.1"
@@ -51,8 +51,8 @@ func TestReadConfigFile(t *testing.T) {
 					capabilityIntel,
 					capability10G,
 				},
-				Services: []string{
-					service1,
+				ServiceDomains: []string{
+					serviceDomain1,
 				},
 				VirtualFunctions: map[string]uint{
 					vf11PciAddr: 1,
@@ -64,9 +64,9 @@ func TestReadConfigFile(t *testing.T) {
 					capabilityIntel,
 					capability20G,
 				},
-				Services: []string{
-					service1,
-					service2,
+				ServiceDomains: []string{
+					serviceDomain1,
+					serviceDomain2,
 				},
 				VirtualFunctions: map[string]uint{
 					vf21PciAddr: 1,

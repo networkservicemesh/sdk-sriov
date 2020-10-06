@@ -74,9 +74,9 @@ func NewPool(tokenPool TokenPool, cfg *config.Config) *Pool {
 		}
 		p.physicalFunctions[pfPCIAddr] = pf
 
-		for _, service := range pff.Services {
+		for _, serviceDomain := range pff.ServiceDomains {
 			for _, capability := range pff.Capabilities {
-				pf.tokenNames[path.Join(service, capability)] = struct{}{}
+				pf.tokenNames[path.Join(serviceDomain, capability)] = struct{}{}
 			}
 		}
 

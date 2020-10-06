@@ -29,8 +29,8 @@ import (
 
 const (
 	configFileName  = "config.yml"
-	service1        = "service-1"
-	service2        = "service-2"
+	serviceDomain1  = "service.domain.1"
+	serviceDomain2  = "service.domain.2"
 	capabilityIntel = "intel"
 	capability10G   = "10G"
 	capability20G   = "20G"
@@ -44,11 +44,11 @@ func TestPool_Tokens(t *testing.T) {
 
 	tokens := p.Tokens()
 	require.Equal(t, 5, len(tokens))
-	require.Equal(t, 4, countTrue(tokens[path.Join(service1, capabilityIntel)]))
-	require.Equal(t, 1, countTrue(tokens[path.Join(service1, capability10G)]))
-	require.Equal(t, 3, countTrue(tokens[path.Join(service1, capability20G)]))
-	require.Equal(t, 3, countTrue(tokens[path.Join(service2, capabilityIntel)]))
-	require.Equal(t, 3, countTrue(tokens[path.Join(service2, capability20G)]))
+	require.Equal(t, 4, countTrue(tokens[path.Join(serviceDomain1, capabilityIntel)]))
+	require.Equal(t, 1, countTrue(tokens[path.Join(serviceDomain1, capability10G)]))
+	require.Equal(t, 3, countTrue(tokens[path.Join(serviceDomain1, capability20G)]))
+	require.Equal(t, 3, countTrue(tokens[path.Join(serviceDomain2, capabilityIntel)]))
+	require.Equal(t, 3, countTrue(tokens[path.Join(serviceDomain2, capability20G)]))
 }
 
 func TestPool_Use(t *testing.T) {
@@ -58,12 +58,12 @@ func TestPool_Use(t *testing.T) {
 	p := token.NewPool(cfg)
 
 	var tokenID string
-	for id := range p.Tokens()[path.Join(service2, capability20G)] {
+	for id := range p.Tokens()[path.Join(serviceDomain2, capability20G)] {
 		err = p.Use(id, []string{
-			path.Join(service1, capabilityIntel),
-			path.Join(service1, capability20G),
-			path.Join(service2, capabilityIntel),
-			path.Join(service2, capability20G),
+			path.Join(serviceDomain1, capabilityIntel),
+			path.Join(serviceDomain1, capability20G),
+			path.Join(serviceDomain2, capabilityIntel),
+			path.Join(serviceDomain2, capability20G),
 		})
 		require.NoError(t, err)
 		tokenID = id
@@ -71,22 +71,22 @@ func TestPool_Use(t *testing.T) {
 
 	tokens := p.Tokens()
 	require.Equal(t, 5, len(tokens))
-	require.Equal(t, 1, countTrue(tokens[path.Join(service1, capabilityIntel)]))
-	require.Equal(t, 1, countTrue(tokens[path.Join(service1, capability10G)]))
-	require.Equal(t, 0, countTrue(tokens[path.Join(service1, capability20G)]))
-	require.Equal(t, 0, countTrue(tokens[path.Join(service2, capabilityIntel)]))
-	require.Equal(t, 3, countTrue(tokens[path.Join(service2, capability20G)]))
+	require.Equal(t, 1, countTrue(tokens[path.Join(serviceDomain1, capabilityIntel)]))
+	require.Equal(t, 1, countTrue(tokens[path.Join(serviceDomain1, capability10G)]))
+	require.Equal(t, 0, countTrue(tokens[path.Join(serviceDomain1, capability20G)]))
+	require.Equal(t, 0, countTrue(tokens[path.Join(serviceDomain2, capabilityIntel)]))
+	require.Equal(t, 3, countTrue(tokens[path.Join(serviceDomain2, capability20G)]))
 
 	err = p.StopUsing(tokenID)
 	require.NoError(t, err)
 
 	tokens = p.Tokens()
 	require.Equal(t, 5, len(tokens))
-	require.Equal(t, 2, countTrue(tokens[path.Join(service1, capabilityIntel)]))
-	require.Equal(t, 1, countTrue(tokens[path.Join(service1, capability10G)]))
-	require.Equal(t, 1, countTrue(tokens[path.Join(service1, capability20G)]))
-	require.Equal(t, 1, countTrue(tokens[path.Join(service2, capabilityIntel)]))
-	require.Equal(t, 3, countTrue(tokens[path.Join(service2, capability20G)]))
+	require.Equal(t, 2, countTrue(tokens[path.Join(serviceDomain1, capabilityIntel)]))
+	require.Equal(t, 1, countTrue(tokens[path.Join(serviceDomain1, capability10G)]))
+	require.Equal(t, 1, countTrue(tokens[path.Join(serviceDomain1, capability20G)]))
+	require.Equal(t, 1, countTrue(tokens[path.Join(serviceDomain2, capabilityIntel)]))
+	require.Equal(t, 3, countTrue(tokens[path.Join(serviceDomain2, capability20G)]))
 }
 
 func countTrue(m map[string]bool) (count int) {

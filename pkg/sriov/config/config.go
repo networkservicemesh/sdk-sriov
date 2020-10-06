@@ -42,10 +42,10 @@ func (c *Config) String() string {
 	return sb.String()
 }
 
-// PhysicalFunction contains physical function capabilities, available services and virtual functions IOMMU groups
+// PhysicalFunction contains physical function capabilities, available services domains and virtual functions IOMMU groups
 type PhysicalFunction struct {
 	Capabilities     []string        `yaml:"capabilities"`
-	Services         []string        `yaml:"services"`
+	ServiceDomains   []string        `yaml:"serviceDomains"`
 	VirtualFunctions map[string]uint `yaml:"virtualFunctions"`
 }
 

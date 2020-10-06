@@ -72,9 +72,9 @@ func NewPool(cfg *config.Config) *Pool {
 	}
 
 	for _, pf := range cfg.PhysicalFunctions {
-		for _, service := range pf.Services {
+		for _, serviceDomain := range pf.ServiceDomains {
 			for _, capability := range pf.Capabilities {
-				name := path.Join(service, capability)
+				name := path.Join(serviceDomain, capability)
 				for i := 0; i < len(pf.VirtualFunctions); i++ {
 					tok := &token{
 						id:    uuid.New().String(),
