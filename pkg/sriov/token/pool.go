@@ -46,6 +46,9 @@ type Pool struct {
 type state int
 
 func (ts state) String() string {
+	if ts < free || closed < ts {
+		return "invalid state"
+	}
 	return []string{
 		"free",
 		"allocated",
