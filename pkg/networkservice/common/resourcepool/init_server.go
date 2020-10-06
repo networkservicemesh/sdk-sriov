@@ -18,7 +18,6 @@ package resourcepool
 
 import (
 	"context"
-	"sync"
 
 	"github.com/golang/protobuf/ptypes/empty"
 
@@ -31,7 +30,6 @@ import (
 
 type initResourcePoolServer struct {
 	resourcePool *resource.Pool
-	lock         sync.Mutex
 }
 
 // NewInitServer returns a new init resource pool server
@@ -43,13 +41,7 @@ func NewInitServer(tokenPool resource.TokenPool, cfg *config.Config) networkserv
 
 func (s *initResourcePoolServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
 	if Pool(ctx) == nil {
-		ctx = WithPool(ctx, struct {
-			*resource.Pool
-			*sync.Mutex
-		}{
-			s.resourcePool,
-			&s.lock,
-		})
+		ctx = WithPool(ctx, s.resourcePool)
 	}
 	return next.Server(ctx).Request(ctx, request)
 }

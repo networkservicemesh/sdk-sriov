@@ -38,32 +38,33 @@ const (
 	TokenIDKey = "tokenID" // TODO: move to api
 )
 
-// ResourcePool is a resource.Pool + sync.Locker interface
+// ResourcePool is a resource.Pool interface
 type ResourcePool interface {
 	Select(tokenID string, driverType sriov.DriverType) (string, error)
 	Free(vfPCIAddr string) error
-
-	sync.Locker
 }
 
 type resourcePoolServer struct {
-	driverType  sriov.DriverType
-	functions   map[sriov.PCIFunction][]sriov.PCIFunction
-	binders     map[uint][]sriov.DriverBinder
-	selectedVFs map[string]string
+	driverType   sriov.DriverType
+	resourceLock sync.Locker
+	functions    map[sriov.PCIFunction][]sriov.PCIFunction
+	binders      map[uint][]sriov.DriverBinder
+	selectedVFs  map[string]string
 }
 
 // NewServer returns a new resource pool server chain element
 func NewServer(
 	driverType sriov.DriverType,
+	resourceLock sync.Locker,
 	functions map[sriov.PCIFunction][]sriov.PCIFunction,
 	binders map[uint][]sriov.DriverBinder,
 ) networkservice.NetworkServiceServer {
 	return &resourcePoolServer{
-		driverType:  driverType,
-		functions:   functions,
-		binders:     binders,
-		selectedVFs: map[string]string{},
+		driverType:   driverType,
+		resourceLock: resourceLock,
+		functions:    functions,
+		binders:      binders,
+		selectedVFs:  map[string]string{},
 	}
 }
 
@@ -82,8 +83,8 @@ func (s *resourcePoolServer) Request(ctx context.Context, request *networkservic
 
 	vfConfig := vfconfig.Config(ctx)
 	if err := func() error {
-		resourcePool.Lock()
-		defer resourcePool.Unlock()
+		s.resourceLock.Lock()
+		defer s.resourceLock.Unlock()
 
 		logEntry.Infof("trying to select VF for %v", s.driverType)
 		vf, err := s.selectVF(request.GetConnection().GetId(), vfConfig, resourcePool, tokenID)
@@ -183,9 +184,8 @@ func (s *resourcePoolServer) close(ctx context.Context, conn *networkservice.Con
 	}
 	delete(s.selectedVFs, conn.GetId())
 
-	resourcePool := Pool(ctx)
-	resourcePool.Lock()
-	defer resourcePool.Unlock()
+	s.resourceLock.Lock()
+	defer s.resourceLock.Unlock()
 
-	return resourcePool.Free(vfPCIAddr)
+	return Pool(ctx).Free(vfPCIAddr)
 }

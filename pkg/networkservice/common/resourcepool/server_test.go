@@ -52,7 +52,7 @@ func initResourcePoolServer(driverType sriov.DriverType) (networkservice.Network
 		}
 	}
 
-	return chain.NewNetworkServiceServer(resourcepool.NewServer(driverType, functions, binders)), pfs
+	return chain.NewNetworkServiceServer(resourcepool.NewServer(driverType, &sync.Mutex{}, functions, binders)), pfs
 }
 
 func Test_resourcePoolServer_Request(t *testing.T) {
