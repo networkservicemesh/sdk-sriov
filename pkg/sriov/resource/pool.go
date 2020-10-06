@@ -20,6 +20,7 @@ package resource
 import (
 	"path"
 	"sort"
+	"strings"
 
 	"github.com/pkg/errors"
 
@@ -117,8 +118,13 @@ func (p *Pool) Select(tokenID string, driverType sriov.DriverType) (string, erro
 			return true
 		case iIg == sriov.NoDriver && kIg == driverType:
 			return false
+		case iPF.freeVFsCount > kPF.freeVFsCount:
+			return true
+		case iPF.freeVFsCount < kPF.freeVFsCount:
+			return false
 		default:
-			return iPF.freeVFsCount-kPF.freeVFsCount > 0
+			// we need this additional comparison to make sort deterministic
+			return strings.Compare(vfs[i].pciAddr, vfs[k].pciAddr) < 0
 		}
 	})
 
