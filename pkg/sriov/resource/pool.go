@@ -40,6 +40,7 @@ type TokenPool interface {
 type Pool struct {
 	physicalFunctions map[string]*physicalFunction
 	virtualFunctions  map[string]*virtualFunction
+	tokens            map[string]*virtualFunction
 	iommuGroups       map[uint]sriov.DriverType
 	tokenPool         TokenPool
 }
@@ -62,6 +63,7 @@ func NewPool(tokenPool TokenPool, cfg *config.Config) *Pool {
 	p := &Pool{
 		physicalFunctions: map[string]*physicalFunction{},
 		virtualFunctions:  map[string]*virtualFunction{},
+		tokens:            map[string]*virtualFunction{},
 		iommuGroups:       map[uint]sriov.DriverType{},
 		tokenPool:         tokenPool,
 	}
@@ -98,6 +100,13 @@ func NewPool(tokenPool TokenPool, cfg *config.Config) *Pool {
 
 // Select selects a virtual function for the given driver type and marks it as "in-use"
 func (p *Pool) Select(tokenID string, driverType sriov.DriverType) (string, error) {
+	switch vf, err := p.trySelected(tokenID, driverType); {
+	case err != nil:
+		return "", err
+	case vf != nil:
+		return vf.pciAddr, nil
+	}
+
 	tokenName, err := p.tokenPool.Find(tokenID)
 	if err != nil {
 		return "", err
@@ -135,6 +144,16 @@ func (p *Pool) Select(tokenID string, driverType sriov.DriverType) (string, erro
 	return vfs[0].pciAddr, nil
 }
 
+func (p *Pool) trySelected(tokenID string, driverType sriov.DriverType) (*virtualFunction, error) {
+	if vf, ok := p.tokens[tokenID]; ok {
+		if p.iommuGroups[vf.iommuGroup] != driverType {
+			return nil, p.Free(vf.pciAddr)
+		}
+		return vf, nil
+	}
+	return nil, nil
+}
+
 func (p *Pool) find(driverType sriov.DriverType, tokenName string) []*virtualFunction {
 	var virtualFunctions []*virtualFunction
 	for _, pf := range p.physicalFunctions {
@@ -162,6 +181,7 @@ func (p *Pool) selectVF(vf *virtualFunction, tokenID string, driverType sriov.Dr
 		return err
 	}
 
+	p.tokens[tokenID] = vf
 	vf.tokenID = tokenID
 
 	p.physicalFunctions[vf.pfPCIAddr].freeVFsCount--
@@ -183,6 +203,7 @@ func (p *Pool) Free(vfPCIAddr string) error {
 	if err := p.tokenPool.StopUsing(vf.tokenID); err != nil {
 		return err
 	}
+	delete(p.tokens, vf.tokenID)
 	vf.tokenID = ""
 
 	p.physicalFunctions[vf.pfPCIAddr].freeVFsCount++

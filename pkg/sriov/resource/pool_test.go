@@ -42,7 +42,7 @@ const (
 	vf31PciAddr     = "0000:03:00.1"
 )
 
-func TestPool_Select_ServiceDomain(t *testing.T) {
+func TestPool_Select_Selected(t *testing.T) {
 	tokenPool := &tokenPoolStub{
 		tokens: map[string]string{
 			"1": path.Join(serviceDomain1, capabilityIntel),
@@ -54,9 +54,48 @@ func TestPool_Select_ServiceDomain(t *testing.T) {
 
 	p := resource.NewPool(tokenPool, cfg)
 
+	// Should be the same VF for the same driver.
+
+	vfPCIAddr, err := p.Select("1", sriov.VFIOPCIDriver)
+	require.NoError(t, err)
+	require.Equal(t, vf11PciAddr, vfPCIAddr) // <-- initial
+
+	vfPCIAddr, err = p.Select("1", sriov.VFIOPCIDriver)
+	require.NoError(t, err)
+	require.Equal(t, vf11PciAddr, vfPCIAddr) // <-- same
+}
+
+func TestPool_Select_SelectedAnotherDriver(t *testing.T) {
+	tokenPool := &tokenPoolStub{
+		tokens: map[string]string{
+			"1": path.Join(serviceDomain1, capabilityIntel),
+			"2": path.Join(serviceDomain2, capabilityIntel),
+			"3": path.Join(serviceDomain2, capabilityIntel),
+		},
+	}
+
+	cfg, err := config.ReadConfig(context.TODO(), configFileName)
+	require.NoError(t, err)
+
+	p := resource.NewPool(tokenPool, cfg)
+
 	vfPCIAddr, err := p.Select("1", sriov.VFIOPCIDriver)
 	assert.Nil(t, err)
 	assert.Equal(t, vf11PciAddr, vfPCIAddr)
+
+	// Could be another VF for the different driver, but should free the initial VF.
+
+	vfPCIAddr, err = p.Select("2", sriov.KernelDriver)
+	assert.Nil(t, err)
+	assert.Equal(t, vf22PciAddr, vfPCIAddr) // <-- initial
+
+	vfPCIAddr, err = p.Select("2", sriov.VFIOPCIDriver)
+	assert.Nil(t, err)
+	assert.Equal(t, vf31PciAddr, vfPCIAddr) // <-- different
+
+	vfPCIAddr, err = p.Select("3", sriov.KernelDriver)
+	assert.Nil(t, err)
+	assert.Equal(t, vf22PciAddr, vfPCIAddr) // <-- same
 }
 
 func TestPool_Select_Capability(t *testing.T) {
@@ -74,28 +113,6 @@ func TestPool_Select_Capability(t *testing.T) {
 	vfPCIAddr, err := p.Select("1", sriov.VFIOPCIDriver)
 	assert.Nil(t, err)
 	assert.Equal(t, vf21PciAddr, vfPCIAddr)
-}
-
-func TestPool_Select_DriverType(t *testing.T) {
-	tokenPool := &tokenPoolStub{
-		tokens: map[string]string{
-			"1": path.Join(serviceDomain1, capabilityIntel),
-			"2": path.Join(serviceDomain2, capabilityIntel),
-		},
-	}
-
-	cfg, err := config.ReadConfig(context.TODO(), configFileName)
-	require.NoError(t, err)
-
-	p := resource.NewPool(tokenPool, cfg)
-
-	vfPCIAddr, err := p.Select("1", sriov.VFIOPCIDriver)
-	assert.Nil(t, err)
-	assert.Equal(t, vf11PciAddr, vfPCIAddr)
-
-	vfPCIAddr, err = p.Select("2", sriov.KernelDriver)
-	assert.Nil(t, err)
-	assert.Equal(t, vf22PciAddr, vfPCIAddr)
 }
 
 func TestPool_Select_FreeVFsCount(t *testing.T) {
