@@ -116,6 +116,9 @@ func (p *Pool) Tokens() map[string]map[string]bool {
 
 // Find returns a token name selected by the given ID
 func (p *Pool) Find(id string) (string, error) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
 	tok, err := p.find(id)
 	if err != nil {
 		return "", err
@@ -130,7 +133,11 @@ func (p *Pool) find(id string) (*token, error) {
 	return nil, errors.Errorf("token doesn't exist: %s", id)
 }
 
-// Allocate marks a token selected by the given ID as "allocated"
+// Allocate marks a token selected by the given ID as "allocated":
+// * `free` -> `allocated` (common case)
+// * `allocated` -> `allocated` (we have not called Free, but Device Plugin is already using the token)
+// * `inUse` -stopUsing-> `allocated` (we have not called StopUsing, Free, but Device Plugin is already using the token)
+// * `closed` -XXX-> `error`
 func (p *Pool) Allocate(id string) error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
@@ -140,15 +147,22 @@ func (p *Pool) Allocate(id string) error {
 		return err
 	}
 
-	if tok.state != free {
-		return errors.Errorf("token is not free: %s:%s - %v", tok.name, tok.id, tok.state)
+	switch tok.state {
+	case inUse:
+		return p.stopUsing(id)
+	case closed:
+		return errors.Errorf("token is closed: %s:%s", tok.name, tok.id)
 	}
 	tok.state = allocated
 
 	return nil
 }
 
-// Free marks a token selected by the given ID as "free"
+// Free marks a token selected by the given ID as "free":
+// * `free` -> `free` (nothing to do here)
+// * `allocated` -> `free` (common case)
+// * `inUse` -stopUsing-> `allocated` -> `free` (we have not called StopUsing, but the client have died)
+// * `closed` -> `closed` (we should not fail, but we cannot free closed token)
 func (p *Pool) Free(id string) error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
@@ -158,15 +172,22 @@ func (p *Pool) Free(id string) error {
 		return err
 	}
 
-	if tok.state == inUse {
+	switch tok.state {
+	case inUse:
 		_ = p.stopUsing(id)
+	case closed:
+		return nil
 	}
 	tok.state = free
 
 	return nil
 }
 
-// Use marks a token selected by the given ID as "inUse" and closes 1 token for any of names
+// Use marks a token selected by the given ID as "inUse" and closes 1 token for any of names:
+// * `free` -> `inUse` (allocated token has been closed and freed, but the client have not died)
+// * `allocated` -> `inUse` (common case)
+// * `inUse` -XXX-> `error`
+// * `closed` -XXX-> `error`
 func (p *Pool) Use(id string, names []string) error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
@@ -176,8 +197,8 @@ func (p *Pool) Use(id string, names []string) error {
 		return err
 	}
 
-	if tok.state == closed {
-		return errors.Errorf("token is closed: %s:%s", tok.name, tok.id)
+	if tok.state == inUse || tok.state == closed {
+		return errors.Errorf("token is %v: %s:%s", tok.state, tok.name, tok.id)
 	}
 	tok.state = inUse
 
@@ -216,7 +237,11 @@ func (p *Pool) findToClose(name string) *token {
 	return nil
 }
 
-// StopUsing marks an "inUse" token selected by ID as "allocated" and frees all related closed tokens
+// StopUsing marks an "inUse" token selected by ID as "allocated" and frees all related closed tokens:
+// * `free` -XXX-> `error`
+// * `allocated` -XXX-> `error`
+// * `inUse` -> `allocated` (common case)
+// * `closed` -XXX-> `error`
 func (p *Pool) StopUsing(id string) error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
