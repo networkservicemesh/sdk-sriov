@@ -47,5 +47,8 @@ func (s *initResourcePoolServer) Request(ctx context.Context, request *networkse
 }
 
 func (s *initResourcePoolServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {
+	if Pool(ctx) == nil {
+		ctx = WithPool(ctx, s.resourcePool)
+	}
 	return next.Server(ctx).Close(ctx, conn)
 }

@@ -165,6 +165,11 @@ func (s *resourcePoolServer) bindDriver(igid uint) (err error) {
 }
 
 func (s *resourcePoolServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {
+	resourcePool := Pool(ctx)
+	if resourcePool == nil {
+		return nil, errors.New("ResourcePool not found")
+	}
+
 	closeErr := s.close(ctx, conn)
 
 	rv, err := next.Server(ctx).Close(ctx, conn)
