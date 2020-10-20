@@ -1,0 +1,29 @@
+---
+physicalFunctions:
+  0000:01:00.0:
+    capabilities:
+      - intel
+      - 10G
+    serviceDomains:
+      - service.domain.1
+    virtualFunctions:
+      0000:01:00.1: 1
+  0000:02:00.0:
+    capabilities:
+      - intel
+      - 10G
+    serviceDomains:
+      - service.domain.2
+    virtualFunctions:
+      0000:02:00.1: 1
+      0000:02:00.2: 2
+  0000:03:00.0:
+    capabilities:
+      - intel
+      - 20G
+    serviceDomains:
+      - service.domain.2
+    virtualFunctions:
+      0000:03:00.1: 1
+      0000:03:00.2: 1
+      0000:03:00.3: 1

@@ -27,7 +27,7 @@ type BindablePCIFunction interface {
 type PCIFunction interface {
 	GetPCIAddress() string
 	GetNetInterfaceName() (string, error)
-	GetIommuGroupID() (uint, error)
+	GetIOMMUGroup() (uint, error)
 	GetBoundDriver() (string, error)
 }
 

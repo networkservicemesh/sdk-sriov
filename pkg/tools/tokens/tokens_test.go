@@ -14,11 +14,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package resourcepool
+package tokens_test
 
-// VirtualFunction is a ResourcePool virtual function description class
-type VirtualFunction struct {
-	PCIAddress                 string
-	PhysicalFunctionPCIAddress string
-	IommuGroupID               uint
+import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/networkservicemesh/sdk-sriov/pkg/tools/tokens"
+)
+
+func TestToEnv(t *testing.T) {
+	name, value := tokens.ToEnv("name", []string{"1", "2", "3"})
+	require.Equal(t, "NSM_SRIOV_TOKENS_name", name)
+	require.Equal(t, "1,2,3", value)
+}
+
+func TestFromEnv(t *testing.T) {
+	envs := []string{
+		"A=aaa",
+		"NSM_SRIOV_TOKENS_name-1=1,2,3",
+		"B=bbb",
+		"NSM_SRIOV_TOKENS_name-2=4",
+	}
+
+	toks := tokens.FromEnv(envs)
+	require.Equal(t, map[string][]string{
+		"name-1": {"1", "2", "3"},
+		"name-2": {"4"},
+	}, toks)
 }

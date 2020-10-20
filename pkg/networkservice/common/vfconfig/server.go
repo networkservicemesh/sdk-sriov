@@ -22,6 +22,7 @@ import (
 	"sync"
 
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/pkg/errors"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/sdk-kernel/pkg/kernel/networkservice/vfconfig"
@@ -46,7 +47,10 @@ func (s *vfConfigServer) Request(ctx context.Context, request *networkservice.Ne
 }
 
 func (s *vfConfigServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {
-	rawConfig, _ := s.configs.Load(conn.GetId())
+	rawConfig, ok := s.configs.Load(conn.GetId())
+	if !ok {
+		return nil, errors.Errorf("no VF config for the connection: %v", conn.GetId())
+	}
 	s.configs.Delete(conn.GetId())
 
 	return next.Server(ctx).Close(vfconfig.WithConfig(ctx, rawConfig.(*vfconfig.VFConfig)), conn)

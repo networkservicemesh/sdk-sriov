@@ -18,53 +18,37 @@ package resourcepool
 
 import (
 	"context"
-	"sync"
 
 	"github.com/golang/protobuf/ptypes/empty"
+
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 
-	"github.com/networkservicemesh/sdk-sriov/pkg/sriov"
-	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/resourcepool"
+	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/config"
+	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/resource"
 )
 
 type initResourcePoolServer struct {
-	resourcePool *resourcepool.ResourcePool
-	lock         sync.Mutex
+	resourcePool *resource.Pool
 }
 
 // NewInitServer returns a new init resource pool server
-func NewInitServer(functions map[sriov.PCIFunction][]sriov.PCIFunction, config *resourcepool.Config) networkservice.NetworkServiceServer {
-	var virtualFunctions []*resourcepool.VirtualFunction
-	for pf, vfs := range functions {
-		for _, vf := range vfs {
-			igid, _ := vf.GetIommuGroupID()
-			virtualFunctions = append(virtualFunctions, &resourcepool.VirtualFunction{
-				PCIAddress:                 vf.GetPCIAddress(),
-				PhysicalFunctionPCIAddress: pf.GetPCIAddress(),
-				IommuGroupID:               igid,
-			})
-		}
-	}
-
+func NewInitServer(tokenPool resource.TokenPool, cfg *config.Config) networkservice.NetworkServiceServer {
 	return &initResourcePoolServer{
-		resourcePool: resourcepool.NewResourcePool(virtualFunctions, config),
+		resourcePool: resource.NewPool(tokenPool, cfg),
 	}
 }
 
 func (s *initResourcePoolServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
-	if ResourcePool(ctx) == nil {
-		ctx = WithResourcePool(ctx, struct {
-			*resourcepool.ResourcePool
-			*sync.Mutex
-		}{
-			s.resourcePool,
-			&s.lock,
-		})
+	if Pool(ctx) == nil {
+		ctx = WithPool(ctx, s.resourcePool)
 	}
 	return next.Server(ctx).Request(ctx, request)
 }
 
 func (s *initResourcePoolServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {
+	if Pool(ctx) == nil {
+		ctx = WithPool(ctx, s.resourcePool)
+	}
 	return next.Server(ctx).Close(ctx, conn)
 }

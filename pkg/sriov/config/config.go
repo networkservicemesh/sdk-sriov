@@ -14,18 +14,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package resourcepool
+// Package config provides SR-IOV config
+package config
 
 import (
 	"context"
 	"fmt"
 	"strings"
 
-	"github.com/pkg/errors"
-
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 
-	"github.com/networkservicemesh/sdk-sriov/pkg/sriov"
 	"github.com/networkservicemesh/sdk-sriov/pkg/tools/yamlhelper"
 )
 
@@ -44,10 +42,11 @@ func (c *Config) String() string {
 	return sb.String()
 }
 
-// PhysicalFunction contains physical function capability and list of the available services
+// PhysicalFunction contains physical function capabilities, available services domains and virtual functions IOMMU groups
 type PhysicalFunction struct {
-	Capability sriov.Capability `yaml:"capability"`
-	Services   []string         `yaml:"services"`
+	Capabilities     []string        `yaml:"capabilities"`
+	ServiceDomains   []string        `yaml:"serviceDomains"`
+	VirtualFunctions map[string]uint `yaml:"virtualFunctions"`
 }
 
 // ReadConfig reads configuration from file
@@ -57,17 +56,6 @@ func ReadConfig(ctx context.Context, configFile string) (*Config, error) {
 	config := &Config{}
 	if err := yamlhelper.UnmarshalFile(configFile, config); err != nil {
 		return nil, err
-	}
-
-	valid := true
-	for _, physicalFunction := range config.PhysicalFunctions {
-		if err := physicalFunction.Capability.Validate(); err != nil {
-			logEntry.Error(err.Error())
-			valid = false
-		}
-	}
-	if !valid {
-		return nil, errors.Errorf("error validating data types for %v", config)
 	}
 
 	logEntry.Infof("unmarshalled Config: %+v", config)

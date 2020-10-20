@@ -36,7 +36,7 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/tools/grpcutils"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/networkservicemesh/sdk-sriov/pkg/networkservice/mechanisms/vfio"
+	"github.com/networkservicemesh/sdk-sriov/pkg/networkservice/common/mechanisms/vfio"
 )
 
 const (
