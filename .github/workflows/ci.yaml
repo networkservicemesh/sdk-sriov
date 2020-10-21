@@ -62,9 +62,11 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Restrict dependencies on github.com/networkservicemesh/*
+        env:
+          ALLOWED_REPOSITORIES: "sdk, api, sdk-kernel"
         run: |
-          for i in $(grep github.com/networkservicemesh/ go.mod | grep -v '^module' | sed 's;.*\(github.com\/networkservicemesh\/[a-zA-z\/]*\).*;\1;g' | sort -u);do
-            if [ "${i}" != "github.com/networkservicemesh/sdk" ] && [ "${i}" != "github.com/networkservicemesh/api" ]; then
+          for i in $(grep github.com/networkservicemesh/ go.mod | grep -v '^module' | sed 's;.*\(github.com\/networkservicemesh\/[^ ]*\).*;\1;g');do
+            if ! [ "$(echo ${ALLOWED_REPOSITORIES} | grep ${i#github.com/networkservicemesh/})" ]; then
               echo Dependency on "${i}" is forbidden
               exit 1
             fi
@@ -105,21 +107,6 @@ jobs:
         run: |
           git diff -- '*.pb.go' || ( echo "Rerun go generate ./... locally and resubmit" && false )
           git diff -- '*.gen.go' || ( echo "Rerun go generate ./... locally and resubmit" && false )
-
-  license:
-    name: license header check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-go@v1
-        with:
-          go-version: 1.15
-      - name: Install go-header
-        run: 'go get github.com/denis-tingajkin/go-header@v0.2.2'
-      - name: Run go-header
-        run: |
-          eval $(go env)
-          ${GOPATH}/bin/go-header
 
   excludereplace:
     name: Exclude replace in go.mod
