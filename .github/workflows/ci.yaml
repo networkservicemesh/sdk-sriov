@@ -144,7 +144,9 @@ jobs:
   update-dependent-repositories:
     strategy:
       matrix:
-        repository: [cmd-forwarder-sriov, cmd-nsc]
+        repository:
+          - cmd-forwarder-sriov
+          - cmd-nsc
     name: Update ${{ matrix.repository }}
     runs-on: ubuntu-latest
     needs:
