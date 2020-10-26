@@ -54,9 +54,15 @@ func TestReadConfigFile(t *testing.T) {
 				ServiceDomains: []string{
 					serviceDomain1,
 				},
-				VirtualFunctions: map[string]uint{
-					vf11PciAddr: 1,
-					vf12PciAddr: 2,
+				VirtualFunctions: []*config.VirtualFunction{
+					{
+						Address:    vf11PciAddr,
+						IOMMUGroup: 1,
+					},
+					{
+						Address:    vf12PciAddr,
+						IOMMUGroup: 2,
+					},
 				},
 			},
 			pf2PciAddr: {
@@ -68,10 +74,19 @@ func TestReadConfigFile(t *testing.T) {
 					serviceDomain1,
 					serviceDomain2,
 				},
-				VirtualFunctions: map[string]uint{
-					vf21PciAddr: 1,
-					vf22PciAddr: 2,
-					vf23PciAddr: 3,
+				VirtualFunctions: []*config.VirtualFunction{
+					{
+						Address:    vf21PciAddr,
+						IOMMUGroup: 1,
+					},
+					{
+						Address:    vf22PciAddr,
+						IOMMUGroup: 2,
+					},
+					{
+						Address:    vf23PciAddr,
+						IOMMUGroup: 3,
+					},
 				},
 			},
 		},

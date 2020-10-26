@@ -7,8 +7,10 @@ physicalFunctions:
     serviceDomains:
       - service.domain.1
     virtualFunctions:
-      0000:01:00.1: 1
-      0000:01:00.2: 2
+      - address: 0000:01:00.1
+        iommuGroup: 1
+      - address: 0000:01:00.2
+        iommuGroup: 2
   0000:02:00.0:
     capabilities:
       - intel
@@ -17,6 +19,9 @@ physicalFunctions:
       - service.domain.1
       - service.domain.2
     virtualFunctions:
-      0000:02:00.1: 1
-      0000:02:00.2: 2
-      0000:02:00.3: 3
+      - address: 0000:02:00.1
+        iommuGroup: 1
+      - address: 0000:02:00.2
+        iommuGroup: 2
+      - address: 0000:02:00.3
+        iommuGroup: 3

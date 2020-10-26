@@ -34,19 +34,55 @@ type Config struct {
 
 func (c *Config) String() string {
 	sb := &strings.Builder{}
-	_, _ = sb.WriteString("&{PhysicalFunctions:map[")
+	_, _ = sb.WriteString("&{")
+
+	_, _ = sb.WriteString("PhysicalFunctions:map[")
+	var strs []string
 	for k, physicalFunction := range c.PhysicalFunctions {
-		_, _ = sb.WriteString(fmt.Sprintf("%s:%+v ", k, physicalFunction))
+		strs = append(strs, fmt.Sprintf("%s:%+v", k, physicalFunction))
 	}
-	_, _ = sb.WriteString("]}")
+	_, _ = sb.WriteString(strings.Join(strs, " "))
+	_, _ = sb.WriteString("]")
+
+	_, _ = sb.WriteString("}")
 	return sb.String()
 }
 
-// PhysicalFunction contains physical function capabilities, available services domains and virtual functions IOMMU groups
+// PhysicalFunction contains physical function capabilities, available services domains and virtual functions
 type PhysicalFunction struct {
-	Capabilities     []string        `yaml:"capabilities"`
-	ServiceDomains   []string        `yaml:"serviceDomains"`
-	VirtualFunctions map[string]uint `yaml:"virtualFunctions"`
+	Capabilities     []string           `yaml:"capabilities"`
+	ServiceDomains   []string           `yaml:"serviceDomains"`
+	VirtualFunctions []*VirtualFunction `yaml:"virtualFunctions"`
+}
+
+func (pf *PhysicalFunction) String() string {
+	sb := &strings.Builder{}
+	_, _ = sb.WriteString("&{")
+
+	_, _ = sb.WriteString("Capabilities:[")
+	_, _ = sb.WriteString(strings.Join(pf.Capabilities, " "))
+	_, _ = sb.WriteString("]")
+
+	_, _ = sb.WriteString(" ServiceDomains:[")
+	_, _ = sb.WriteString(strings.Join(pf.ServiceDomains, " "))
+	_, _ = sb.WriteString("]")
+
+	_, _ = sb.WriteString(" VirtualFunctions:[")
+	var strs []string
+	for _, virtualFunction := range pf.VirtualFunctions {
+		strs = append(strs, fmt.Sprintf("%+v", virtualFunction))
+	}
+	_, _ = sb.WriteString(strings.Join(strs, " "))
+	_, _ = sb.WriteString("]")
+
+	_, _ = sb.WriteString("}")
+	return sb.String()
+}
+
+// VirtualFunction contains
+type VirtualFunction struct {
+	Address    string `yaml:"address"`
+	IOMMUGroup uint   `yaml:"iommuGroup"`
 }
 
 // ReadConfig reads configuration from file

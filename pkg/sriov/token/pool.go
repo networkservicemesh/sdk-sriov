@@ -71,11 +71,11 @@ func NewPool(cfg *config.Config) *Pool {
 		closedTokens:  map[string][]*token{},
 	}
 
-	for _, pf := range cfg.PhysicalFunctions {
-		for _, serviceDomain := range pf.ServiceDomains {
-			for _, capability := range pf.Capabilities {
+	for _, pFun := range cfg.PhysicalFunctions {
+		for _, serviceDomain := range pFun.ServiceDomains {
+			for _, capability := range pFun.Capabilities {
 				name := path.Join(serviceDomain, capability)
-				for i := 0; i < len(pf.VirtualFunctions); i++ {
+				for i := 0; i < len(pFun.VirtualFunctions); i++ {
 					tok := &token{
 						id:    uuid.New().String(),
 						name:  name,
