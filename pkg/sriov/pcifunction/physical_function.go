@@ -45,7 +45,9 @@ var (
 
 // PhysicalFunction describes Linux PCI physical function
 type PhysicalFunction struct {
-	*Function
+	virtualFunctions []*Function
+
+	Function
 }
 
 // NewPhysicalFunction returns a new PhysicalFunction
@@ -69,36 +71,54 @@ func NewPhysicalFunction(pciAddress, pciDevicesPath, pciDriversPath string) (*Ph
 		return nil, errors.Errorf("PCI device is not SR-IOV capable: %v", bdfPCIAddress)
 	}
 
-	f, err := newFunction(bdfPCIAddress, pciDevicesPath, pciDriversPath)
-	if err != nil {
+	pf := &PhysicalFunction{
+		Function: Function{
+			address:        pciAddress,
+			pciDevicesPath: pciDevicesPath,
+			pciDriversPath: pciDriversPath,
+		},
+	}
+	if err := pf.createVirtualFunctions(); err != nil {
 		return nil, err
 	}
-
-	return &PhysicalFunction{f}, nil
+	if err := pf.loadVirtualFunctions(); err != nil {
+		return nil, err
+	}
+	return pf, nil
 }
 
-// GetVirtualFunctionsCapacity returns count of virtual functions that can be created for the pf
-func (pf *PhysicalFunction) GetVirtualFunctionsCapacity() (uint, error) {
-	return readUintFromFile(filepath.Join(pf.pciDevicesPath, pf.address, totalVFFile))
+// GetVirtualFunctions returns pf virtual functions
+func (pf *PhysicalFunction) GetVirtualFunctions() []*Function {
+	vfs := make([]*Function, len(pf.virtualFunctions))
+	copy(vfs, pf.virtualFunctions)
+	return vfs
 }
 
-// CreateVirtualFunctions initializes virtual functions for the pf
-// NOTE: should fail if virtual functions are already exist
-func (pf *PhysicalFunction) CreateVirtualFunctions(vfCount uint) error {
-	configuredVFFilePath := filepath.Join(pf.pciDevicesPath, pf.address, configuredVFFile)
-	err := ioutil.WriteFile(configuredVFFilePath, []byte(strconv.Itoa(int(vfCount))), 0)
+func (pf *PhysicalFunction) createVirtualFunctions() error {
+	switch vfsCount, err := readUintFromFile(pf.withDevicePath(configuredVFFile)); {
+	case err != nil:
+		return errors.Wrapf(err, "failed to get configured VFs number for the PCI device: %v", pf.address)
+	case vfsCount > 0:
+		return nil
+	}
+
+	vfsCount, err := ioutil.ReadFile(pf.withDevicePath(totalVFFile))
 	if err != nil {
-		return errors.Wrapf(err, "failed to create virtual functions for the device: %v", pf.address)
+		return errors.Wrapf(err, "failed to get available VFs number for the PCI device: %v", pf.address)
+	}
+
+	err = ioutil.WriteFile(pf.withDevicePath(configuredVFFile), vfsCount, 0)
+	if err != nil {
+		return errors.Wrapf(err, "failed to create VFs for the PCI device: %v", pf.address)
 	}
 
 	return nil
 }
 
-// GetVirtualFunctions returns all virtual functions discovered for the pf
-func (pf *PhysicalFunction) GetVirtualFunctions() ([]*Function, error) {
-	vfDirs, err := filepath.Glob(filepath.Join(pf.pciDevicesPath, pf.address, virtualFunctionPrefix+"*"))
+func (pf *PhysicalFunction) loadVirtualFunctions() error {
+	vfDirs, err := filepath.Glob(pf.withDevicePath(virtualFunctionPrefix + "*"))
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to find virtual function directories for the device: %v", pf.address)
+		return errors.Wrapf(err, "failed to find virtual function directories for the device: %v", pf.address)
 	}
 
 	sort.Slice(vfDirs, func(i, k int) bool {
@@ -107,23 +127,22 @@ func (pf *PhysicalFunction) GetVirtualFunctions() ([]*Function, error) {
 		return iVFNum < kVFNum
 	})
 
-	var fs []*Function
 	for _, vfDir := range vfDirs {
 		vfDirInfo, err := os.Lstat(vfDir)
 		if err != nil || vfDirInfo.Mode()&os.ModeSymlink == 0 {
-			return nil, errors.Wrapf(err, "invalid virtual function directory: %v", vfDir)
+			return errors.Wrapf(err, "invalid virtual function directory: %v", vfDir)
 		}
 
 		linkName, err := filepath.EvalSymlinks(vfDir)
 		if err != nil {
-			return nil, errors.Wrapf(err, "invalid virtual function directory: %v", vfDir)
+			return errors.Wrapf(err, "invalid virtual function directory: %v", vfDir)
 		}
 
-		f, err := newFunction(filepath.Base(linkName), pf.pciDevicesPath, pf.pciDriversPath)
-		if err != nil {
-			return nil, err
-		}
-		fs = append(fs, f)
+		pf.virtualFunctions = append(pf.virtualFunctions, &Function{
+			address:        filepath.Base(linkName),
+			pciDevicesPath: pf.pciDevicesPath,
+			pciDriversPath: pf.pciDriversPath,
+		})
 	}
-	return fs, nil
+	return nil
 }
