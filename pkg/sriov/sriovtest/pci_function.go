@@ -20,8 +20,7 @@ import "github.com/networkservicemesh/sdk-sriov/pkg/sriov"
 
 // PCIPhysicalFunction is a test data class for pcifunction.PhysicalFunction
 type PCIPhysicalFunction struct {
-	Capacity int            `yaml:"capacity"`
-	Vfs      []*PCIFunction `yaml:"vfs"`
+	Vfs []*PCIFunction `yaml:"vfs"`
 
 	PCIFunction
 }
