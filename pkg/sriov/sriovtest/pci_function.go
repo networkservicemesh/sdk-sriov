@@ -16,8 +16,6 @@
 
 package sriovtest
 
-import "github.com/networkservicemesh/sdk-sriov/pkg/sriov"
-
 // PCIPhysicalFunction is a test data class for pcifunction.PhysicalFunction
 type PCIPhysicalFunction struct {
 	Vfs []*PCIFunction `yaml:"vfs"`
@@ -56,11 +54,5 @@ func (f *PCIFunction) GetBoundDriver() (string, error) {
 // BindDriver sets f.Driver = driver
 func (f *PCIFunction) BindDriver(driver string) error {
 	f.Driver = driver
-	return nil
-}
-
-// BindKernelDriver sets f.Driver = sriov.KernelDriver
-func (f *PCIFunction) BindKernelDriver() error {
-	f.Driver = string(sriov.KernelDriver)
 	return nil
 }

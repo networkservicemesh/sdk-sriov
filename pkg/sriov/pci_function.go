@@ -17,22 +17,9 @@
 // Package sriov provides types for SR-IOV
 package sriov
 
-// BindablePCIFunction is a PCIFunction and a DriverBinder
-type BindablePCIFunction interface {
-	PCIFunction
-	DriverBinder
-}
-
 // PCIFunction provides methods to get OS PCI function info
 type PCIFunction interface {
 	GetPCIAddress() string
 	GetNetInterfaceName() (string, error)
 	GetIOMMUGroup() (uint, error)
-	GetBoundDriver() (string, error)
-}
-
-// DriverBinder provides a method to bind driver to OS PCI function
-type DriverBinder interface {
-	BindDriver(driver string) error
-	BindKernelDriver() error
 }

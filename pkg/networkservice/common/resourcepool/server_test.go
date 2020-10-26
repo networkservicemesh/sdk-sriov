@@ -27,47 +27,42 @@ import (
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/vfio"
 	"github.com/networkservicemesh/sdk-kernel/pkg/kernel/networkservice/vfconfig"
-	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
 
 	"github.com/networkservicemesh/sdk-sriov/pkg/networkservice/common/resourcepool"
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov"
+	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/config"
+	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/pci"
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/sriovtest"
 	"github.com/networkservicemesh/sdk-sriov/pkg/tools/yamlhelper"
 )
 
 const (
 	physicalFunctionsFilename = "physical_functions.yml"
+	configFileName            = "config.yml"
+	pf2PciAddr                = "0000:00:02.0"
 )
-
-func initResourcePoolServer(driverType sriov.DriverType) (networkservice.NetworkServiceServer, []*sriovtest.PCIPhysicalFunction) {
-	var pfs []*sriovtest.PCIPhysicalFunction
-	_ = yamlhelper.UnmarshalFile(physicalFunctionsFilename, &pfs)
-
-	functions := map[sriov.PCIFunction][]sriov.PCIFunction{}
-	binders := map[uint][]sriov.DriverBinder{}
-	for _, pf := range pfs {
-		for _, vf := range pf.Vfs {
-			functions[pf] = append(functions[pf], vf)
-			binders[vf.IOMMUGroup] = append(binders[vf.IOMMUGroup], vf)
-		}
-	}
-
-	return chain.NewNetworkServiceServer(resourcepool.NewServer(driverType, &sync.Mutex{}, functions, binders)), pfs
-}
 
 func Test_resourcePoolServer_Request(t *testing.T) {
 	vfConfig := &vfconfig.VFConfig{}
 	ctx := vfconfig.WithConfig(context.TODO(), vfConfig)
 
-	resourcePool := &resourcePoolMock{}
-	ctx = resourcepool.WithPool(ctx, resourcePool)
+	var pfs map[string]*sriovtest.PCIPhysicalFunction
+	_ = yamlhelper.UnmarshalFile(physicalFunctionsFilename, &pfs)
 
-	server, pfs := initResourcePoolServer(sriov.VFIOPCIDriver)
+	conf, err := config.ReadConfig(context.TODO(), configFileName)
+	require.NoError(t, err)
+
+	pciPool, err := pci.NewTestPool(pfs, conf)
+	require.NoError(t, err)
+
+	resourcePool := &resourcePoolMock{}
+
+	server := resourcepool.NewServer(sriov.VFIOPCIDriver, &sync.Mutex{}, pciPool, resourcePool, conf)
 
 	// 1. Request
 
 	resourcePool.mock.On("Select", "1", sriov.VFIOPCIDriver).
-		Return(pfs[1].Vfs[1].Addr, nil)
+		Return(pfs[pf2PciAddr].Vfs[1].Addr, nil)
 
 	conn, err := server.Request(ctx, &networkservice.NetworkServiceRequest{
 		Connection: &networkservice.Connection{
@@ -84,18 +79,18 @@ func Test_resourcePoolServer_Request(t *testing.T) {
 
 	resourcePool.mock.AssertNumberOfCalls(t, "Select", 1)
 
-	require.Equal(t, pfs[1].Vfs[0].Driver, string(sriov.VFIOPCIDriver))
-	require.Equal(t, pfs[1].Vfs[1].Driver, string(sriov.VFIOPCIDriver))
+	require.Equal(t, pfs[pf2PciAddr].Vfs[0].Driver, string(sriov.VFIOPCIDriver))
+	require.Equal(t, pfs[pf2PciAddr].Vfs[1].Driver, string(sriov.VFIOPCIDriver))
 
-	require.Equal(t, vfConfig.PFInterfaceName, pfs[1].IfName)
-	require.Equal(t, vfConfig.VFInterfaceName, pfs[1].Vfs[1].IfName)
+	require.Equal(t, vfConfig.PFInterfaceName, pfs[pf2PciAddr].IfName)
+	require.Equal(t, vfConfig.VFInterfaceName, pfs[pf2PciAddr].Vfs[1].IfName)
 	require.Equal(t, vfConfig.VFNum, 1)
 
-	require.Equal(t, vfio.ToMechanism(conn.Mechanism).GetIommuGroup(), pfs[1].Vfs[1].IOMMUGroup)
+	require.Equal(t, vfio.ToMechanism(conn.Mechanism).GetIommuGroup(), pfs[pf2PciAddr].Vfs[1].IOMMUGroup)
 
 	// 2. Close
 
-	resourcePool.mock.On("Free", pfs[1].Vfs[1].Addr).
+	resourcePool.mock.On("Free", pfs[pf2PciAddr].Vfs[1].Addr).
 		Return(nil)
 
 	_, err = server.Close(ctx, conn)
