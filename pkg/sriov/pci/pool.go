@@ -24,6 +24,7 @@ import (
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/config"
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/pcifunction"
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/sriovtest"
+	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/storage"
 )
 
 const (
@@ -49,28 +50,35 @@ type function struct {
 }
 
 // NewPool returns a new PCI Pool
-func NewPool(pciDevicesPath, pciDriversPath string, conf *config.Config) (*Pool, error) {
+func NewPool(pciDevicesPath, pciDriversPath string, store storage.Storage, conf *config.Config) (*Pool, error) {
 	p := &Pool{
 		functions:             map[string]*function{},
 		functionsByIOMMUGroup: map[uint][]*function{},
 	}
 
+	pciStore := &pciStorage{
+		storage: store,
+	}
+
+	kernelDrivers := pciStore.load()
 	for pfPCIAddr := range conf.PhysicalFunctions {
 		pf, err := pcifunction.NewPhysicalFunction(pfPCIAddr, pciDevicesPath, pciDriversPath)
 		if err != nil {
 			return nil, err
 		}
 
-		if err := p.addFunction(&pf.Function); err != nil {
+		if err := p.addFunction(&pf.Function, kernelDrivers); err != nil {
 			return nil, err
 		}
 
 		for _, vf := range pf.GetVirtualFunctions() {
-			if err := p.addFunction(vf); err != nil {
+			if err := p.addFunction(vf, kernelDrivers); err != nil {
 				return nil, err
 			}
 		}
 	}
+
+	pciStore.store(kernelDrivers)
 
 	return p, nil
 }
@@ -82,32 +90,39 @@ func NewTestPool(physicalFunctions map[string]*sriovtest.PCIPhysicalFunction, co
 		functionsByIOMMUGroup: map[uint][]*function{},
 	}
 
+	kernelDrivers := map[string]string{}
 	for pfPCIAddr := range conf.PhysicalFunctions {
 		pf, ok := physicalFunctions[pfPCIAddr]
 		if !ok {
 			return nil, errors.Errorf("PF doesn't exist: %v", pfPCIAddr)
 		}
 
-		_ = p.addFunction(&pf.PCIFunction)
+		_ = p.addFunction(&pf.PCIFunction, kernelDrivers)
 
 		for _, vf := range pf.Vfs {
-			_ = p.addFunction(vf)
+			_ = p.addFunction(vf, kernelDrivers)
 		}
 	}
 
 	return p, nil
 }
 
-func (p *Pool) addFunction(pcif pciFunction) (err error) {
+func (p *Pool) addFunction(pcif pciFunction, kernelDrivers map[string]string) (err error) {
 	f := &function{
 		function: pcif,
 	}
 
-	f.kernelDriver, err = pcif.GetBoundDriver()
-	if err != nil {
-		return err
+	pciAddr := pcif.GetPCIAddress()
+
+	var ok bool
+	if f.kernelDriver, ok = kernelDrivers[pciAddr]; !ok {
+		f.kernelDriver, err = pcif.GetBoundDriver()
+		if err != nil {
+			return err
+		}
+		kernelDrivers[pciAddr] = f.kernelDriver
 	}
-	p.functions[pcif.GetPCIAddress()] = f
+	p.functions[pciAddr] = f
 
 	iommuGroup, err := pcif.GetIOMMUGroup()
 	if err != nil {

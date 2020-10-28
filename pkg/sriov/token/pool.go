@@ -25,6 +25,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/config"
+	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/storage"
 )
 
 const (
@@ -64,29 +65,45 @@ type token struct {
 }
 
 // NewPool returns a new Pool
-func NewPool(cfg *config.Config) *Pool {
+func NewPool(store storage.Storage, cfg *config.Config) *Pool {
 	p := &Pool{
 		tokens:        map[string]*token{},
 		tokensByNames: map[string][]*token{},
 		closedTokens:  map[string][]*token{},
 	}
 
-	for _, pFun := range cfg.PhysicalFunctions {
-		for _, serviceDomain := range pFun.ServiceDomains {
-			for _, capability := range pFun.Capabilities {
-				name := path.Join(serviceDomain, capability)
-				for i := 0; i < len(pFun.VirtualFunctions); i++ {
-					tok := &token{
-						id:    uuid.New().String(),
-						name:  name,
-						state: free,
+	tokenStore := &tokenStorage{
+		storage: store,
+	}
+
+	tokens := tokenStore.load()
+	if len(tokens) > 0 {
+		// restore tokens from storage
+		p.tokens = tokens
+		for _, tok := range tokens {
+			p.tokensByNames[tok.name] = append(p.tokensByNames[tok.name], tok)
+		}
+	} else {
+		// create new tokens
+		for _, pFun := range cfg.PhysicalFunctions {
+			for _, serviceDomain := range pFun.ServiceDomains {
+				for _, capability := range pFun.Capabilities {
+					name := path.Join(serviceDomain, capability)
+					for i := 0; i < len(pFun.VirtualFunctions); i++ {
+						tok := &token{
+							id:    uuid.New().String(),
+							name:  name,
+							state: free,
+						}
+						p.tokens[tok.id] = tok
+						p.tokensByNames[tok.name] = append(p.tokensByNames[tok.name], tok)
 					}
-					p.tokens[tok.id] = tok
-					p.tokensByNames[tok.name] = append(p.tokensByNames[tok.name], tok)
 				}
 			}
 		}
 	}
+
+	tokenStore.store(p.tokens)
 
 	return p
 }

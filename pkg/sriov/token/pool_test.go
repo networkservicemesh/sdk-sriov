@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/config"
+	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/storage"
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/token"
 )
 
@@ -40,7 +41,7 @@ func TestPool_Tokens(t *testing.T) {
 	cfg, err := config.ReadConfig(context.TODO(), configFileName)
 	require.NoError(t, err)
 
-	p := token.NewPool(cfg)
+	p := token.NewPool(storage.NewTestStorage(), cfg)
 
 	tokens := p.Tokens()
 	require.Equal(t, 5, len(tokens))
@@ -55,7 +56,7 @@ func TestPool_Use(t *testing.T) {
 	cfg, err := config.ReadConfig(context.TODO(), configFileName)
 	require.NoError(t, err)
 
-	p := token.NewPool(cfg)
+	p := token.NewPool(storage.NewTestStorage(), cfg)
 
 	var tokenID string
 	for id := range p.Tokens()[path.Join(serviceDomain2, capability20G)] {
@@ -87,6 +88,19 @@ func TestPool_Use(t *testing.T) {
 	require.Equal(t, 1, countTrue(tokens[path.Join(serviceDomain1, capability20G)]))
 	require.Equal(t, 1, countTrue(tokens[path.Join(serviceDomain2, capabilityIntel)]))
 	require.Equal(t, 3, countTrue(tokens[path.Join(serviceDomain2, capability20G)]))
+}
+
+func TestPool_Restore(t *testing.T) {
+	cfg, err := config.ReadConfig(context.TODO(), configFileName)
+	require.NoError(t, err)
+
+	store := storage.NewTestStorage()
+
+	p := token.NewPool(store, cfg)
+	tokens := p.Tokens()
+
+	p = token.NewPool(store, cfg)
+	require.Equal(t, tokens, p.Tokens())
 }
 
 func countTrue(m map[string]bool) (count int) {

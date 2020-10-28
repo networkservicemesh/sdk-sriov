@@ -33,4 +33,3 @@ physicalFunctions:
         iommuGroup: 1
       - address: 0000:03:00.3
         iommuGroup: 1
-
