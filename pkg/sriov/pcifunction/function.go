@@ -70,11 +70,19 @@ func (f *Function) GetNetInterfaceName() (string, error) {
 		return "", errors.Wrapf(err, "failed to read net directory for the device: %v", f.address)
 	}
 
-	if len(fInfos) > 0 {
-		return "", errors.Errorf("found multiple interfaces for the device: %v - %+v", f.address, fInfos)
+	var ifNames []string
+	for _, fInfo := range fInfos {
+		ifNames = append(ifNames, fInfo.Name())
 	}
 
-	return fInfos[0].Name(), nil
+	switch len(ifNames) {
+	case 0:
+		return "", errors.Errorf("no interfaces found for the device: %v - %+v", f.address, ifNames)
+	case 1:
+		return ifNames[0], nil
+	default:
+		return "", errors.Errorf("found multiple interfaces for the device: %v - %+v", f.address, ifNames)
+	}
 }
 
 // GetIOMMUGroup returns f IOMMU group id
