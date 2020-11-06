@@ -112,7 +112,12 @@ func (s *resourcePoolServer) Request(ctx context.Context, request *networkservic
 		return nil, err
 	}
 
-	return next.Server(ctx).Request(ctx, request)
+	conn, err := next.Server(ctx).Request(ctx, request)
+	if err != nil {
+		_ = s.close(ctx, request.GetConnection())
+	}
+
+	return conn, err
 }
 
 func (s *resourcePoolServer) selectVF(
@@ -170,16 +175,17 @@ func (s *resourcePoolServer) Close(ctx context.Context, conn *networkservice.Con
 		return nil, errors.New("ResourcePool not found")
 	}
 
+	_, err := next.Server(ctx).Close(ctx, conn)
+
 	closeErr := s.close(ctx, conn)
 
-	rv, err := next.Server(ctx).Close(ctx, conn)
 	if err != nil && closeErr != nil {
-		return rv, errors.Wrapf(err, "failed to free VF: %v", closeErr)
+		return nil, errors.Wrapf(err, "failed to free VF: %v", closeErr)
 	}
 	if closeErr != nil {
-		return rv, errors.Wrap(closeErr, "failed to free VF")
+		return nil, errors.Wrap(closeErr, "failed to free VF")
 	}
-	return rv, err
+	return &empty.Empty{}, err
 }
 
 func (s *resourcePoolServer) close(ctx context.Context, conn *networkservice.Connection) error {
