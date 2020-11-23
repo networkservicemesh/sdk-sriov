@@ -21,6 +21,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/pkg/errors"
 )
@@ -36,7 +37,7 @@ func readUintFromFile(path string) (uint, error) {
 		return 0, errors.Wrapf(err, "unable to locate file: %v", path)
 	}
 
-	value, err := strconv.Atoi(string(data))
+	value, err := strconv.Atoi(strings.TrimSpace(string(data)))
 	if err != nil {
 		return 0, errors.Wrapf(err, "unable to convert string to int: %v", string(data))
 	}
