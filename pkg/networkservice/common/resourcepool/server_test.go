@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
+	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/kernel"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/vfio"
 	"github.com/networkservicemesh/sdk-kernel/pkg/kernel/networkservice/vfconfig"
 
@@ -40,63 +41,100 @@ const (
 	physicalFunctionsFilename = "physical_functions.yml"
 	configFileName            = "config.yml"
 	pf2PciAddr                = "0000:00:02.0"
+	vf2KernelDriver           = "vf-2-driver"
 )
 
-func Test_resourcePoolServer_Request(t *testing.T) {
-	vfConfig := &vfconfig.VFConfig{}
-	ctx := vfconfig.WithConfig(context.TODO(), vfConfig)
+type sample struct {
+	driverType sriov.DriverType
+	mechanism  string
+	test       func(t *testing.T, pfs map[string]*sriovtest.PCIPhysicalFunction, vfConfig *vfconfig.VFConfig, conn *networkservice.Connection)
+}
 
-	var pfs map[string]*sriovtest.PCIPhysicalFunction
-	_ = yamlhelper.UnmarshalFile(physicalFunctionsFilename, &pfs)
+var samples = []*sample{
+	{
+		driverType: sriov.KernelDriver,
+		mechanism:  kernel.MECHANISM,
+		test: func(t *testing.T, pfs map[string]*sriovtest.PCIPhysicalFunction, vfConfig *vfconfig.VFConfig, _ *networkservice.Connection) {
+			require.Equal(t, vf2KernelDriver, pfs[pf2PciAddr].Vfs[0].Driver)
+			require.Equal(t, vf2KernelDriver, pfs[pf2PciAddr].Vfs[1].Driver)
 
-	conf, err := config.ReadConfig(context.TODO(), configFileName)
-	require.NoError(t, err)
-
-	pciPool, err := pci.NewTestPool(pfs, conf)
-	require.NoError(t, err)
-
-	resourcePool := &resourcePoolMock{}
-
-	server := resourcepool.NewServer(sriov.VFIOPCIDriver, &sync.Mutex{}, pciPool, resourcePool, conf)
-
-	// 1. Request
-
-	resourcePool.mock.On("Select", "1", sriov.VFIOPCIDriver).
-		Return(pfs[pf2PciAddr].Vfs[1].Addr, nil)
-
-	conn, err := server.Request(ctx, &networkservice.NetworkServiceRequest{
-		Connection: &networkservice.Connection{
-			Id: "id",
-			Mechanism: &networkservice.Mechanism{
-				Type: vfio.MECHANISM,
-				Parameters: map[string]string{
-					resourcepool.TokenIDKey: "1",
-				},
-			},
+			require.Equal(t, &vfconfig.VFConfig{
+				PFInterfaceName: pfs[pf2PciAddr].IfName,
+				VFInterfaceName: pfs[pf2PciAddr].Vfs[1].IfName,
+				VFNum:           1,
+			}, vfConfig)
 		},
-	})
-	require.NoError(t, err)
+	},
+	{
+		driverType: sriov.VFIOPCIDriver,
+		mechanism:  vfio.MECHANISM,
+		test: func(t *testing.T, pfs map[string]*sriovtest.PCIPhysicalFunction, vfConfig *vfconfig.VFConfig, conn *networkservice.Connection) {
+			require.Equal(t, string(sriov.VFIOPCIDriver), pfs[pf2PciAddr].Vfs[0].Driver)
+			require.Equal(t, string(sriov.VFIOPCIDriver), pfs[pf2PciAddr].Vfs[1].Driver)
 
-	resourcePool.mock.AssertNumberOfCalls(t, "Select", 1)
+			require.Equal(t, &vfconfig.VFConfig{
+				PFInterfaceName: pfs[pf2PciAddr].IfName,
+				VFNum:           1,
+			}, vfConfig)
 
-	require.Equal(t, pfs[pf2PciAddr].Vfs[0].Driver, string(sriov.VFIOPCIDriver))
-	require.Equal(t, pfs[pf2PciAddr].Vfs[1].Driver, string(sriov.VFIOPCIDriver))
+			require.Equal(t, vfio.ToMechanism(conn.Mechanism).GetIommuGroup(), pfs[pf2PciAddr].Vfs[1].IOMMUGroup)
+		},
+	},
+}
 
-	require.Equal(t, vfConfig.PFInterfaceName, pfs[pf2PciAddr].IfName)
-	require.Equal(t, vfConfig.VFInterfaceName, pfs[pf2PciAddr].Vfs[1].IfName)
-	require.Equal(t, vfConfig.VFNum, 1)
+func TestResourcePoolServer_Request(t *testing.T) {
+	for i := range samples {
+		sample := samples[i]
+		t.Run(sample.mechanism, func(t *testing.T) {
+			vfConfig := new(vfconfig.VFConfig)
+			ctx := vfconfig.WithConfig(context.TODO(), vfConfig)
 
-	require.Equal(t, vfio.ToMechanism(conn.Mechanism).GetIommuGroup(), pfs[pf2PciAddr].Vfs[1].IOMMUGroup)
+			var pfs map[string]*sriovtest.PCIPhysicalFunction
+			_ = yamlhelper.UnmarshalFile(physicalFunctionsFilename, &pfs)
 
-	// 2. Close
+			conf, err := config.ReadConfig(context.TODO(), configFileName)
+			require.NoError(t, err)
 
-	resourcePool.mock.On("Free", pfs[pf2PciAddr].Vfs[1].Addr).
-		Return(nil)
+			pciPool, err := pci.NewTestPool(pfs, conf)
+			require.NoError(t, err)
 
-	_, err = server.Close(ctx, conn)
-	require.NoError(t, err)
+			resourcePool := new(resourcePoolMock)
 
-	resourcePool.mock.AssertNumberOfCalls(t, "Free", 1)
+			server := resourcepool.NewServer(sample.driverType, new(sync.Mutex), pciPool, resourcePool, conf)
+
+			// 1. Request
+
+			resourcePool.mock.On("Select", "1", sample.driverType).
+				Return(pfs[pf2PciAddr].Vfs[1].Addr, nil)
+
+			conn, err := server.Request(ctx, &networkservice.NetworkServiceRequest{
+				Connection: &networkservice.Connection{
+					Id: "id",
+					Mechanism: &networkservice.Mechanism{
+						Type: sample.mechanism,
+						Parameters: map[string]string{
+							resourcepool.TokenIDKey: "1",
+						},
+					},
+				},
+			})
+			require.NoError(t, err)
+
+			resourcePool.mock.AssertNumberOfCalls(t, "Select", 1)
+
+			sample.test(t, pfs, vfConfig, conn)
+
+			// 2. Close
+
+			resourcePool.mock.On("Free", pfs[pf2PciAddr].Vfs[1].Addr).
+				Return(nil)
+
+			_, err = server.Close(ctx, conn)
+			require.NoError(t, err)
+
+			resourcePool.mock.AssertNumberOfCalls(t, "Free", 1)
+		})
+	}
 }
 
 type resourcePoolMock struct {

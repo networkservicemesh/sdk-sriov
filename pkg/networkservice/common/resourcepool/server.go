@@ -107,7 +107,13 @@ func (s *resourcePoolServer) Request(ctx context.Context, request *networkservic
 			return err
 		}
 
-		if s.driverType == sriov.VFIOPCIDriver {
+		switch s.driverType {
+		case sriov.KernelDriver:
+			vfConfig.VFInterfaceName, err = vf.GetNetInterfaceName()
+			if err != nil {
+				return errors.Wrapf(err, "failed to get VF net interface name: %v", vf.GetPCIAddress())
+			}
+		case sriov.VFIOPCIDriver:
 			vfio.ToMechanism(request.GetConnection().GetMechanism()).SetIommuGroup(iommuGroup)
 		}
 
@@ -150,10 +156,6 @@ func (s *resourcePoolServer) selectVF(connID string, vfConfig *vfconfig.VFConfig
 			vf, err := s.pciPool.GetPCIFunction(vfPCIAddr)
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed to get VF: %v", vfPCIAddr)
-			}
-			vfConfig.VFInterfaceName, err = vf.GetNetInterfaceName()
-			if err != nil {
-				return nil, errors.Errorf("failed to get VF net interface name: %v", vfPCIAddr)
 			}
 
 			vfConfig.VFNum = i
