@@ -6,9 +6,9 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/golang/protobuf v1.4.3
 	github.com/google/uuid v1.1.2
-	github.com/networkservicemesh/api v0.0.0-20201204031251-69c62e4cdcea
-	github.com/networkservicemesh/sdk v0.0.0-20201204174047-d64f22ec27bd
-	github.com/networkservicemesh/sdk-kernel v0.0.0-20201204174342-bb9ac7a1b75a
+	github.com/networkservicemesh/api v0.0.0-20201204203731-4294f67deaa4
+	github.com/networkservicemesh/sdk v0.0.0-20201205175107-a9f34cf63044
+	github.com/networkservicemesh/sdk-kernel v0.0.0-20201205175354-21b7f2b3bab3
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.6.1
 	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
