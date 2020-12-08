@@ -14,11 +14,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package vfio_test
+package vfio
 
-const (
-	cgroupDir        = "cgroup_dir"
-	vfioDevice       = "vfio"
-	iommuGroup       = 1
-	iommuGroupString = "1"
-)
+import "golang.org/x/sys/unix"
+
+// Major is unix.Major typed to unix.Stat_t .Dev
+func Major(dev int32) uint32 {
+	return unix.Major(uint64(dev))
+}
+
+// Minor is unix.Minor typed to unix.Stat_t .Dev
+func Minor(dev int32) uint32 {
+	return unix.Minor(uint64(dev))
+}

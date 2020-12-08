@@ -14,16 +14,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//+build !windows
+
 package vfio_test
 
 import (
 	"context"
 	"net/url"
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
 	"golang.org/x/sys/unix"
 	"google.golang.org/grpc"
 
@@ -34,7 +37,6 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/tools/grpcutils"
-	"github.com/stretchr/testify/assert"
 
 	"github.com/networkservicemesh/sdk-sriov/pkg/networkservice/common/mechanisms/vfio"
 )
@@ -46,7 +48,7 @@ const (
 func testServer(ctx context.Context, tmpDir string) (grpc.ClientConnInterface, error) {
 	socketURL := &url.URL{
 		Scheme: "unix",
-		Path:   path.Join(tmpDir, serverSocket),
+		Path:   filepath.Join(tmpDir, serverSocket),
 	}
 
 	server := grpc.NewServer()
@@ -66,17 +68,17 @@ func testServer(ctx context.Context, tmpDir string) (grpc.ClientConnInterface, e
 	return grpc.DialContext(ctx, socketURL.String(), grpc.WithInsecure())
 }
 
-func TestVfioClient_Request(t *testing.T) {
+func TestVFIOClient_Request(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
 	defer cancel()
 
-	tmpDir := path.Join(os.TempDir(), t.Name())
+	tmpDir := filepath.Join(os.TempDir(), t.Name())
 	err := os.MkdirAll(tmpDir, 0750)
-	assert.Nil(t, err)
+	require.NoError(t, err)
 	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	cc, err := testServer(ctx, tmpDir)
-	assert.Nil(t, err)
+	require.NoError(t, err)
 
 	client := chain.NewNetworkServiceClient(
 		vfio.NewClient(tmpDir, cgroupDir),
@@ -86,25 +88,25 @@ func TestVfioClient_Request(t *testing.T) {
 	conn, err := client.Request(ctx, &networkservice.NetworkServiceRequest{
 		Connection: &networkservice.Connection{},
 	})
-	assert.Nil(t, err)
+	require.NoError(t, err)
 
 	mech := vfiomech.ToMechanism(conn.GetMechanism())
-	assert.NotNil(t, mech)
-	assert.Equal(t, cgroupDir, mech.GetCgroupDir())
+	require.NotNil(t, mech)
+	require.Equal(t, cgroupDir, mech.GetCgroupDir())
 
 	info := new(unix.Stat_t)
 
-	err = unix.Stat(path.Join(tmpDir, vfioDevice), info)
-	assert.Nil(t, err)
-	assert.Equal(t, uint32(1), unix.Major(uint64(info.Rdev)))
-	assert.Equal(t, uint32(2), unix.Minor(uint64(info.Rdev)))
+	err = unix.Stat(filepath.Join(tmpDir, vfioDevice), info)
+	require.NoError(t, err)
+	require.Equal(t, uint32(1), vfio.Major(info.Rdev))
+	require.Equal(t, uint32(2), vfio.Minor(info.Rdev))
 
-	err = unix.Stat(path.Join(tmpDir, iommuGroupString), info)
-	assert.Nil(t, err)
-	assert.Equal(t, uint32(3), unix.Major(uint64(info.Rdev)))
-	assert.Equal(t, uint32(4), unix.Minor(uint64(info.Rdev)))
+	err = unix.Stat(filepath.Join(tmpDir, iommuGroupString), info)
+	require.NoError(t, err)
+	require.Equal(t, uint32(3), vfio.Major(info.Rdev))
+	require.Equal(t, uint32(4), vfio.Minor(info.Rdev))
 
-	assert.Nil(t, ctx.Err())
+	require.NoError(t, ctx.Err())
 }
 
 type vfioForwarderStub struct {
