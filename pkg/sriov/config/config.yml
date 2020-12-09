@@ -1,6 +1,8 @@
 ---
 physicalFunctions:
   0000:01:00.0:
+    pfKernelDriver: pf-driver
+    vfKernelDriver: vf-driver
     capabilities:
       - intel
       - 10G
@@ -12,6 +14,8 @@ physicalFunctions:
       - address: 0000:01:00.2
         iommuGroup: 2
   0000:02:00.0:
+    pfKernelDriver: pf-driver
+    vfKernelDriver: vf-driver
     capabilities:
       - intel
       - 20G

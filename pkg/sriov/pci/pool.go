@@ -50,7 +50,7 @@ type function struct {
 }
 
 // NewPool returns a new PCI Pool
-func NewPool(pciDevicesPath, pciDriversPath string, store storage.Storage, conf *config.Config) (*Pool, error) {
+func NewPool(pciDevicesPath, pciDriversPath string, store storage.Storage, cfg *config.Config) (*Pool, error) {
 	p := &Pool{
 		functions:             map[string]*function{},
 		functionsByIOMMUGroup: map[uint][]*function{},
@@ -61,7 +61,7 @@ func NewPool(pciDevicesPath, pciDriversPath string, store storage.Storage, conf 
 	}
 
 	kernelDrivers := pciStore.load()
-	for pfPCIAddr := range conf.PhysicalFunctions {
+	for pfPCIAddr := range cfg.PhysicalFunctions {
 		pf, err := pcifunction.NewPhysicalFunction(pfPCIAddr, pciDevicesPath, pciDriversPath)
 		if err != nil {
 			return nil, err
@@ -84,14 +84,14 @@ func NewPool(pciDevicesPath, pciDriversPath string, store storage.Storage, conf 
 }
 
 // NewTestPool returns a new PCI Pool for testing
-func NewTestPool(physicalFunctions map[string]*sriovtest.PCIPhysicalFunction, conf *config.Config) (*Pool, error) {
+func NewTestPool(physicalFunctions map[string]*sriovtest.PCIPhysicalFunction, cfg *config.Config) (*Pool, error) {
 	p := &Pool{
 		functions:             map[string]*function{},
 		functionsByIOMMUGroup: map[uint][]*function{},
 	}
 
 	kernelDrivers := map[string]string{}
-	for pfPCIAddr := range conf.PhysicalFunctions {
+	for pfPCIAddr := range cfg.PhysicalFunctions {
 		pf, ok := physicalFunctions[pfPCIAddr]
 		if !ok {
 			return nil, errors.Errorf("PF doesn't exist: %v", pfPCIAddr)

@@ -22,8 +22,8 @@ import (
 )
 
 // UpdateConfig updates config with virtual functions
-func UpdateConfig(pciDevicesPath, pciDriversPath string, conf *config.Config) error {
-	for pfPCIAddr, pFun := range conf.PhysicalFunctions {
+func UpdateConfig(pciDevicesPath, pciDriversPath string, cfg *config.Config) error {
+	for pfPCIAddr, pfCfg := range cfg.PhysicalFunctions {
 		pf, err := pcifunction.NewPhysicalFunction(pfPCIAddr, pciDevicesPath, pciDriversPath)
 		if err != nil {
 			return err
@@ -35,7 +35,7 @@ func UpdateConfig(pciDevicesPath, pciDriversPath string, conf *config.Config) er
 				return err
 			}
 
-			pFun.VirtualFunctions = append(pFun.VirtualFunctions, &config.VirtualFunction{
+			pfCfg.VirtualFunctions = append(pfCfg.VirtualFunctions, &config.VirtualFunction{
 				Address:    vf.GetPCIAddress(),
 				IOMMUGroup: iommuGroup,
 			})

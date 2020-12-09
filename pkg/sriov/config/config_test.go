@@ -29,6 +29,8 @@ const (
 	configFileName  = "config.yml"
 	pf1PciAddr      = "0000:01:00.0"
 	pf2PciAddr      = "0000:02:00.0"
+	pfKernelDriver  = "pf-driver"
+	vfKernelDriver  = "vf-driver"
 	capabilityIntel = "intel"
 	capability10G   = "10G"
 	capability20G   = "20G"
@@ -47,6 +49,8 @@ func TestReadConfigFile(t *testing.T) {
 	require.Equal(t, &config.Config{
 		PhysicalFunctions: map[string]*config.PhysicalFunction{
 			pf1PciAddr: {
+				PFKernelDriver: pfKernelDriver,
+				VFKernelDriver: vfKernelDriver,
 				Capabilities: []string{
 					capabilityIntel,
 					capability10G,
@@ -66,6 +70,8 @@ func TestReadConfigFile(t *testing.T) {
 				},
 			},
 			pf2PciAddr: {
+				PFKernelDriver: pfKernelDriver,
+				VFKernelDriver: vfKernelDriver,
 				Capabilities: []string{
 					capabilityIntel,
 					capability20G,

@@ -85,11 +85,11 @@ func NewPool(store storage.Storage, cfg *config.Config) *Pool {
 		}
 	} else {
 		// create new tokens
-		for _, pFun := range cfg.PhysicalFunctions {
-			for _, serviceDomain := range pFun.ServiceDomains {
-				for _, capability := range pFun.Capabilities {
+		for _, pfCfg := range cfg.PhysicalFunctions {
+			for _, serviceDomain := range pfCfg.ServiceDomains {
+				for _, capability := range pfCfg.Capabilities {
 					name := path.Join(serviceDomain, capability)
-					for i := 0; i < len(pFun.VirtualFunctions); i++ {
+					for i := 0; i < len(pfCfg.VirtualFunctions); i++ {
 						tok := &token{
 							id:    uuid.New().String(),
 							name:  name,

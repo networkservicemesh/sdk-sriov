@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
+	"github.com/pkg/errors"
 
 	"github.com/networkservicemesh/sdk-sriov/pkg/tools/yamlhelper"
 )
@@ -50,6 +51,8 @@ func (c *Config) String() string {
 
 // PhysicalFunction contains physical function capabilities, available services domains and virtual functions
 type PhysicalFunction struct {
+	PFKernelDriver   string             `yaml:"pfKernelDriver"`
+	VFKernelDriver   string             `yaml:"vfKernelDriver"`
 	Capabilities     []string           `yaml:"capabilities"`
 	ServiceDomains   []string           `yaml:"serviceDomains"`
 	VirtualFunctions []*VirtualFunction `yaml:"virtualFunctions"`
@@ -59,7 +62,13 @@ func (pf *PhysicalFunction) String() string {
 	sb := &strings.Builder{}
 	_, _ = sb.WriteString("&{")
 
-	_, _ = sb.WriteString("Capabilities:[")
+	_, _ = sb.WriteString("PFKernelDriver:")
+	_, _ = sb.WriteString(pf.PFKernelDriver)
+
+	_, _ = sb.WriteString(" VFKernelDriver:")
+	_, _ = sb.WriteString(pf.VFKernelDriver)
+
+	_, _ = sb.WriteString(" Capabilities:[")
 	_, _ = sb.WriteString(strings.Join(pf.Capabilities, " "))
 	_, _ = sb.WriteString("]")
 
@@ -89,12 +98,27 @@ type VirtualFunction struct {
 func ReadConfig(ctx context.Context, configFile string) (*Config, error) {
 	logEntry := log.Entry(ctx).WithField("Config", "ReadConfig")
 
-	config := &Config{}
-	if err := yamlhelper.UnmarshalFile(configFile, config); err != nil {
+	cfg := &Config{}
+	if err := yamlhelper.UnmarshalFile(configFile, cfg); err != nil {
 		return nil, err
 	}
 
-	logEntry.Infof("unmarshalled Config: %+v", config)
+	for pciAddr, pfCfg := range cfg.PhysicalFunctions {
+		if pfCfg.PFKernelDriver == "" {
+			return nil, errors.Errorf("%s has no PFKernelDriver set", pciAddr)
+		}
+		if pfCfg.VFKernelDriver == "" {
+			return nil, errors.Errorf("%s has no VFKernelDriver set", pciAddr)
+		}
+		if len(pfCfg.Capabilities) == 0 {
+			return nil, errors.Errorf("%s has no Capabilities set", pciAddr)
+		}
+		if len(pfCfg.ServiceDomains) == 0 {
+			return nil, errors.Errorf("%s has no ServiceDomains set", pciAddr)
+		}
+	}
 
-	return config, nil
+	logEntry.Infof("unmarshalled Config: %+v", cfg)
+
+	return cfg, nil
 }

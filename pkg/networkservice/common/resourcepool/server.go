@@ -66,14 +66,14 @@ func NewServer(
 	resourceLock sync.Locker,
 	pciPool PCIPool,
 	resourcePool ResourcePool,
-	conf *config.Config,
+	cfg *config.Config,
 ) networkservice.NetworkServiceServer {
 	return &resourcePoolServer{
 		driverType:   driverType,
 		resourceLock: resourceLock,
 		pciPool:      pciPool,
 		resourcePool: resourcePool,
-		config:       conf,
+		config:       cfg,
 		selectedVFs:  map[string]string{},
 	}
 }
@@ -132,9 +132,9 @@ func (s *resourcePoolServer) selectVF(connID string, vfConfig *vfconfig.VFConfig
 	}
 	s.selectedVFs[connID] = vfPCIAddr
 
-	for pfPCIAddr, pFun := range s.config.PhysicalFunctions {
-		for i, vFun := range pFun.VirtualFunctions {
-			if vFun.Address != vfPCIAddr {
+	for pfPCIAddr, pfCfg := range s.config.PhysicalFunctions {
+		for i, vfCfg := range pfCfg.VirtualFunctions {
+			if vfCfg.Address != vfPCIAddr {
 				continue
 			}
 

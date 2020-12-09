@@ -8,11 +8,11 @@
     - addr: 0000:00:01.1
       ifName: vf-1-1
       iommuGroup: 1
-      driver: vf-1-1-driver
+      driver: vf-1-driver
     - addr: 0000:00:01.2
       ifName: vf-1-2
       iommuGroup: 1
-      driver: vf-1-2-driver
+      driver: vf-1-driver
 0000:00:02.0:
   addr: 0000:00:02.0
   ifName: pf-2
@@ -22,8 +22,8 @@
     - addr: 0000:00:02.1
       ifName: vf-2-1
       iommuGroup: 2
-      driver: vf-2-1-driver
+      driver: vf-2-driver
     - addr: 0000:00:02.2
       ifName: vf-2-2
       iommuGroup: 2
-      driver: vf-2-2-driver
+      driver: vf-2-driver
