@@ -25,7 +25,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/config"
-	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/storage"
 )
 
 const (
@@ -37,11 +36,12 @@ const (
 
 // Pool manages forwarder SR-IOV resource tokens
 type Pool struct {
-	lock          sync.Mutex
 	tokens        map[string]*token   // tokens[id] -> *token
 	tokensByNames map[string][]*token // tokensByNames[name] -> []*token
 	closedTokens  map[string][]*token // closedTokens[id] -> []*token
 	listeners     []func()
+	lock          sync.Mutex
+	dirty         bool
 }
 
 type state int
@@ -65,47 +65,62 @@ type token struct {
 }
 
 // NewPool returns a new Pool
-func NewPool(store storage.Storage, cfg *config.Config) *Pool {
+func NewPool(cfg *config.Config) *Pool {
 	p := &Pool{
 		tokens:        map[string]*token{},
 		tokensByNames: map[string][]*token{},
 		closedTokens:  map[string][]*token{},
 	}
 
-	tokenStore := &tokenStorage{
-		storage: store,
-	}
-
-	tokens := tokenStore.load()
-	if len(tokens) > 0 {
-		// restore tokens from storage
-		p.tokens = tokens
-		for _, tok := range tokens {
-			p.tokensByNames[tok.name] = append(p.tokensByNames[tok.name], tok)
-		}
-	} else {
-		// create new tokens
-		for _, pfCfg := range cfg.PhysicalFunctions {
-			for _, serviceDomain := range pfCfg.ServiceDomains {
-				for _, capability := range pfCfg.Capabilities {
-					name := path.Join(serviceDomain, capability)
-					for i := 0; i < len(pfCfg.VirtualFunctions); i++ {
-						tok := &token{
-							id:    uuid.New().String(),
-							name:  name,
-							state: free,
-						}
-						p.tokens[tok.id] = tok
-						p.tokensByNames[tok.name] = append(p.tokensByNames[tok.name], tok)
+	for _, pfCfg := range cfg.PhysicalFunctions {
+		for _, serviceDomain := range pfCfg.ServiceDomains {
+			for _, capability := range pfCfg.Capabilities {
+				name := path.Join(serviceDomain, capability)
+				for i := 0; i < len(pfCfg.VirtualFunctions); i++ {
+					tok := &token{
+						id:    uuid.New().String(),
+						name:  name,
+						state: free,
 					}
+					p.tokens[tok.id] = tok
+					p.tokensByNames[tok.name] = append(p.tokensByNames[tok.name], tok)
 				}
 			}
 		}
 	}
 
-	tokenStore.store(p.tokens)
-
 	return p
+}
+
+// Restore replaces part of existing tokens with given tokens and set them into the allocated state
+// NOTE: it can be called only on untouched Pool, any actions will disable Restore
+func (p *Pool) Restore(tokens map[string][]string) error {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	if p.dirty {
+		return errors.New("token pool has already been accessed")
+	}
+	p.dirty = true
+
+	for name, ids := range tokens {
+		toks, ok := p.tokensByNames[name]
+		if !ok {
+			continue
+		}
+
+		for i := 0; i < len(ids) && i < len(toks); i++ {
+			tok := toks[i]
+			delete(p.tokens, tok.id)
+
+			tok.id = ids[i]
+			tok.state = allocated
+
+			p.tokens[tok.id] = tok
+		}
+	}
+
+	return nil
 }
 
 // AddListener adds a new listener that fires on tokens state change to/from "closed"
@@ -121,6 +136,8 @@ func (p *Pool) Tokens() map[string]map[string]bool {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
+	p.dirty = true
+
 	tokens := map[string]map[string]bool{}
 	for name, toks := range p.tokensByNames {
 		tokens[name] = map[string]bool{}
@@ -135,6 +152,8 @@ func (p *Pool) Tokens() map[string]map[string]bool {
 func (p *Pool) Find(id string) (string, error) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
+
+	p.dirty = true
 
 	tok, err := p.find(id)
 	if err != nil {
@@ -158,6 +177,8 @@ func (p *Pool) find(id string) (*token, error) {
 func (p *Pool) Allocate(id string) error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
+
+	p.dirty = true
 
 	tok, err := p.find(id)
 	if err != nil {
@@ -184,6 +205,8 @@ func (p *Pool) Free(id string) error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
+	p.dirty = true
+
 	tok, err := p.find(id)
 	if err != nil {
 		return err
@@ -208,6 +231,8 @@ func (p *Pool) Free(id string) error {
 func (p *Pool) Use(id string, names []string) error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
+
+	p.dirty = true
 
 	tok, err := p.find(id)
 	if err != nil {
@@ -262,6 +287,8 @@ func (p *Pool) findToClose(name string) *token {
 func (p *Pool) StopUsing(id string) error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
+
+	p.dirty = true
 
 	return p.stopUsing(id)
 }
