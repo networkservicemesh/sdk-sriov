@@ -18,6 +18,12 @@
 package pci
 
 import (
+	"context"
+	"os"
+	"path/filepath"
+	"strconv"
+	"time"
+
 	"github.com/pkg/errors"
 
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov"
@@ -27,7 +33,9 @@ import (
 )
 
 const (
-	vfioDriver = "vfio-pci"
+	vfioDriver        = "vfio-pci"
+	driverBindTimeout = time.Second
+	driverBindCheck   = driverBindTimeout / 10
 )
 
 type pciFunction interface {
@@ -41,6 +49,8 @@ type pciFunction interface {
 type Pool struct {
 	functions             map[string]*function // pciAddr -> *function
 	functionsByIOMMUGroup map[uint][]*function // iommuGroup -> []*function
+	vfioDir               string
+	test                  bool
 }
 
 type function struct {
@@ -49,10 +59,11 @@ type function struct {
 }
 
 // NewPool returns a new PCI Pool
-func NewPool(pciDevicesPath, pciDriversPath string, cfg *config.Config) (*Pool, error) {
+func NewPool(pciDevicesPath, pciDriversPath, vfioDir string, cfg *config.Config) (*Pool, error) {
 	p := &Pool{
 		functions:             map[string]*function{},
 		functionsByIOMMUGroup: map[uint][]*function{},
+		vfioDir:               vfioDir,
 	}
 
 	for pfPCIAddr, pfCfg := range cfg.PhysicalFunctions {
@@ -80,6 +91,7 @@ func NewTestPool(physicalFunctions map[string]*sriovtest.PCIPhysicalFunction, cf
 	p := &Pool{
 		functions:             map[string]*function{},
 		functionsByIOMMUGroup: map[uint][]*function{},
+		test:                  true,
 	}
 
 	for pfPCIAddr, pfCfg := range cfg.PhysicalFunctions {
@@ -117,15 +129,15 @@ func (p *Pool) addFunction(pcif pciFunction, kernelDriver string) (err error) {
 
 // GetPCIFunction returns PCI function for the given PCI address
 func (p *Pool) GetPCIFunction(pciAddr string) (sriov.PCIFunction, error) {
-	f, err := p.find(pciAddr)
-	if err != nil {
-		return nil, err
+	f, ok := p.functions[pciAddr]
+	if !ok {
+		return nil, errors.Errorf("PCI function doesn't exist: %v", pciAddr)
 	}
 	return f.function, nil
 }
 
 // BindDriver binds selected IOMMU group to the given driver type
-func (p *Pool) BindDriver(iommuGroup uint, driverType sriov.DriverType) error {
+func (p *Pool) BindDriver(ctx context.Context, iommuGroup uint, driverType sriov.DriverType) error {
 	for _, f := range p.functionsByIOMMUGroup[iommuGroup] {
 		switch driverType {
 		case sriov.KernelDriver:
@@ -140,13 +152,62 @@ func (p *Pool) BindDriver(iommuGroup uint, driverType sriov.DriverType) error {
 			return errors.Errorf("driver type is not supported: %v", driverType)
 		}
 	}
+
+	for _, f := range p.functionsByIOMMUGroup[iommuGroup] {
+		if err := p.waitDriverGettingBound(ctx, f.function, driverType); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
-func (p *Pool) find(pciAddr string) (*function, error) {
-	f, ok := p.functions[pciAddr]
-	if !ok {
-		return nil, errors.Errorf("PCI function doesn't exist: %v", pciAddr)
+func (p *Pool) waitDriverGettingBound(ctx context.Context, pcif pciFunction, driverType sriov.DriverType) error {
+	timeoutCh := time.After(driverBindTimeout)
+	for {
+		var driverCheck func(pciFunction) error
+		switch driverType {
+		case sriov.KernelDriver:
+			driverCheck = p.kernelDriverCheck
+		case sriov.VFIOPCIDriver:
+			driverCheck = p.vfioDriverCheck
+		default:
+			return errors.Errorf("driver type is not supported: %v", driverType)
+		}
+
+		if driverCheck(pcif) == nil {
+			return nil
+		}
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-timeoutCh:
+			return errors.Errorf("time for binding kernel driver exceeded: %s", pcif.GetPCIAddress())
+		case <-time.After(driverBindCheck):
+		}
 	}
-	return f, nil
+}
+
+func (p *Pool) kernelDriverCheck(pcif pciFunction) error {
+	if p.test {
+		return nil
+	}
+
+	_, err := pcif.GetNetInterfaceName()
+	return err
+}
+
+func (p *Pool) vfioDriverCheck(pcif pciFunction) error {
+	if p.test {
+		return nil
+	}
+
+	iommuGroup, err := pcif.GetIOMMUGroup()
+	if err != nil {
+		return err
+	}
+
+	_, err = os.Stat(filepath.Join(p.vfioDir, strconv.FormatUint(uint64(iommuGroup), 10)))
+	return err
 }

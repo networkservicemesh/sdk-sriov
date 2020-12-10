@@ -42,7 +42,7 @@ const (
 // PCIPool is a pci.Pool interface
 type PCIPool interface {
 	GetPCIFunction(pciAddr string) (sriov.PCIFunction, error)
-	BindDriver(iommuGroup uint, driverType sriov.DriverType) error
+	BindDriver(ctx context.Context, iommuGroup uint, driverType sriov.DriverType) error
 }
 
 // ResourcePool is a resource.Pool interface
@@ -103,7 +103,7 @@ func (s *resourcePoolServer) Request(ctx context.Context, request *networkservic
 			return errors.Wrapf(err, "failed to get VF IOMMU group: %v", vf.GetPCIAddress())
 		}
 
-		if err := s.pciPool.BindDriver(iommuGroup, s.driverType); err != nil {
+		if err := s.pciPool.BindDriver(ctx, iommuGroup, s.driverType); err != nil {
 			return err
 		}
 
