@@ -14,12 +14,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package sriov provides types for SR-IOV
-package sriov
+package vfio
 
-// PCIFunction provides methods to get OS PCI function info
-type PCIFunction interface {
-	GetPCIAddress() string
-	GetNetInterfaceName() (string, error)
-	GetIOMMUGroup() (uint, error)
+import "golang.org/x/sys/unix"
+
+// Major is unix.Major typed to unix.Stat_t .Dev
+func Major(dev int32) uint32 {
+	return unix.Major(uint64(dev))
+}
+
+// Minor is unix.Minor typed to unix.Stat_t .Dev
+func Minor(dev int32) uint32 {
+	return unix.Minor(uint64(dev))
 }

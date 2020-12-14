@@ -1,0 +1,28 @@
+---
+physicalFunctions:
+  0000:00:01.0:
+    pfKernelDriver: pf-1-driver
+    vfKernelDriver: vf-1-driver
+    capabilities:
+      - intel
+      - 10G
+    serviceDomains:
+      - service.domain.1
+    virtualFunctions:
+      - address: 0000:00:01.1
+        iommuGroup: 1
+      - address: 0000:00:01.2
+        iommuGroup: 1
+  0000:00:02.0:
+    pfKernelDriver: pf-2-driver
+    vfKernelDriver: vf-2-driver
+    capabilities:
+      - intel
+      - 10G
+    serviceDomains:
+      - service.domain.1
+    virtualFunctions:
+      - address: 0000:00:02.1
+        iommuGroup: 2
+      - address: 0000:00:02.2
+        iommuGroup: 2

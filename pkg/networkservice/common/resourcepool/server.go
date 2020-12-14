@@ -22,21 +22,28 @@ import (
 	"sync"
 
 	"github.com/golang/protobuf/ptypes/empty"
-	"github.com/networkservicemesh/sdk/pkg/tools/log"
 	"github.com/pkg/errors"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/vfio"
 	"github.com/networkservicemesh/sdk-kernel/pkg/kernel/networkservice/vfconfig"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
+	"github.com/networkservicemesh/sdk/pkg/tools/log"
 
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov"
+	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/config"
 )
 
 const (
 	// TokenIDKey is a token ID mechanism parameter key
 	TokenIDKey = "tokenID" // TODO: move to api
 )
+
+// PCIPool is a pci.Pool interface
+type PCIPool interface {
+	GetPCIFunction(pciAddr string) (sriov.PCIFunction, error)
+	BindDriver(ctx context.Context, iommuGroup uint, driverType sriov.DriverType) error
+}
 
 // ResourcePool is a resource.Pool interface
 type ResourcePool interface {
@@ -47,8 +54,9 @@ type ResourcePool interface {
 type resourcePoolServer struct {
 	driverType   sriov.DriverType
 	resourceLock sync.Locker
-	functions    map[sriov.PCIFunction][]sriov.PCIFunction
-	binders      map[uint][]sriov.DriverBinder
+	pciPool      PCIPool
+	resourcePool ResourcePool
+	config       *config.Config
 	selectedVFs  map[string]string
 }
 
@@ -56,25 +64,22 @@ type resourcePoolServer struct {
 func NewServer(
 	driverType sriov.DriverType,
 	resourceLock sync.Locker,
-	functions map[sriov.PCIFunction][]sriov.PCIFunction,
-	binders map[uint][]sriov.DriverBinder,
+	pciPool PCIPool,
+	resourcePool ResourcePool,
+	cfg *config.Config,
 ) networkservice.NetworkServiceServer {
 	return &resourcePoolServer{
 		driverType:   driverType,
 		resourceLock: resourceLock,
-		functions:    functions,
-		binders:      binders,
+		pciPool:      pciPool,
+		resourcePool: resourcePool,
+		config:       cfg,
 		selectedVFs:  map[string]string{},
 	}
 }
 
 func (s *resourcePoolServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
 	logEntry := log.Entry(ctx).WithField("resourcePoolServer", "Request")
-
-	resourcePool := Pool(ctx)
-	if resourcePool == nil {
-		return nil, errors.New("ResourcePool not found")
-	}
 
 	tokenID, ok := request.GetConnection().GetMechanism().GetParameters()[TokenIDKey]
 	if !ok {
@@ -87,7 +92,7 @@ func (s *resourcePoolServer) Request(ctx context.Context, request *networkservic
 		defer s.resourceLock.Unlock()
 
 		logEntry.Infof("trying to select VF for %v", s.driverType)
-		vf, err := s.selectVF(request.GetConnection().GetId(), vfConfig, resourcePool, tokenID)
+		vf, err := s.selectVF(request.GetConnection().GetId(), vfConfig, tokenID)
 		if err != nil {
 			return err
 		}
@@ -98,86 +103,74 @@ func (s *resourcePoolServer) Request(ctx context.Context, request *networkservic
 			return errors.Wrapf(err, "failed to get VF IOMMU group: %v", vf.GetPCIAddress())
 		}
 
-		if err := s.bindDriver(iommuGroup); err != nil {
+		if err := s.pciPool.BindDriver(ctx, iommuGroup, s.driverType); err != nil {
 			return err
 		}
 
-		if s.driverType == sriov.VFIOPCIDriver {
+		switch s.driverType {
+		case sriov.KernelDriver:
+			vfConfig.VFInterfaceName, err = vf.GetNetInterfaceName()
+			if err != nil {
+				return errors.Wrapf(err, "failed to get VF net interface name: %v", vf.GetPCIAddress())
+			}
+		case sriov.VFIOPCIDriver:
 			vfio.ToMechanism(request.GetConnection().GetMechanism()).SetIommuGroup(iommuGroup)
 		}
 
 		return nil
 	}(); err != nil {
-		_ = s.close(ctx, request.GetConnection())
+		_ = s.close(request.GetConnection())
 		return nil, err
 	}
 
 	conn, err := next.Server(ctx).Request(ctx, request)
 	if err != nil {
-		_ = s.close(ctx, request.GetConnection())
+		_ = s.close(request.GetConnection())
 	}
 
 	return conn, err
 }
 
-func (s *resourcePoolServer) selectVF(
-	connID string,
-	vfConfig *vfconfig.VFConfig,
-	resourcePool ResourcePool,
-	tokenID string,
-) (vf sriov.PCIFunction, err error) {
-	s.selectedVFs[connID], err = resourcePool.Select(tokenID, s.driverType)
+func (s *resourcePoolServer) selectVF(connID string, vfConfig *vfconfig.VFConfig, tokenID string) (vf sriov.PCIFunction, err error) {
+	vfPCIAddr, err := s.resourcePool.Select(tokenID, s.driverType)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to select VF for: %v", s.driverType)
 	}
+	s.selectedVFs[connID] = vfPCIAddr
 
-	for pf, vfs := range s.functions {
-		for i, vf := range vfs {
-			if vf.GetPCIAddress() != s.selectedVFs[connID] {
+	for pfPCIAddr, pfCfg := range s.config.PhysicalFunctions {
+		for i, vfCfg := range pfCfg.VirtualFunctions {
+			if vfCfg.Address != vfPCIAddr {
 				continue
 			}
 
-			vfConfig.VFInterfaceName, err = vf.GetNetInterfaceName()
+			pf, err := s.pciPool.GetPCIFunction(pfPCIAddr)
 			if err != nil {
-				return nil, errors.Wrapf(err, "failed to get VF net interface name: %v", vf.GetPCIAddress())
+				return nil, errors.Wrapf(err, "failed to get PF: %v", pfPCIAddr)
 			}
 			vfConfig.PFInterfaceName, err = pf.GetNetInterfaceName()
 			if err != nil {
-				return nil, errors.Errorf("failed to get PF net interface name: %v", pf.GetPCIAddress())
+				return nil, errors.Errorf("failed to get PF net interface name: %v", pfPCIAddr)
 			}
+
+			vf, err := s.pciPool.GetPCIFunction(vfPCIAddr)
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed to get VF: %v", vfPCIAddr)
+			}
+
 			vfConfig.VFNum = i
 
-			return vf, nil
+			return vf, err
 		}
 	}
 
 	return nil, errors.Errorf("no VF with selected PCI address exists: %v", s.selectedVFs[connID])
 }
 
-func (s *resourcePoolServer) bindDriver(igid uint) (err error) {
-	for _, binder := range s.binders[igid] {
-		switch s.driverType {
-		case sriov.KernelDriver:
-			err = binder.BindKernelDriver()
-		case sriov.VFIOPCIDriver:
-			err = binder.BindDriver(string(sriov.VFIOPCIDriver))
-		}
-		if err != nil {
-			return errors.Wrapf(err, "failed to bind driver to IOMMU group: %v", igid)
-		}
-	}
-	return nil
-}
-
 func (s *resourcePoolServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {
-	resourcePool := Pool(ctx)
-	if resourcePool == nil {
-		return nil, errors.New("ResourcePool not found")
-	}
-
 	_, err := next.Server(ctx).Close(ctx, conn)
 
-	closeErr := s.close(ctx, conn)
+	closeErr := s.close(conn)
 
 	if err != nil && closeErr != nil {
 		return nil, errors.Wrapf(err, "failed to free VF: %v", closeErr)
@@ -188,7 +181,7 @@ func (s *resourcePoolServer) Close(ctx context.Context, conn *networkservice.Con
 	return &empty.Empty{}, err
 }
 
-func (s *resourcePoolServer) close(ctx context.Context, conn *networkservice.Connection) error {
+func (s *resourcePoolServer) close(conn *networkservice.Connection) error {
 	vfPCIAddr, ok := s.selectedVFs[conn.GetId()]
 	if !ok {
 		return nil
@@ -198,5 +191,5 @@ func (s *resourcePoolServer) close(ctx context.Context, conn *networkservice.Con
 	s.resourceLock.Lock()
 	defer s.resourceLock.Unlock()
 
-	return Pool(ctx).Free(vfPCIAddr)
+	return s.resourcePool.Free(vfPCIAddr)
 }

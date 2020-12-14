@@ -22,20 +22,19 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"reflect"
 	"sync"
 	"testing"
 	"time"
-
-	"golang.org/x/sys/unix"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/cls"
 	vfiomech "github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/vfio"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/unix"
 
 	"github.com/networkservicemesh/sdk-sriov/pkg/networkservice/common/mechanisms/vfio"
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/sriovtest"
@@ -48,9 +47,9 @@ const (
 )
 
 func testVFIOServer(ctx context.Context, t *testing.T, allowedDevices *allowedDevices) (server networkservice.NetworkServiceServer, tmpDir string) {
-	tmpDir = path.Join(os.TempDir(), t.Name())
-	err := os.MkdirAll(path.Join(tmpDir, cgroupDir), 0750)
-	assert.Nil(t, err)
+	tmpDir = filepath.Join(os.TempDir(), t.Name())
+	err := os.MkdirAll(filepath.Join(tmpDir, cgroupDir), 0750)
+	require.NoError(t, err)
 
 	server = chain.NewNetworkServiceServer(
 		mechanisms.NewServer(map[string]networkservice.NetworkServiceServer{
@@ -58,22 +57,22 @@ func testVFIOServer(ctx context.Context, t *testing.T, allowedDevices *allowedDe
 		}),
 	)
 
-	err = sriovtest.InputFileAPI(ctx, path.Join(tmpDir, cgroupDir, deviceAllowFile), func(s string) {
+	err = sriovtest.InputFileAPI(ctx, filepath.Join(tmpDir, cgroupDir, deviceAllowFile), func(s string) {
 		var major, minor int
 		_, _ = fmt.Sscanf(s, deviceStringFormat, &major, &minor)
 		allowedDevices.Lock()
 		allowedDevices.devices[fmt.Sprintf("%d:%d", major, minor)] = true
 		allowedDevices.Unlock()
 	})
-	assert.Nil(t, err)
-	err = sriovtest.InputFileAPI(ctx, path.Join(tmpDir, cgroupDir, deviceDenyFile), func(s string) {
+	require.NoError(t, err)
+	err = sriovtest.InputFileAPI(ctx, filepath.Join(tmpDir, cgroupDir, deviceDenyFile), func(s string) {
 		var major, minor int
 		_, _ = fmt.Sscanf(s, deviceStringFormat, &major, &minor)
 		allowedDevices.Lock()
 		delete(allowedDevices.devices, fmt.Sprintf("%d:%d", major, minor))
 		allowedDevices.Unlock()
 	})
-	assert.Nil(t, err)
+	require.NoError(t, err)
 
 	return server, tmpDir
 }
@@ -88,10 +87,10 @@ func TestVFIOServer_Request(t *testing.T) {
 	server, tmpDir := testVFIOServer(ctx, t, allowedDevices)
 	defer func() { _ = os.RemoveAll(tmpDir) }()
 
-	err := unix.Mknod(path.Join(tmpDir, vfioDevice), unix.S_IFCHR|0666, int(unix.Mkdev(1, 2)))
-	assert.Nil(t, err)
-	err = unix.Mknod(path.Join(tmpDir, iommuGroupString), unix.S_IFCHR|0666, int(unix.Mkdev(3, 4)))
-	assert.Nil(t, err)
+	err := unix.Mknod(filepath.Join(tmpDir, vfioDevice), unix.S_IFCHR|0666, int(unix.Mkdev(1, 2)))
+	require.NoError(t, err)
+	err = unix.Mknod(filepath.Join(tmpDir, iommuGroupString), unix.S_IFCHR|0666, int(unix.Mkdev(3, 4)))
+	require.NoError(t, err)
 
 	conn, err := server.Request(ctx, &networkservice.NetworkServiceRequest{
 		Connection: &networkservice.Connection{},
@@ -100,22 +99,22 @@ func TestVFIOServer_Request(t *testing.T) {
 				Cls:  cls.LOCAL,
 				Type: vfiomech.MECHANISM,
 				Parameters: map[string]string{
-					vfiomech.CgroupDirKey:  cgroupDir,
+					vfiomech.CgroupDirKey:  "*",
 					vfiomech.IommuGroupKey: iommuGroupString,
 				},
 			},
 		},
 	})
-	assert.Nil(t, err)
+	require.NoError(t, err)
 
 	mech := vfiomech.ToMechanism(conn.GetMechanism())
-	assert.NotNil(t, mech)
-	assert.Equal(t, uint32(1), mech.GetVfioMajor())
-	assert.Equal(t, uint32(2), mech.GetVfioMinor())
-	assert.Equal(t, uint32(3), mech.GetDeviceMajor())
-	assert.Equal(t, uint32(4), mech.GetDeviceMinor())
+	require.NotNil(t, mech)
+	require.Equal(t, uint32(1), mech.GetVfioMajor())
+	require.Equal(t, uint32(2), mech.GetVfioMinor())
+	require.Equal(t, uint32(3), mech.GetDeviceMajor())
+	require.Equal(t, uint32(4), mech.GetDeviceMinor())
 
-	assert.Eventually(t, func() bool {
+	require.Eventually(t, func() bool {
 		allowedDevices.Lock()
 		defer allowedDevices.Unlock()
 		return reflect.DeepEqual(map[string]bool{
@@ -124,7 +123,7 @@ func TestVFIOServer_Request(t *testing.T) {
 		}, allowedDevices.devices)
 	}, time.Second, 10*time.Millisecond)
 
-	assert.Nil(t, ctx.Err())
+	require.NoError(t, ctx.Err())
 }
 
 func TestVFIOServer_Close(t *testing.T) {
@@ -145,7 +144,7 @@ func TestVFIOServer_Close(t *testing.T) {
 			Cls:  cls.LOCAL,
 			Type: vfiomech.MECHANISM,
 			Parameters: map[string]string{
-				vfiomech.CgroupDirKey:   cgroupDir,
+				vfiomech.CgroupDirKey:   "*",
 				vfiomech.IommuGroupKey:  iommuGroupString,
 				vfiomech.VfioMajorKey:   "1",
 				vfiomech.VfioMinorKey:   "2",
@@ -156,15 +155,15 @@ func TestVFIOServer_Close(t *testing.T) {
 	}
 
 	_, err := server.Close(ctx, conn)
-	assert.Nil(t, err)
+	require.NoError(t, err)
 
-	assert.Eventually(t, func() bool {
+	require.Eventually(t, func() bool {
 		allowedDevices.Lock()
 		defer allowedDevices.Unlock()
 		return reflect.DeepEqual(map[string]bool{}, allowedDevices.devices)
 	}, time.Second, 10*time.Millisecond)
 
-	assert.Nil(t, ctx.Err())
+	require.NoError(t, ctx.Err())
 }
 
 type allowedDevices struct {

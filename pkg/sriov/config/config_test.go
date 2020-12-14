@@ -29,6 +29,8 @@ const (
 	configFileName  = "config.yml"
 	pf1PciAddr      = "0000:01:00.0"
 	pf2PciAddr      = "0000:02:00.0"
+	pfKernelDriver  = "pf-driver"
+	vfKernelDriver  = "vf-driver"
 	capabilityIntel = "intel"
 	capability10G   = "10G"
 	capability20G   = "20G"
@@ -47,6 +49,8 @@ func TestReadConfigFile(t *testing.T) {
 	require.Equal(t, &config.Config{
 		PhysicalFunctions: map[string]*config.PhysicalFunction{
 			pf1PciAddr: {
+				PFKernelDriver: pfKernelDriver,
+				VFKernelDriver: vfKernelDriver,
 				Capabilities: []string{
 					capabilityIntel,
 					capability10G,
@@ -54,12 +58,20 @@ func TestReadConfigFile(t *testing.T) {
 				ServiceDomains: []string{
 					serviceDomain1,
 				},
-				VirtualFunctions: map[string]uint{
-					vf11PciAddr: 1,
-					vf12PciAddr: 2,
+				VirtualFunctions: []*config.VirtualFunction{
+					{
+						Address:    vf11PciAddr,
+						IOMMUGroup: 1,
+					},
+					{
+						Address:    vf12PciAddr,
+						IOMMUGroup: 2,
+					},
 				},
 			},
 			pf2PciAddr: {
+				PFKernelDriver: pfKernelDriver,
+				VFKernelDriver: vfKernelDriver,
 				Capabilities: []string{
 					capabilityIntel,
 					capability20G,
@@ -68,10 +80,19 @@ func TestReadConfigFile(t *testing.T) {
 					serviceDomain1,
 					serviceDomain2,
 				},
-				VirtualFunctions: map[string]uint{
-					vf21PciAddr: 1,
-					vf22PciAddr: 2,
-					vf23PciAddr: 3,
+				VirtualFunctions: []*config.VirtualFunction{
+					{
+						Address:    vf21PciAddr,
+						IOMMUGroup: 1,
+					},
+					{
+						Address:    vf22PciAddr,
+						IOMMUGroup: 2,
+					},
+					{
+						Address:    vf23PciAddr,
+						IOMMUGroup: 3,
+					},
 				},
 			},
 		},

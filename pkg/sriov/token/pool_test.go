@@ -89,6 +89,25 @@ func TestPool_Use(t *testing.T) {
 	require.Equal(t, 3, countTrue(tokens[path.Join(serviceDomain2, capability20G)]))
 }
 
+func TestPool_Restore(t *testing.T) {
+	cfg, err := config.ReadConfig(context.TODO(), configFileName)
+	require.NoError(t, err)
+
+	p := token.NewPool(cfg)
+	tokens := p.Tokens()
+
+	idsByNames := map[string][]string{}
+	for name, toks := range tokens {
+		for id := range toks {
+			idsByNames[name] = append(idsByNames[name], id)
+		}
+	}
+
+	p = token.NewPool(cfg)
+	require.NoError(t, p.Restore(idsByNames))
+	require.Equal(t, tokens, p.Tokens())
+}
+
 func countTrue(m map[string]bool) (count int) {
 	for _, v := range m {
 		if v {

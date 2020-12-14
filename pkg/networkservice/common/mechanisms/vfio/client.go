@@ -21,7 +21,7 @@ package vfio
 import (
 	"context"
 	"os"
-	"path"
+	"path/filepath"
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"golang.org/x/sys/unix"
@@ -68,7 +68,7 @@ func (c *vfioClient) Request(ctx context.Context, request *networkservice.Networ
 		}
 
 		if err := unix.Mknod(
-			path.Join(c.vfioDir, vfioDevice),
+			filepath.Join(c.vfioDir, vfioDevice),
 			unix.S_IFCHR|mknodPerm,
 			int(unix.Mkdev(mech.GetVfioMajor(), mech.GetVfioMinor())),
 		); err != nil && !os.IsExist(err) {
@@ -78,7 +78,7 @@ func (c *vfioClient) Request(ctx context.Context, request *networkservice.Networ
 
 		igid := mech.GetParameters()[vfio.IommuGroupKey]
 		if err := unix.Mknod(
-			path.Join(c.vfioDir, igid),
+			filepath.Join(c.vfioDir, igid),
 			unix.S_IFCHR|mknodPerm,
 			int(unix.Mkdev(mech.GetDeviceMajor(), mech.GetDeviceMinor())),
 		); err != nil && !os.IsExist(err) {

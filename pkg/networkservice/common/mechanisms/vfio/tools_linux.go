@@ -14,30 +14,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package resourcepool
+package vfio
 
-import (
-	"context"
-)
+import "golang.org/x/sys/unix"
 
-const (
-	resourcePoolKey key = "resourcepool.ResourcePool"
-)
-
-type key string
-
-// WithPool returns a new context with ResourcePool
-func WithPool(parent context.Context, resourcePool ResourcePool) context.Context {
-	if parent == nil {
-		parent = context.TODO()
-	}
-	return context.WithValue(parent, resourcePoolKey, resourcePool)
+// Major is unix.Major
+func Major(dev uint64) uint32 {
+	return unix.Major(dev)
 }
 
-// Pool returns ResourcePool from context
-func Pool(ctx context.Context) ResourcePool {
-	if rv, ok := ctx.Value(resourcePoolKey).(ResourcePool); ok {
-		return rv
-	}
-	return nil
+// Minor is unix.Minor
+func Minor(dev uint64) uint32 {
+	return unix.Minor(dev)
 }

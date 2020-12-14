@@ -68,30 +68,30 @@ func NewPool(tokenPool TokenPool, cfg *config.Config) *Pool {
 		tokenPool:         tokenPool,
 	}
 
-	for pfPCIAddr, pff := range cfg.PhysicalFunctions {
+	for pfPCIAddr, pFun := range cfg.PhysicalFunctions {
 		pf := &physicalFunction{
 			tokenNames:       map[string]struct{}{},
 			virtualFunctions: map[uint][]*virtualFunction{},
-			freeVFsCount:     len(pff.VirtualFunctions),
+			freeVFsCount:     len(pFun.VirtualFunctions),
 		}
 		p.physicalFunctions[pfPCIAddr] = pf
 
-		for _, serviceDomain := range pff.ServiceDomains {
-			for _, capability := range pff.Capabilities {
+		for _, serviceDomain := range pFun.ServiceDomains {
+			for _, capability := range pFun.Capabilities {
 				pf.tokenNames[path.Join(serviceDomain, capability)] = struct{}{}
 			}
 		}
 
-		for vfPCIAddr, iommuGroup := range pff.VirtualFunctions {
+		for _, vFun := range pFun.VirtualFunctions {
 			vf := &virtualFunction{
-				pciAddr:    vfPCIAddr,
+				pciAddr:    vFun.Address,
 				pfPCIAddr:  pfPCIAddr,
-				iommuGroup: iommuGroup,
+				iommuGroup: vFun.IOMMUGroup,
 			}
-			p.virtualFunctions[vfPCIAddr] = vf
+			p.virtualFunctions[vFun.Address] = vf
 
-			pf.virtualFunctions[iommuGroup] = append(pf.virtualFunctions[iommuGroup], vf)
-			p.iommuGroups[iommuGroup] = sriov.NoDriver
+			pf.virtualFunctions[vFun.IOMMUGroup] = append(pf.virtualFunctions[vFun.IOMMUGroup], vf)
+			p.iommuGroups[vFun.IOMMUGroup] = sriov.NoDriver
 		}
 	}
 
