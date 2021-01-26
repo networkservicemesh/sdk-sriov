@@ -24,6 +24,8 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/networkservicemesh/sdk/pkg/tools/logger"
+
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/kernel"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/vfio"
@@ -88,6 +90,7 @@ func TestResourcePoolServer_Request(t *testing.T) {
 		t.Run(sample.mechanism, func(t *testing.T) {
 			vfConfig := new(vfconfig.VFConfig)
 			ctx := vfconfig.WithConfig(context.TODO(), vfConfig)
+			ctx = logger.WithLog(ctx)
 
 			var pfs map[string]*sriovtest.PCIPhysicalFunction
 			_ = yamlhelper.UnmarshalFile(physicalFunctionsFilename, &pfs)

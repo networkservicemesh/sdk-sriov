@@ -33,7 +33,7 @@ import (
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/vfio"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
-	"github.com/networkservicemesh/sdk/pkg/tools/log"
+	"github.com/networkservicemesh/sdk/pkg/tools/logger"
 )
 
 const (
@@ -59,7 +59,7 @@ func NewServer(vfioDir, cgroupBaseDir string) networkservice.NetworkServiceServe
 }
 
 func (s *vfioServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
-	logEntry := log.Entry(ctx).WithField("vfioServer", "Request")
+	logEntry := logger.Log(ctx).WithField("vfioServer", "Request")
 
 	if mech := vfio.ToMechanism(request.GetConnection().GetMechanism()); mech != nil {
 		vfioMajor, vfioMinor, err := s.getDeviceNumbers(filepath.Join(s.vfioDir, vfioDevice))
@@ -154,7 +154,7 @@ func (s *vfioServer) Close(ctx context.Context, conn *networkservice.Connection)
 }
 
 func (s *vfioServer) close(ctx context.Context, conn *networkservice.Connection) {
-	logEntry := log.Entry(ctx).WithField("vfioServer", "close")
+	logEntry := logger.Log(ctx).WithField("vfioServer", "close")
 
 	if mech := vfio.ToMechanism(conn.GetMechanism()); mech != nil {
 		cgroupDirPattern := filepath.Join(s.cgroupBaseDir, mech.GetCgroupDir())

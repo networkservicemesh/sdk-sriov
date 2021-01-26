@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/networkservicemesh/sdk/pkg/tools/log"
+	"github.com/networkservicemesh/sdk/pkg/tools/logger/logruslogger"
 	"github.com/pkg/errors"
 
 	"github.com/networkservicemesh/sdk-sriov/pkg/tools/yamlhelper"
@@ -96,7 +96,7 @@ type VirtualFunction struct {
 
 // ReadConfig reads configuration from file
 func ReadConfig(ctx context.Context, configFile string) (*Config, error) {
-	logEntry := log.Entry(ctx).WithField("Config", "ReadConfig")
+	_, logEntry := logruslogger.New(ctx)
 
 	cfg := &Config{}
 	if err := yamlhelper.UnmarshalFile(configFile, cfg); err != nil {
@@ -118,7 +118,7 @@ func ReadConfig(ctx context.Context, configFile string) (*Config, error) {
 		}
 	}
 
-	logEntry.Infof("unmarshalled Config: %+v", cfg)
+	logEntry.WithField("Config", "ReadConfig").Infof("unmarshalled Config: %+v", cfg)
 
 	return cfg, nil
 }
