@@ -30,7 +30,7 @@ import (
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/vfio"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
-	"github.com/networkservicemesh/sdk/pkg/tools/log"
+	"github.com/networkservicemesh/sdk/pkg/tools/logger"
 )
 
 type vfioClient struct {
@@ -52,7 +52,7 @@ func NewClient(vfioDir, cgroupDir string) networkservice.NetworkServiceClient {
 }
 
 func (c *vfioClient) Request(ctx context.Context, request *networkservice.NetworkServiceRequest, opts ...grpc.CallOption) (*networkservice.Connection, error) {
-	logEntry := log.Entry(ctx).WithField("vfioClient", "Request")
+	logEntry := logger.Log(ctx).WithField("vfioClient", "Request")
 
 	request.MechanismPreferences = append(request.MechanismPreferences, vfio.New(c.cgroupDir))
 
