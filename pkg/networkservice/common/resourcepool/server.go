@@ -28,7 +28,7 @@ import (
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/vfio"
 	"github.com/networkservicemesh/sdk-kernel/pkg/kernel/networkservice/vfconfig"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
-	"github.com/networkservicemesh/sdk/pkg/tools/logger"
+	"github.com/networkservicemesh/sdk/pkg/tools/log"
 
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov"
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/config"
@@ -79,7 +79,7 @@ func NewServer(
 }
 
 func (s *resourcePoolServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
-	logEntry := logger.Log(ctx).WithField("resourcePoolServer", "Request")
+	logger := log.FromContext(ctx).WithField("resourcePoolServer", "Request")
 
 	tokenID, ok := request.GetConnection().GetMechanism().GetParameters()[TokenIDKey]
 	if !ok {
@@ -91,12 +91,12 @@ func (s *resourcePoolServer) Request(ctx context.Context, request *networkservic
 		s.resourceLock.Lock()
 		defer s.resourceLock.Unlock()
 
-		logEntry.Infof("trying to select VF for %v", s.driverType)
+		logger.Infof("trying to select VF for %v", s.driverType)
 		vf, err := s.selectVF(request.GetConnection().GetId(), vfConfig, tokenID)
 		if err != nil {
 			return err
 		}
-		logEntry.Infof("selected VF: %+v", vf)
+		logger.Infof("selected VF: %+v", vf)
 
 		iommuGroup, err := vf.GetIOMMUGroup()
 		if err != nil {
