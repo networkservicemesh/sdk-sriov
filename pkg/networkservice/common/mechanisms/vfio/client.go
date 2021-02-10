@@ -30,7 +30,7 @@ import (
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/vfio"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
-	"github.com/networkservicemesh/sdk/pkg/tools/logger"
+	"github.com/networkservicemesh/sdk/pkg/tools/log"
 )
 
 type vfioClient struct {
@@ -52,7 +52,7 @@ func NewClient(vfioDir, cgroupDir string) networkservice.NetworkServiceClient {
 }
 
 func (c *vfioClient) Request(ctx context.Context, request *networkservice.NetworkServiceRequest, opts ...grpc.CallOption) (*networkservice.Connection, error) {
-	logEntry := logger.Log(ctx).WithField("vfioClient", "Request")
+	logger := log.FromContext(ctx).WithField("vfioClient", "Request")
 
 	request.MechanismPreferences = append(request.MechanismPreferences, vfio.New(c.cgroupDir))
 
@@ -63,7 +63,7 @@ func (c *vfioClient) Request(ctx context.Context, request *networkservice.Networ
 
 	if mech := vfio.ToMechanism(conn.GetMechanism()); mech != nil {
 		if err := os.Mkdir(c.vfioDir, mkdirPerm); err != nil && !os.IsExist(err) {
-			logEntry.Error("failed to create vfio directory")
+			logger.Error("failed to create vfio directory")
 			return nil, err
 		}
 
@@ -72,7 +72,7 @@ func (c *vfioClient) Request(ctx context.Context, request *networkservice.Networ
 			unix.S_IFCHR|mknodPerm,
 			int(unix.Mkdev(mech.GetVfioMajor(), mech.GetVfioMinor())),
 		); err != nil && !os.IsExist(err) {
-			logEntry.Errorf("failed to mknod device: %v", vfioDevice)
+			logger.Errorf("failed to mknod device: %v", vfioDevice)
 			return nil, err
 		}
 
@@ -82,7 +82,7 @@ func (c *vfioClient) Request(ctx context.Context, request *networkservice.Networ
 			unix.S_IFCHR|mknodPerm,
 			int(unix.Mkdev(mech.GetDeviceMajor(), mech.GetDeviceMinor())),
 		); err != nil && !os.IsExist(err) {
-			logEntry.Errorf("failed to mknod device: %v", vfioDevice)
+			logger.Errorf("failed to mknod device: %v", vfioDevice)
 			return nil, err
 		}
 	}

@@ -33,7 +33,7 @@ import (
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/vfio"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
-	"github.com/networkservicemesh/sdk/pkg/tools/logger"
+	"github.com/networkservicemesh/sdk/pkg/tools/log"
 )
 
 const (
@@ -59,19 +59,19 @@ func NewServer(vfioDir, cgroupBaseDir string) networkservice.NetworkServiceServe
 }
 
 func (s *vfioServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
-	logEntry := logger.Log(ctx).WithField("vfioServer", "Request")
+	logger := log.FromContext(ctx).WithField("vfioServer", "Request")
 
 	if mech := vfio.ToMechanism(request.GetConnection().GetMechanism()); mech != nil {
 		vfioMajor, vfioMinor, err := s.getDeviceNumbers(filepath.Join(s.vfioDir, vfioDevice))
 		if err != nil {
-			logEntry.Errorf("failed to get device numbers for the device: %v", vfioDevice)
+			logger.Errorf("failed to get device numbers for the device: %v", vfioDevice)
 			return nil, err
 		}
 
 		igid := mech.GetParameters()[vfio.IommuGroupKey]
 		deviceMajor, deviceMinor, err := s.getDeviceNumbers(filepath.Join(s.vfioDir, igid))
 		if err != nil {
-			logEntry.Errorf("failed to get device numbers for the device: %v", igid)
+			logger.Errorf("failed to get device numbers for the device: %v", igid)
 			return nil, err
 		}
 
@@ -82,14 +82,14 @@ func (s *vfioServer) Request(ctx context.Context, request *networkservice.Networ
 			defer s.lock.Unlock()
 
 			if err := s.deviceAllow(cgroupDirPattern, vfioMajor, vfioMinor); err != nil {
-				logEntry.Errorf("failed to allow device for the client: %v", vfioDevice)
+				logger.Errorf("failed to allow device for the client: %v", vfioDevice)
 				return err
 			}
 			mech.SetVfioMajor(vfioMajor)
 			mech.SetVfioMinor(vfioMinor)
 
 			if err := s.deviceAllow(cgroupDirPattern, deviceMajor, deviceMinor); err != nil {
-				logEntry.Errorf("failed to allow device for the client: %v", igid)
+				logger.Errorf("failed to allow device for the client: %v", igid)
 				_ = s.deviceDeny(cgroupDirPattern, vfioMajor, vfioMinor)
 				return err
 			}
@@ -154,7 +154,7 @@ func (s *vfioServer) Close(ctx context.Context, conn *networkservice.Connection)
 }
 
 func (s *vfioServer) close(ctx context.Context, conn *networkservice.Connection) {
-	logEntry := logger.Log(ctx).WithField("vfioServer", "close")
+	logger := log.FromContext(ctx).WithField("vfioServer", "close")
 
 	if mech := vfio.ToMechanism(conn.GetMechanism()); mech != nil {
 		cgroupDirPattern := filepath.Join(s.cgroupBaseDir, mech.GetCgroupDir())
@@ -166,7 +166,7 @@ func (s *vfioServer) close(ctx context.Context, conn *networkservice.Connection)
 		vfioMinor := mech.GetVfioMinor()
 		if !(vfioMajor == 0 && vfioMinor == 0) {
 			if err := s.deviceDeny(cgroupDirPattern, vfioMajor, vfioMinor); err != nil {
-				logEntry.Warnf("failed to deny device for the client: %v", vfioDevice)
+				logger.Warnf("failed to deny device for the client: %v", vfioDevice)
 			}
 		}
 
@@ -174,7 +174,7 @@ func (s *vfioServer) close(ctx context.Context, conn *networkservice.Connection)
 		deviceMinor := mech.GetDeviceMinor()
 		if !(deviceMajor == 0 && deviceMinor == 0) {
 			if err := s.deviceDeny(cgroupDirPattern, deviceMajor, deviceMinor); err != nil {
-				logEntry.Warnf("failed to deny device for the client: %v", mech.GetIommuGroup())
+				logger.Warnf("failed to deny device for the client: %v", mech.GetIommuGroup())
 			}
 		}
 	}
