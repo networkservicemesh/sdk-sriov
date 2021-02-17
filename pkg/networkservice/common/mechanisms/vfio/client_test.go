@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Doc.ai and/or its affiliates.
+// Copyright (c) 2020-2021 Doc.ai and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -81,7 +81,7 @@ func TestVFIOClient_Request(t *testing.T) {
 	require.NoError(t, err)
 
 	client := chain.NewNetworkServiceClient(
-		vfio.NewClient(tmpDir, cgroupDir),
+		vfio.NewClient(vfio.WithVFIODir(tmpDir), vfio.WithCgroupDir(cgroupDir)),
 		networkservice.NewNetworkServiceClient(cc),
 	)
 
