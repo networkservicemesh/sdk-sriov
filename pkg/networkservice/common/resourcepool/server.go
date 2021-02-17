@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Doc.ai and/or its affiliates.
+// Copyright (c) 2020-2021 Doc.ai and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -103,7 +103,7 @@ func (s *resourcePoolServer) Request(ctx context.Context, request *networkservic
 			return errors.Wrapf(err, "failed to get VF IOMMU group: %v", vf.GetPCIAddress())
 		}
 
-		if err := s.pciPool.BindDriver(ctx, iommuGroup, s.driverType); err != nil {
+		if err = s.pciPool.BindDriver(ctx, iommuGroup, s.driverType); err != nil {
 			return err
 		}
 

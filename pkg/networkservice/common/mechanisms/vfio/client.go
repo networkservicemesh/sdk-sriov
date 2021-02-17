@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Doc.ai and/or its affiliates.
+// Copyright (c) 2020-2021 Doc.ai and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -24,6 +24,7 @@ import (
 	"path/filepath"
 
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/inject/injecterror"
 	"golang.org/x/sys/unix"
 	"google.golang.org/grpc"
 
@@ -44,11 +45,23 @@ const (
 )
 
 // NewClient returns a new VFIO client chain element
-func NewClient(vfioDir, cgroupDir string) networkservice.NetworkServiceClient {
-	return &vfioClient{
-		vfioDir:   vfioDir,
-		cgroupDir: cgroupDir,
+func NewClient(options ...Option) networkservice.NetworkServiceClient {
+	c := &vfioClient{
+		vfioDir: "/dev/vfio",
 	}
+
+	for _, option := range options {
+		option(c)
+	}
+
+	if c.cgroupDir == "" {
+		var err error
+		if c.cgroupDir, err = cgroupDirPath(); err != nil {
+			return injecterror.NewClient(err)
+		}
+	}
+
+	return c
 }
 
 func (c *vfioClient) Request(ctx context.Context, request *networkservice.NetworkServiceRequest, opts ...grpc.CallOption) (*networkservice.Connection, error) {
