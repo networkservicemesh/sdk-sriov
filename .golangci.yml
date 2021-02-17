@@ -8,12 +8,9 @@ linters-settings:
   goheader:
     template-path: ".ci/license/template.txt"
     values:
-      const:
-        year: 2020
       regexp:
-        year-range: ((\d\d\d\d-{{year}})|({{year}}))
         company: .*
-        copyright-holder: Copyright \(c\) {{year-range}} {{company}}\n\n
+        copyright-holder: Copyright \(c\) ({{year-range}}) {{company}}\n\n
         copyright-holders: ({{copyright-holder}})+
   errcheck:
     check-type-assertions: false
@@ -30,7 +27,7 @@ linters-settings:
   golint:
     min-confidence: 0.8
   goimports:
-    local-prefixes: github.com/networkservicemesh/sdk-sriov/
+    local-prefixes: github.com/networkservicemesh/sdk-sriov
   gocyclo:
     min-complexity: 15
   maligned:
@@ -112,7 +109,7 @@ linters-settings:
       - regexpPattern
       - singleCaseSwitch
       - sloppyLen
-      - sloppyReassign
+      # - sloppyReassign
       - stringXbytes
       - switchTrue
       - typeAssertChain
@@ -169,13 +166,3 @@ issues:
   exclude-use-default: false
   max-issues-per-linter: 0
   max-same-issues: 0
-  exclude-rules:
-    - path: ./
-      linters:
-        - gocritic
-      text: "sloppyReassign: re-assignment to `err` can be replaced with `err :="
-    - path: ./
-      linters:
-        - gocritic
-        - govet
-      text: "shadow: declaration of \"err\" shadows declaration"
