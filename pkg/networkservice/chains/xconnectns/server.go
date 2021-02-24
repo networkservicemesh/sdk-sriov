@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Doc.ai and/or its affiliates.
+// Copyright (c) 2020-2021 Doc.ai and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -16,8 +16,8 @@
 
 //+build !windows
 
-// Package sriovns provides an Endpoint implementing the SR-IOV Forwarder networks service
-package sriovns
+// Package xconnectns provides an Endpoint implementing the SR-IOV Forwarder networks service
+package xconnectns
 
 import (
 	"context"
@@ -90,11 +90,11 @@ func NewServer(
 			clienturl.NewServer(clientURL),
 			connect.NewServer(ctx,
 				client.NewCrossConnectClientFactory(
-					name,
-					// What to call onHeal
-					addressof.NetworkServiceClient(adapters.NewServerToClient(rv)),
-					tokenGenerator,
-					noop.NewClient(class),
+					client.WithName(name),
+					client.WithHeal(addressof.NetworkServiceClient(adapters.NewServerToClient(rv))),
+					client.WithAdditionalFunctionality(
+						noop.NewClient(class),
+					),
 				),
 				clientDialOptions...,
 			),
