@@ -67,7 +67,16 @@ func NewClient(options ...Option) networkservice.NetworkServiceClient {
 func (c *vfioClient) Request(ctx context.Context, request *networkservice.NetworkServiceRequest, opts ...grpc.CallOption) (*networkservice.Connection, error) {
 	logger := log.FromContext(ctx).WithField("vfioClient", "Request")
 
-	request.MechanismPreferences = append(request.MechanismPreferences, vfio.New(c.cgroupDir))
+	var hasMechanism bool
+	for _, preference := range request.MechanismPreferences {
+		if mech := vfio.ToMechanism(preference); mech != nil {
+			hasMechanism = true
+			mech.SetCgroupDir(c.cgroupDir)
+		}
+	}
+	if !hasMechanism {
+		request.MechanismPreferences = append(request.MechanismPreferences, vfio.New(c.cgroupDir))
+	}
 
 	conn, err := next.Client(ctx).Request(ctx, request, opts...)
 	if err != nil {
