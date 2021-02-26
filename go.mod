@@ -5,7 +5,7 @@ go 1.15
 require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/golang/protobuf v1.4.3
-	github.com/google/uuid v1.1.2
+	github.com/google/uuid v1.2.0
 	github.com/networkservicemesh/api v0.0.0-20210218170701-1a72f1cba074
 	github.com/networkservicemesh/sdk v0.0.0-20210226095245-acdecd4599ac
 	github.com/networkservicemesh/sdk-kernel v0.0.0-20210226095937-76847e2a604b

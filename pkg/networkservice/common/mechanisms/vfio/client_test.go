@@ -43,6 +43,7 @@ import (
 
 const (
 	serverSocket = "server.socket"
+	cgroupDir    = "cgroup_dir"
 )
 
 func testServer(ctx context.Context, tmpDir string) (grpc.ClientConnInterface, error) {

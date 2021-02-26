@@ -32,6 +32,8 @@ import (
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/vfio"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
+
+	"github.com/networkservicemesh/sdk-sriov/pkg/tools/cgroup"
 )
 
 type vfioClient struct {
@@ -56,7 +58,7 @@ func NewClient(options ...Option) networkservice.NetworkServiceClient {
 
 	if c.cgroupDir == "" {
 		var err error
-		if c.cgroupDir, err = cgroupDirPath(); err != nil {
+		if c.cgroupDir, err = cgroup.DirPath(); err != nil {
 			return injecterror.NewClient(err)
 		}
 	}

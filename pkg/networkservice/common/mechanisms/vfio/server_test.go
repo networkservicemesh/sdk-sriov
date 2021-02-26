@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Doc.ai and/or its affiliates.
+// Copyright (c) 2020-2021 Doc.ai and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -20,72 +20,57 @@ package vfio_test
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
-	"reflect"
-	"sync"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/unix"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/cls"
 	vfiomech "github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/vfio"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
-	"github.com/stretchr/testify/require"
-	"golang.org/x/sys/unix"
 
 	"github.com/networkservicemesh/sdk-sriov/pkg/networkservice/common/mechanisms/vfio"
-	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/sriovtest"
+	"github.com/networkservicemesh/sdk-sriov/pkg/tools/cgroup"
 )
 
-const (
-	deviceAllowFile    = "devices.allow"
-	deviceDenyFile     = "devices.deny"
-	deviceStringFormat = "c %d:%d rwm"
-)
+func testCgroups(ctx context.Context, t *testing.T, tmpDir string) (notAllowed, allowed, wider *cgroup.Cgroup) {
+	var err error
 
-func testVFIOServer(ctx context.Context, t *testing.T, allowedDevices *allowedDevices) (server networkservice.NetworkServiceServer, tmpDir string) {
-	tmpDir = filepath.Join(os.TempDir(), t.Name())
-	err := os.MkdirAll(filepath.Join(tmpDir, cgroupDir), 0750)
+	notAllowed, err = cgroup.NewFakeCgroup(ctx, filepath.Join(tmpDir, uuid.NewString()))
 	require.NoError(t, err)
 
-	server = chain.NewNetworkServiceServer(
+	allowed, err = cgroup.NewFakeCgroup(ctx, filepath.Join(tmpDir, uuid.NewString()))
+	require.NoError(t, err)
+
+	require.NoError(t, allowed.Allow(1, 2))
+	require.NoError(t, allowed.Allow(3, 4))
+
+	wider, err = cgroup.NewFakeWideCgroup(ctx, filepath.Join(tmpDir, uuid.NewString()))
+	require.NoError(t, err)
+
+	return notAllowed, allowed, wider
+}
+
+func TestVFIOServer_Request(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.TODO(), 5*time.Second)
+	defer cancel()
+
+	tmpDir := filepath.Join(os.TempDir(), t.Name())
+	defer func() { _ = os.RemoveAll(tmpDir) }()
+
+	server := chain.NewNetworkServiceServer(
 		mechanisms.NewServer(map[string]networkservice.NetworkServiceServer{
 			vfiomech.MECHANISM: vfio.NewServer(tmpDir, tmpDir),
 		}),
 	)
 
-	err = sriovtest.InputFileAPI(ctx, filepath.Join(tmpDir, cgroupDir, deviceAllowFile), func(s string) {
-		var major, minor int
-		_, _ = fmt.Sscanf(s, deviceStringFormat, &major, &minor)
-		allowedDevices.Lock()
-		allowedDevices.devices[fmt.Sprintf("%d:%d", major, minor)] = true
-		allowedDevices.Unlock()
-	})
-	require.NoError(t, err)
-	err = sriovtest.InputFileAPI(ctx, filepath.Join(tmpDir, cgroupDir, deviceDenyFile), func(s string) {
-		var major, minor int
-		_, _ = fmt.Sscanf(s, deviceStringFormat, &major, &minor)
-		allowedDevices.Lock()
-		delete(allowedDevices.devices, fmt.Sprintf("%d:%d", major, minor))
-		allowedDevices.Unlock()
-	})
-	require.NoError(t, err)
-
-	return server, tmpDir
-}
-
-func TestVFIOServer_Request(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
-	defer cancel()
-
-	allowedDevices := &allowedDevices{
-		devices: map[string]bool{},
-	}
-	server, tmpDir := testVFIOServer(ctx, t, allowedDevices)
-	defer func() { _ = os.RemoveAll(tmpDir) }()
+	notAllowed, allowed, wider := testCgroups(ctx, t, tmpDir)
 
 	err := unix.Mknod(filepath.Join(tmpDir, vfioDevice), unix.S_IFCHR|0666, int(unix.Mkdev(1, 2)))
 	require.NoError(t, err)
@@ -114,30 +99,53 @@ func TestVFIOServer_Request(t *testing.T) {
 	require.Equal(t, uint32(3), mech.GetDeviceMajor())
 	require.Equal(t, uint32(4), mech.GetDeviceMinor())
 
+	require.Never(t, func() bool {
+		allowed12, err := allowed.IsAllowed(1, 2)
+		require.NoError(t, err)
+
+		allowed34, err := allowed.IsAllowed(3, 4)
+		require.NoError(t, err)
+
+		return !allowed12 || !allowed34
+	}, 100*time.Millisecond, 10*time.Millisecond)
+
+	require.Never(t, func() bool {
+		wider12, err := wider.IsAllowed(1, 2)
+		require.NoError(t, err)
+
+		wider34, err := wider.IsAllowed(3, 4)
+		require.NoError(t, err)
+
+		return !wider12 || !wider34
+	}, 100*time.Millisecond, 10*time.Millisecond)
+
 	require.Eventually(t, func() bool {
-		allowedDevices.Lock()
-		defer allowedDevices.Unlock()
-		return reflect.DeepEqual(map[string]bool{
-			"1:2": true,
-			"3:4": true,
-		}, allowedDevices.devices)
-	}, time.Second, 10*time.Millisecond)
+		_12, err := notAllowed.IsAllowed(1, 2)
+		require.NoError(t, err)
+
+		_34, err := notAllowed.IsAllowed(3, 4)
+		require.NoError(t, err)
+
+		return _12 && _34
+	}, 100*time.Millisecond, 10*time.Millisecond)
 
 	require.NoError(t, ctx.Err())
 }
 
 func TestVFIOServer_Close(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.TODO(), 5*time.Second)
 	defer cancel()
 
-	allowedDevices := &allowedDevices{
-		devices: map[string]bool{
-			"1:2": true,
-			"3:4": true,
-		},
-	}
-	server, tmpDir := testVFIOServer(ctx, t, allowedDevices)
+	tmpDir := filepath.Join(os.TempDir(), t.Name())
 	defer func() { _ = os.RemoveAll(tmpDir) }()
+
+	server := chain.NewNetworkServiceServer(
+		mechanisms.NewServer(map[string]networkservice.NetworkServiceServer{
+			vfiomech.MECHANISM: vfio.NewServer(tmpDir, tmpDir),
+		}),
+	)
+
+	notAllowed, allowed, wider := testCgroups(ctx, t, tmpDir)
 
 	conn := &networkservice.Connection{
 		Mechanism: &networkservice.Mechanism{
@@ -157,17 +165,35 @@ func TestVFIOServer_Close(t *testing.T) {
 	_, err := server.Close(ctx, conn)
 	require.NoError(t, err)
 
+	require.Never(t, func() bool {
+		notAllowed12, err := notAllowed.IsAllowed(1, 2)
+		require.NoError(t, err)
+
+		notAllowed34, err := notAllowed.IsAllowed(3, 4)
+		require.NoError(t, err)
+
+		return notAllowed12 || notAllowed34
+	}, 100*time.Millisecond, 10*time.Millisecond)
+
+	require.Never(t, func() bool {
+		wider12, err := wider.IsAllowed(1, 2)
+		require.NoError(t, err)
+
+		wider34, err := wider.IsAllowed(3, 4)
+		require.NoError(t, err)
+
+		return !wider12 || !wider34
+	}, 100*time.Millisecond, 10*time.Millisecond)
+
 	require.Eventually(t, func() bool {
-		allowedDevices.Lock()
-		defer allowedDevices.Unlock()
-		return reflect.DeepEqual(map[string]bool{}, allowedDevices.devices)
-	}, time.Second, 10*time.Millisecond)
+		allowed12, err := allowed.IsAllowed(1, 2)
+		require.NoError(t, err)
+
+		allowed34, err := allowed.IsAllowed(3, 4)
+		require.NoError(t, err)
+
+		return !allowed12 && !allowed34
+	}, 100*time.Millisecond, 10*time.Millisecond)
 
 	require.NoError(t, ctx.Err())
-}
-
-type allowedDevices struct {
-	devices map[string]bool
-
-	sync.Mutex
 }
