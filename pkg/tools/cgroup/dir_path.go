@@ -14,7 +14,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package vfio
+//+build !windows
+
+package cgroup
 
 import (
 	"bufio"
@@ -28,7 +30,8 @@ import (
 
 var devicesCgroup = regexp.MustCompile("^[1-9][0-9]*?:devices:(.*)$")
 
-func cgroupDirPath() (string, error) {
+// DirPath returns cgroup dir path pattern matching all pod containers
+func DirPath() (string, error) {
 	cgroupInfo, err := os.OpenFile("/proc/self/cgroup", os.O_RDONLY, 0)
 	if err != nil {
 		return "", errors.Wrap(err, "error opening cgroup info file")
@@ -36,13 +39,13 @@ func cgroupDirPath() (string, error) {
 	for scanner := bufio.NewScanner(cgroupInfo); scanner.Scan(); {
 		line := scanner.Text()
 		if devicesCgroup.MatchString(line) {
-			return podCgroupDirPath(devicesCgroup.FindStringSubmatch(line)[1]), nil
+			return podDirPath(devicesCgroup.FindStringSubmatch(line)[1]), nil
 		}
 	}
 	return "", errors.New("can't find out cgroup directory")
 }
 
-func podCgroupDirPath(containerCgroupDirPath string) string {
+func podDirPath(containerCgroupDirPath string) string {
 	split := strings.Split(containerCgroupDirPath, string(filepath.Separator))
 	split[len(split)-1] = "*" // any container match
 	return filepath.Join(split...)

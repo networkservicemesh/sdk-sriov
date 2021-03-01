@@ -32,6 +32,8 @@ import (
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/vfio"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
+
+	"github.com/networkservicemesh/sdk-sriov/pkg/tools/cgroup"
 )
 
 type vfioClient struct {
@@ -56,7 +58,7 @@ func NewClient(options ...Option) networkservice.NetworkServiceClient {
 
 	if c.cgroupDir == "" {
 		var err error
-		if c.cgroupDir, err = cgroupDirPath(); err != nil {
+		if c.cgroupDir, err = cgroup.DirPath(); err != nil {
 			return injecterror.NewClient(err)
 		}
 	}
@@ -67,7 +69,16 @@ func NewClient(options ...Option) networkservice.NetworkServiceClient {
 func (c *vfioClient) Request(ctx context.Context, request *networkservice.NetworkServiceRequest, opts ...grpc.CallOption) (*networkservice.Connection, error) {
 	logger := log.FromContext(ctx).WithField("vfioClient", "Request")
 
-	request.MechanismPreferences = append(request.MechanismPreferences, vfio.New(c.cgroupDir))
+	var hasMechanism bool
+	for _, preference := range request.MechanismPreferences {
+		if mech := vfio.ToMechanism(preference); mech != nil {
+			hasMechanism = true
+			mech.SetCgroupDir(c.cgroupDir)
+		}
+	}
+	if !hasMechanism {
+		request.MechanismPreferences = append(request.MechanismPreferences, vfio.New(c.cgroupDir))
+	}
 
 	conn, err := next.Client(ctx).Request(ctx, request, opts...)
 	if err != nil {

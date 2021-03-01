@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Doc.ai and/or its affiliates.
+// Copyright (c) 2020-2021 Doc.ai and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -16,8 +16,7 @@
 
 //+build !windows
 
-// Package sriovtest provides utils for SR-IOV testing
-package sriovtest
+package cgroup
 
 import (
 	"bufio"
@@ -29,13 +28,12 @@ import (
 )
 
 const (
-	mkfifoPerm = 0666
+	createPerm = 0666
 )
 
-// InputFileAPI calls consumer when someone writes into filePath File
-func InputFileAPI(ctx context.Context, filePath string, consumer func(string)) error {
+func inputFileAPI(ctx context.Context, filePath string, consumer func(string)) error {
 	_ = os.Remove(filePath)
-	err := unix.Mkfifo(filePath, mkfifoPerm)
+	err := unix.Mkfifo(filePath, createPerm)
 	if err != nil {
 		return err
 	}
@@ -76,10 +74,11 @@ func readFile(ctx context.Context, file *os.File) <-chan string {
 	return ch
 }
 
-// OutputFileAPI rewrites filePath File every time supplier called
-func OutputFileAPI(filePath string) (supplier func(string) error) {
+type supplierFunc func(s string) error
+
+func outputFileAPI(filePath string) (supplier supplierFunc) {
 	supplier = func(data string) error {
-		return ioutil.WriteFile(filePath, []byte(data), 0)
+		return ioutil.WriteFile(filePath, []byte(data), createPerm)
 	}
 	return supplier
 }

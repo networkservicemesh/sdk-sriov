@@ -22,7 +22,6 @@ package vfio
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"path/filepath"
 	"sync"
 
@@ -34,12 +33,8 @@ import (
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/vfio"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
-)
 
-const (
-	deviceAllowFile    = "devices.allow"
-	deviceDenyFile     = "devices.deny"
-	deviceStringFormat = "c %v:%v rwm\n"
+	"github.com/networkservicemesh/sdk-sriov/pkg/tools/cgroup"
 )
 
 type vfioServer struct {
@@ -62,6 +57,10 @@ func (s *vfioServer) Request(ctx context.Context, request *networkservice.Networ
 	logger := log.FromContext(ctx).WithField("vfioServer", "Request")
 
 	if mech := vfio.ToMechanism(request.GetConnection().GetMechanism()); mech != nil {
+		if mech.GetCgroupDir() == "" {
+			return nil, errors.New("expected client cgroup directory set")
+		}
+
 		vfioMajor, vfioMinor, err := s.getDeviceNumbers(filepath.Join(s.vfioDir, vfioDevice))
 		if err != nil {
 			logger.Errorf("failed to get device numbers for the device: %v", vfioDevice)
@@ -120,21 +119,27 @@ func (s *vfioServer) getDeviceNumbers(deviceFile string) (major, minor uint32, e
 }
 
 func (s *vfioServer) deviceAllow(cgroupDirPattern string, major, minor uint32) error {
-	deviceFiles, err := filepath.Glob(filepath.Join(cgroupDirPattern, deviceAllowFile))
-	if err != nil || len(deviceFiles) == 0 {
+	cgroups, err := cgroup.NewCgroups(cgroupDirPattern)
+	if err != nil || len(cgroups) == 0 {
 		return errors.Wrapf(err, "no cgroupDir found: %s", cgroupDirPattern)
 	}
 
-	for _, deviceFile := range deviceFiles {
-		fmt.Printf("file: %s\n", deviceFile)
-		key := deviceKey(filepath.Dir(deviceFile), major, minor)
+	for _, cg := range cgroups {
+		isWider, err := cg.IsWiderThan(major, minor)
+		if err != nil {
+			return err
+		}
+		if isWider {
+			continue
+		}
+
+		key := deviceKey(cg.Path, major, minor)
 		if counter, ok := s.deviceCounters[key]; ok && counter > 0 {
 			s.deviceCounters[key] = counter + 1
 			return nil
 		}
 
-		deviceString := fmt.Sprintf(deviceStringFormat, major, minor)
-		if err := ioutil.WriteFile(deviceFile, []byte(deviceString), 0); err != nil {
+		if err := cg.Allow(major, minor); err != nil {
 			return err
 		}
 
@@ -181,20 +186,27 @@ func (s *vfioServer) close(ctx context.Context, conn *networkservice.Connection)
 }
 
 func (s *vfioServer) deviceDeny(cgroupDirPattern string, major, minor uint32) error {
-	deviceFiles, err := filepath.Glob(filepath.Join(cgroupDirPattern, deviceDenyFile))
-	if err != nil || len(deviceFiles) == 0 {
+	cgroups, err := cgroup.NewCgroups(cgroupDirPattern)
+	if err != nil || len(cgroups) == 0 {
 		return errors.Wrapf(err, "no cgroupDir found: %s", cgroupDirPattern)
 	}
 
-	for _, deviceFile := range deviceFiles {
-		key := deviceKey(filepath.Dir(deviceFile), major, minor)
+	for _, cg := range cgroups {
+		isWider, err := cg.IsWiderThan(major, minor)
+		if err != nil {
+			return err
+		}
+		if isWider {
+			continue
+		}
+
+		key := deviceKey(cg.Path, major, minor)
 		s.deviceCounters[key]--
 		if s.deviceCounters[key] > 0 {
 			return nil
 		}
 
-		deviceString := fmt.Sprintf(deviceStringFormat, major, minor)
-		if err := ioutil.WriteFile(deviceFile, []byte(deviceString), 0); err != nil {
+		if err := cg.Deny(major, minor); err != nil {
 			return err
 		}
 	}
