@@ -127,16 +127,16 @@ func NewServer(
 		ipcontext.NewServer(),
 	)
 
-	rv.Endpoint = endpoint.NewServer(
-		ctx,
-		name,
-		authzServer,
-		tokenGenerator,
-		mechanisms.NewServer(map[string]networkservice.NetworkServiceServer{
-			kernel.MECHANISM:   sriovChain,
-			vfiomech.MECHANISM: sriovChain,
-			noopmech.MECHANISM: connectChainFactory(cls.LOCAL),
-		}),
+	rv.Endpoint = endpoint.NewServer(ctx, tokenGenerator,
+		endpoint.WithName(name),
+		endpoint.WithAuthorizeServer(authzServer),
+		endpoint.WithAdditionalFunctionality(
+			mechanisms.NewServer(map[string]networkservice.NetworkServiceServer{
+				kernel.MECHANISM:   sriovChain,
+				vfiomech.MECHANISM: sriovChain,
+				noopmech.MECHANISM: connectChainFactory(cls.LOCAL),
+			}),
+		),
 	)
 
 	return rv
