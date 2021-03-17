@@ -7,8 +7,8 @@ require (
 	github.com/golang/protobuf v1.4.3
 	github.com/google/uuid v1.2.0
 	github.com/networkservicemesh/api v0.0.0-20210305165706-bcfdc8d78700
-	github.com/networkservicemesh/sdk v0.0.0-20210315171752-01cd1e0db8e4
-	github.com/networkservicemesh/sdk-kernel v0.0.0-20210315172041-85cc8783ed42
+	github.com/networkservicemesh/sdk v0.0.0-20210317132006-b49513c2d75c
+	github.com/networkservicemesh/sdk-kernel v0.0.0-20210317132606-cc99f54fabec
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.6.1
 	golang.org/x/exp v0.0.0-20191030013958-a1ab85dbe136 // indirect
