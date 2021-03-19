@@ -96,7 +96,7 @@ func NewServer(
 						noop.NewClient(class),
 					),
 				),
-				clientDialOptions...,
+				connect.WithDialOptions(clientDialOptions...),
 			),
 		)
 	}
