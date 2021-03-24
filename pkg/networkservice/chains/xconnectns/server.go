@@ -40,6 +40,7 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/networkservice/chains/endpoint"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/clienturl"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/connect"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/common/heal"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms/recvfd"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/adapters"
@@ -88,10 +89,10 @@ func NewServer(
 	connectChainFactory := func(class string) networkservice.NetworkServiceServer {
 		return chain.NewNetworkServiceServer(
 			clienturl.NewServer(clientURL),
+			heal.NewServer(ctx, addressof.NetworkServiceClient(adapters.NewServerToClient(rv))),
 			connect.NewServer(ctx,
 				client.NewCrossConnectClientFactory(
 					client.WithName(name),
-					client.WithHeal(addressof.NetworkServiceClient(adapters.NewServerToClient(rv))),
 					client.WithAdditionalFunctionality(
 						noop.NewClient(class),
 					),
