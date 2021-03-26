@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"go.uber.org/goleak"
 	"golang.org/x/sys/unix"
 	"google.golang.org/grpc"
 
@@ -46,7 +47,7 @@ const (
 	cgroupDir    = "cgroup_dir"
 )
 
-func testServer(ctx context.Context, tmpDir string) (grpc.ClientConnInterface, error) {
+func testServer(ctx context.Context, tmpDir string) (*grpc.ClientConn, error) {
 	socketURL := &url.URL{
 		Scheme: "unix",
 		Path:   filepath.Join(tmpDir, serverSocket),
@@ -70,6 +71,8 @@ func testServer(ctx context.Context, tmpDir string) (grpc.ClientConnInterface, e
 }
 
 func TestVFIOClient_Request(t *testing.T) {
+	defer goleak.VerifyNone(t, goleak.IgnoreCurrent())
+
 	ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
 	defer cancel()
 
@@ -80,6 +83,7 @@ func TestVFIOClient_Request(t *testing.T) {
 
 	cc, err := testServer(ctx, tmpDir)
 	require.NoError(t, err)
+	defer func() { _ = cc.Close() }()
 
 	client := chain.NewNetworkServiceClient(
 		vfio.NewClient(vfio.WithVFIODir(tmpDir), vfio.WithCgroupDir(cgroupDir)),
