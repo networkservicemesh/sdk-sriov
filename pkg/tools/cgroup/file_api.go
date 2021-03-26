@@ -38,7 +38,7 @@ func inputFileAPI(ctx context.Context, filePath string, consumer func(string)) e
 		return err
 	}
 
-	fd, err := unix.Open(filePath, os.O_RDWR, 0)
+	fd, err := unix.Open(filePath, unix.O_RDWR|unix.O_NONBLOCK, 0)
 	if err != nil {
 		return err
 	}

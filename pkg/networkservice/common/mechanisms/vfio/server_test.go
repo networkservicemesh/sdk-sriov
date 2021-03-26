@@ -26,17 +26,22 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/stretchr/testify/require"
-	"golang.org/x/sys/unix"
-
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/cls"
 	vfiomech "github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/vfio"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/goleak"
+	"golang.org/x/sys/unix"
 
 	"github.com/networkservicemesh/sdk-sriov/pkg/networkservice/common/mechanisms/vfio"
 	"github.com/networkservicemesh/sdk-sriov/pkg/tools/cgroup"
+)
+
+const (
+	testWait = 100 * time.Millisecond
+	testTick = testWait / 100
 )
 
 func testCgroups(ctx context.Context, t *testing.T, tmpDir string) (notAllowed, allowed, wider *cgroup.Cgroup) {
@@ -51,13 +56,35 @@ func testCgroups(ctx context.Context, t *testing.T, tmpDir string) (notAllowed, 
 	require.NoError(t, allowed.Allow(1, 2))
 	require.NoError(t, allowed.Allow(3, 4))
 
+	require.Eventually(t, func() bool {
+		allowed12, allowedErr := allowed.IsAllowed(1, 2)
+		require.NoError(t, allowedErr)
+
+		allowed34, allowedErr := allowed.IsAllowed(3, 4)
+		require.NoError(t, allowedErr)
+
+		return allowed12 && allowed34
+	}, testWait, testTick)
+
 	wider, err = cgroup.NewFakeWideCgroup(ctx, filepath.Join(tmpDir, uuid.NewString()))
 	require.NoError(t, err)
+
+	require.Eventually(t, func() bool {
+		wider12, allowedErr := wider.IsAllowed(1, 2)
+		require.NoError(t, allowedErr)
+
+		wider34, allowedErr := wider.IsAllowed(3, 4)
+		require.NoError(t, allowedErr)
+
+		return wider12 && wider34
+	}, testWait, testTick)
 
 	return notAllowed, allowed, wider
 }
 
 func TestVFIOServer_Request(t *testing.T) {
+	defer goleak.VerifyNone(t, goleak.IgnoreCurrent())
+
 	ctx, cancel := context.WithTimeout(context.TODO(), 5*time.Second)
 	defer cancel()
 
@@ -99,40 +126,39 @@ func TestVFIOServer_Request(t *testing.T) {
 	require.Equal(t, uint32(3), mech.GetDeviceMajor())
 	require.Equal(t, uint32(4), mech.GetDeviceMinor())
 
-	require.Never(t, func() bool {
-		allowed12, err := allowed.IsAllowed(1, 2)
-		require.NoError(t, err)
+	// Wait for the fileapi hooks
+	time.Sleep(testWait)
 
-		allowed34, err := allowed.IsAllowed(3, 4)
-		require.NoError(t, err)
+	allowed12, err := allowed.IsAllowed(1, 2)
+	require.NoError(t, err)
+	require.True(t, allowed12)
 
-		return !allowed12 || !allowed34
-	}, 100*time.Millisecond, 10*time.Millisecond)
+	allowed34, err := allowed.IsAllowed(3, 4)
+	require.NoError(t, err)
+	require.True(t, allowed34)
 
-	require.Never(t, func() bool {
-		wider12, err := wider.IsAllowed(1, 2)
-		require.NoError(t, err)
+	wider12, err := wider.IsAllowed(1, 2)
+	require.NoError(t, err)
+	require.True(t, wider12)
 
-		wider34, err := wider.IsAllowed(3, 4)
-		require.NoError(t, err)
+	wider34, err := wider.IsAllowed(3, 4)
+	require.NoError(t, err)
+	require.True(t, wider34)
 
-		return !wider12 || !wider34
-	}, 100*time.Millisecond, 10*time.Millisecond)
+	notAllowed12, err := notAllowed.IsAllowed(1, 2)
+	require.NoError(t, err)
+	require.True(t, notAllowed12)
 
-	require.Eventually(t, func() bool {
-		_12, err := notAllowed.IsAllowed(1, 2)
-		require.NoError(t, err)
-
-		_34, err := notAllowed.IsAllowed(3, 4)
-		require.NoError(t, err)
-
-		return _12 && _34
-	}, 100*time.Millisecond, 10*time.Millisecond)
+	notAllowed34, err := notAllowed.IsAllowed(3, 4)
+	require.NoError(t, err)
+	require.True(t, notAllowed34)
 
 	require.NoError(t, ctx.Err())
 }
 
 func TestVFIOServer_Close(t *testing.T) {
+	defer goleak.VerifyNone(t, goleak.IgnoreCurrent())
+
 	ctx, cancel := context.WithTimeout(context.TODO(), 5*time.Second)
 	defer cancel()
 
@@ -166,34 +192,30 @@ func TestVFIOServer_Close(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Never(t, func() bool {
-		notAllowed12, err := notAllowed.IsAllowed(1, 2)
-		require.NoError(t, err)
+		notAllowed12, allowedErr := notAllowed.IsAllowed(1, 2)
+		require.NoError(t, allowedErr)
 
-		notAllowed34, err := notAllowed.IsAllowed(3, 4)
-		require.NoError(t, err)
+		notAllowed34, allowedErr := notAllowed.IsAllowed(3, 4)
+		require.NoError(t, allowedErr)
 
 		return notAllowed12 || notAllowed34
-	}, 100*time.Millisecond, 10*time.Millisecond)
+	}, testWait, testTick)
 
-	require.Never(t, func() bool {
-		wider12, err := wider.IsAllowed(1, 2)
-		require.NoError(t, err)
+	wider12, err := wider.IsAllowed(1, 2)
+	require.NoError(t, err)
+	require.True(t, wider12)
 
-		wider34, err := wider.IsAllowed(3, 4)
-		require.NoError(t, err)
+	wider34, err := wider.IsAllowed(3, 4)
+	require.NoError(t, err)
+	require.True(t, wider34)
 
-		return !wider12 || !wider34
-	}, 100*time.Millisecond, 10*time.Millisecond)
+	allowed12, err := allowed.IsAllowed(1, 2)
+	require.NoError(t, err)
+	require.False(t, allowed12)
 
-	require.Eventually(t, func() bool {
-		allowed12, err := allowed.IsAllowed(1, 2)
-		require.NoError(t, err)
-
-		allowed34, err := allowed.IsAllowed(3, 4)
-		require.NoError(t, err)
-
-		return !allowed12 && !allowed34
-	}, 100*time.Millisecond, 10*time.Millisecond)
+	allowed34, err := allowed.IsAllowed(3, 4)
+	require.NoError(t, err)
+	require.False(t, allowed34)
 
 	require.NoError(t, ctx.Err())
 }

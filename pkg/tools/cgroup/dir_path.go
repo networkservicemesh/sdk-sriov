@@ -32,16 +32,19 @@ var devicesCgroup = regexp.MustCompile("^[1-9][0-9]*?:devices:(.*)$")
 
 // DirPath returns cgroup dir path pattern matching all pod containers
 func DirPath() (string, error) {
-	cgroupInfo, err := os.OpenFile("/proc/self/cgroup", os.O_RDONLY, 0)
+	cgroupInfo, err := os.Open("/proc/self/cgroup")
 	if err != nil {
 		return "", errors.Wrap(err, "error opening cgroup info file")
 	}
+	defer func() { _ = cgroupInfo.Close() }()
+
 	for scanner := bufio.NewScanner(cgroupInfo); scanner.Scan(); {
 		line := scanner.Text()
 		if devicesCgroup.MatchString(line) {
 			return podDirPath(devicesCgroup.FindStringSubmatch(line)[1]), nil
 		}
 	}
+
 	return "", errors.New("can't find out cgroup directory")
 }
 

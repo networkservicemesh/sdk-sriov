@@ -89,6 +89,7 @@ func (c *Cgroup) compareTo(dev *device) (isAllowed, isWider bool, err error) {
 	if err != nil {
 		return false, false, err
 	}
+	defer func() { _ = file.Close() }()
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
