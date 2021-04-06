@@ -84,7 +84,7 @@ func NewServer(
 	clientURL *url.URL,
 	clientDialOptions ...grpc.DialOption,
 ) endpoint.Endpoint {
-	rv := sriovServer{}
+	rv := new(sriovServer)
 
 	connectChainFactory := func(class string) networkservice.NetworkServiceServer {
 		return chain.NewNetworkServiceServer(
