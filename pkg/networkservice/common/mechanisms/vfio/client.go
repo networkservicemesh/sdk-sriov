@@ -59,7 +59,7 @@ func NewClient(options ...Option) networkservice.NetworkServiceClient {
 	if c.cgroupDir == "" {
 		var err error
 		if c.cgroupDir, err = cgroup.DirPath(); err != nil {
-			return injecterror.NewClient(err)
+			return injecterror.NewClient(injecterror.WithError(err))
 		}
 	}
 
