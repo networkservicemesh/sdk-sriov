@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2021 Doc.ai and/or its affiliates.
+// Copyright (c) 2021 Nordix Foundation.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -14,7 +14,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package resourcepool provides chain elements for to select and free VF
 package resourcepool
 
 import (
@@ -22,29 +21,29 @@ import (
 	"sync"
 
 	"github.com/golang/protobuf/ptypes/empty"
-	"github.com/pkg/errors"
-
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
+	"github.com/pkg/errors"
+	"google.golang.org/grpc"
 
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov"
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/config"
 )
 
-type resourcePoolServer struct {
+type resourcePoolClient struct {
 	resourcePool *resourcePoolConfig
 }
 
-// NewServer returns a new resource pool server chain element
-func NewServer(
+// NewClient returns a new resource pool client chain element
+func NewClient(
 	driverType sriov.DriverType,
 	resourceLock sync.Locker,
 	pciPool PCIPool,
 	resourcePool ResourcePool,
 	cfg *config.Config,
-) networkservice.NetworkServiceServer {
-	return &resourcePoolServer{resourcePool: &resourcePoolConfig{
+) networkservice.NetworkServiceClient {
+	return &resourcePoolClient{resourcePool: &resourcePoolConfig{
 		driverType:   driverType,
 		resourceLock: resourceLock,
 		pciPool:      pciPool,
@@ -54,33 +53,32 @@ func NewServer(
 	}}
 }
 
-func (s *resourcePoolServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
-	logger := log.FromContext(ctx).WithField("resourcePoolServer", "Request")
-	conn := request.GetConnection()
-	tokenID, ok := conn.GetMechanism().GetParameters()[TokenIDKey]
-	if !ok {
-		logger.Infof("no token id present for client connection %v", conn)
-		return next.Server(ctx).Request(ctx, request)
-	}
+func (i *resourcePoolClient) Request(ctx context.Context, request *networkservice.NetworkServiceRequest, opts ...grpc.CallOption) (*networkservice.Connection, error) {
+	logger := log.FromContext(ctx).WithField("resourcePoolClient", "Request")
 
-	err := assignVF(ctx, logger, conn, tokenID, s.resourcePool)
+	conn, err := next.Client(ctx).Request(ctx, request, opts...)
 	if err != nil {
-		_ = s.resourcePool.close(conn)
 		return nil, err
 	}
 
-	conn, err = next.Server(ctx).Request(ctx, request)
-	if err != nil {
-		_ = s.resourcePool.close(request.GetConnection())
+	tokenID, ok := conn.GetMechanism().GetParameters()[TokenIDKey]
+	if !ok {
+		logger.Infof("no token id present for endpoint connection %v", conn)
+		return conn, nil
 	}
 
-	return conn, err
+	err = assignVF(ctx, logger, conn, tokenID, i.resourcePool)
+	if err != nil {
+		_ = i.resourcePool.close(conn)
+		return nil, err
+	}
+
+	return conn, nil
 }
 
-func (s *resourcePoolServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {
-	_, err := next.Server(ctx).Close(ctx, conn)
-
-	closeErr := s.resourcePool.close(conn)
+func (i *resourcePoolClient) Close(ctx context.Context, conn *networkservice.Connection, opts ...grpc.CallOption) (*empty.Empty, error) {
+	rv, err := next.Client(ctx).Close(ctx, conn, opts...)
+	closeErr := i.resourcePool.close(conn)
 
 	if err != nil && closeErr != nil {
 		return nil, errors.Wrapf(err, "failed to free VF: %v", closeErr)
@@ -88,5 +86,5 @@ func (s *resourcePoolServer) Close(ctx context.Context, conn *networkservice.Con
 	if closeErr != nil {
 		return nil, errors.Wrap(closeErr, "failed to free VF")
 	}
-	return &empty.Empty{}, err
+	return rv, err
 }
