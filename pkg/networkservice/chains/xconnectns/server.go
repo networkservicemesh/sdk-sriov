@@ -1,5 +1,7 @@
 // Copyright (c) 2020-2021 Doc.ai and/or its affiliates.
 //
+// Copyright (c) 2021 Nordix Foundation.
+//
 // SPDX-License-Identifier: Apache-2.0
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,9 +33,9 @@ import (
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/kernel"
 	noopmech "github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/noop"
 	vfiomech "github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/vfio"
+	"github.com/networkservicemesh/sdk-kernel/pkg/kernel/networkservice/connectioncontextkernel"
 	"github.com/networkservicemesh/sdk-kernel/pkg/kernel/networkservice/ethernetcontext"
 	"github.com/networkservicemesh/sdk-kernel/pkg/kernel/networkservice/inject"
-	"github.com/networkservicemesh/sdk-kernel/pkg/kernel/networkservice/ipcontext"
 	"github.com/networkservicemesh/sdk-kernel/pkg/kernel/networkservice/netns"
 	"github.com/networkservicemesh/sdk-kernel/pkg/kernel/networkservice/rename"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/chains/client"
@@ -125,7 +127,7 @@ func NewServer(
 		// now setup VF interface, so we do it in the client net NS
 		netns.NewServer(),
 		rename.NewServer(),
-		ipcontext.NewServer(),
+		connectioncontextkernel.NewServer(),
 	)
 
 	rv.Endpoint = endpoint.NewServer(ctx, tokenGenerator,
