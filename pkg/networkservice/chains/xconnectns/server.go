@@ -24,6 +24,7 @@ import (
 	"net/url"
 	"sync"
 
+	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanismtranslation"
 	"google.golang.org/grpc"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
@@ -91,9 +92,10 @@ func NewServer(
 			clienturl.NewServer(clientURL),
 			heal.NewServer(ctx, addressof.NetworkServiceClient(adapters.NewServerToClient(rv))),
 			connect.NewServer(ctx,
-				client.NewCrossConnectClientFactory(
+				client.NewClientFactory(
 					client.WithName(name),
 					client.WithAdditionalFunctionality(
+						mechanismtranslation.NewClient(),
 						noop.NewClient(class),
 					),
 				),
