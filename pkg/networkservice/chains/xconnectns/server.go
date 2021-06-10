@@ -24,7 +24,6 @@ import (
 	"net/url"
 	"sync"
 
-	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanismtranslation"
 	"google.golang.org/grpc"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
@@ -44,6 +43,7 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/heal"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms/recvfd"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanismtranslation"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/adapters"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
 	"github.com/networkservicemesh/sdk/pkg/tools/addressof"
@@ -90,7 +90,9 @@ func NewServer(
 	connectChainFactory := func(class string) networkservice.NetworkServiceServer {
 		return chain.NewNetworkServiceServer(
 			clienturl.NewServer(clientURL),
-			heal.NewServer(ctx, addressof.NetworkServiceClient(adapters.NewServerToClient(rv))),
+			heal.NewServer(ctx,
+				heal.WithOnHeal(addressof.NetworkServiceClient(adapters.NewServerToClient(rv))),
+				heal.WithRestoreEnabled(false)),
 			connect.NewServer(ctx,
 				client.NewClientFactory(
 					client.WithName(name),
