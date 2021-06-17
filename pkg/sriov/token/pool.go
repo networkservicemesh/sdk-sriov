@@ -25,6 +25,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/config"
+	tokenenv "github.com/networkservicemesh/sdk-sriov/pkg/tools/tokens"
 )
 
 const (
@@ -314,4 +315,9 @@ func (p *Pool) stopUsing(id string) error {
 	}
 
 	return nil
+}
+
+// ToEnv returns a (name, value) pair to store given tokens into the environment variable
+func (p *Pool) ToEnv(tokenName string, tokenIDs []string) (name, value string) {
+	return tokenenv.ToEnv(tokenName, tokenIDs)
 }
