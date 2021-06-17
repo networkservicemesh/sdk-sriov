@@ -92,7 +92,7 @@ func NewServer(
 			clienturl.NewServer(clientURL),
 			heal.NewServer(ctx,
 				heal.WithOnHeal(addressof.NetworkServiceClient(adapters.NewServerToClient(rv))),
-				heal.WithRestoreEnabled(false)),
+				heal.WithOnRestore(heal.OnRestoreIgnore)),
 			connect.NewServer(ctx,
 				client.NewClientFactory(
 					client.WithName(name),
