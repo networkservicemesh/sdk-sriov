@@ -46,6 +46,7 @@ jobs:
         repository:
           - cmd-forwarder-sriov
           - cmd-nsc
+          - cmd-nsc-init
     name: Update ${{ matrix.repository }}
     needs: create-release
     runs-on: ubuntu-latest
