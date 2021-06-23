@@ -44,6 +44,20 @@ const (
 	testTick = testWait / 100
 )
 
+func eventuallyIsAllowed(t *testing.T, a1 *cgroup.Cgroup, major, minor uint32) bool {
+	finishTime := time.Now().Add(testWait)
+	for time.Now().Before(finishTime) {
+		allowed, allowedErr := a1.IsAllowed(major, minor)
+		require.NoError(t, allowedErr)
+
+		if allowed {
+			return true
+		}
+		time.Sleep(testTick)
+	}
+	return false
+}
+
 func testCgroups(ctx context.Context, t *testing.T, tmpDir string) (notAllowed, allowed, wider *cgroup.Cgroup) {
 	var err error
 
@@ -56,28 +70,14 @@ func testCgroups(ctx context.Context, t *testing.T, tmpDir string) (notAllowed, 
 	require.NoError(t, allowed.Allow(1, 2))
 	require.NoError(t, allowed.Allow(3, 4))
 
-	require.Eventually(t, func() bool {
-		allowed12, allowedErr := allowed.IsAllowed(1, 2)
-		require.NoError(t, allowedErr)
-
-		allowed34, allowedErr := allowed.IsAllowed(3, 4)
-		require.NoError(t, allowedErr)
-
-		return allowed12 && allowed34
-	}, testWait, testTick)
+	require.True(t, eventuallyIsAllowed(t, allowed, 1, 2))
+	require.True(t, eventuallyIsAllowed(t, allowed, 3, 4))
 
 	wider, err = cgroup.NewFakeWideCgroup(ctx, filepath.Join(tmpDir, uuid.NewString()))
 	require.NoError(t, err)
 
-	require.Eventually(t, func() bool {
-		wider12, allowedErr := wider.IsAllowed(1, 2)
-		require.NoError(t, allowedErr)
-
-		wider34, allowedErr := wider.IsAllowed(3, 4)
-		require.NoError(t, allowedErr)
-
-		return wider12 && wider34
-	}, testWait, testTick)
+	require.True(t, eventuallyIsAllowed(t, wider, 1, 2))
+	require.True(t, eventuallyIsAllowed(t, wider, 3, 4))
 
 	return notAllowed, allowed, wider
 }
@@ -191,15 +191,8 @@ func TestVFIOServer_Close(t *testing.T) {
 	_, err := server.Close(ctx, conn)
 	require.NoError(t, err)
 
-	require.Never(t, func() bool {
-		notAllowed12, allowedErr := notAllowed.IsAllowed(1, 2)
-		require.NoError(t, allowedErr)
-
-		notAllowed34, allowedErr := notAllowed.IsAllowed(3, 4)
-		require.NoError(t, allowedErr)
-
-		return notAllowed12 || notAllowed34
-	}, testWait, testTick)
+	require.False(t, eventuallyIsAllowed(t, notAllowed, 1, 2))
+	require.False(t, eventuallyIsAllowed(t, notAllowed, 3, 4))
 
 	wider12, err := wider.IsAllowed(1, 2)
 	require.NoError(t, err)
