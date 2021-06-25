@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//+build !windows
+// +build linux
 
 // Package xconnectns provides an Endpoint implementing the SR-IOV Forwarder networks service
 package xconnectns
@@ -31,9 +31,9 @@ import (
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/kernel"
 	noopmech "github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/noop"
 	vfiomech "github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/vfio"
+	"github.com/networkservicemesh/sdk-kernel/pkg/kernel/networkservice/connectioncontextkernel"
 	"github.com/networkservicemesh/sdk-kernel/pkg/kernel/networkservice/ethernetcontext"
 	"github.com/networkservicemesh/sdk-kernel/pkg/kernel/networkservice/inject"
-	"github.com/networkservicemesh/sdk-kernel/pkg/kernel/networkservice/ipcontext"
 	"github.com/networkservicemesh/sdk-kernel/pkg/kernel/networkservice/netns"
 	"github.com/networkservicemesh/sdk-kernel/pkg/kernel/networkservice/rename"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/chains/client"
@@ -129,7 +129,7 @@ func NewServer(
 		// now setup VF interface, so we do it in the client net NS
 		netns.NewServer(),
 		rename.NewServer(),
-		ipcontext.NewServer(),
+		connectioncontextkernel.NewServer(),
 	)
 
 	rv.Endpoint = endpoint.NewServer(ctx, tokenGenerator,
