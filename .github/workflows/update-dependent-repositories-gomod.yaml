@@ -46,6 +46,11 @@ jobs:
           echo "Commit Message:"
           cat /tmp/commit-message
 
+      - name: Get current sdk version
+        id: get-sdk-version
+        working-directory: ${{ github.repository }}
+        run: |
+          echo "::set-output name=value::$(go list -m -f '{{ .Version }}' github.com/networkservicemesh/sdk)"
       - name: Checkout networkservicemesh/${{ matrix.repository }}
         uses: actions/checkout@v2
         with:
@@ -59,6 +64,7 @@ jobs:
         working-directory: networkservicemesh/${{ matrix.repository }}
         run: |
           GOPROXY=direct go get -u github.com/${{ github.repository }}@main
+          GOPROXY=direct go get -u github.com/networkservicemesh/sdk@${{ steps.get-sdk-version.outputs.value }}
           go mod tidy
           git diff
       - name: Push update to the ${{ matrix.repository }}
