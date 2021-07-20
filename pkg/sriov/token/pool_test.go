@@ -1,4 +1,6 @@
-// Copyright (c) 2020 Doc.ai and/or its affiliates.
+// Copyright (c) 2020-2021 Doc.ai and/or its affiliates.
+//
+// Copyright (c) 2021 Nordix Foundation.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -106,6 +108,16 @@ func TestPool_Restore(t *testing.T) {
 	p = token.NewPool(cfg)
 	require.NoError(t, p.Restore(idsByNames))
 	require.Equal(t, tokens, p.Tokens())
+}
+
+func TestPool_ToEnv(t *testing.T) {
+	cfg, err := config.ReadConfig(context.TODO(), configFileName)
+	require.NoError(t, err)
+
+	p := token.NewPool(cfg)
+	name, value := p.ToEnv("name", []string{"1", "2", "3"})
+	require.Equal(t, "NSM_SRIOV_TOKENS_name", name)
+	require.Equal(t, "1,2,3", value)
 }
 
 func countTrue(m map[string]bool) (count int) {

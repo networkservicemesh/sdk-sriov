@@ -1,4 +1,6 @@
-// Copyright (c) 2020 Doc.ai and/or its affiliates.
+// Copyright (c) 2020-2021 Doc.ai and/or its affiliates.
+//
+// Copyright (c) 2021 Nordix Foundation.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -25,6 +27,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/config"
+	tokenenv "github.com/networkservicemesh/sdk-sriov/pkg/tools/tokens"
 )
 
 const (
@@ -314,4 +317,9 @@ func (p *Pool) stopUsing(id string) error {
 	}
 
 	return nil
+}
+
+// ToEnv returns a (name, value) pair to store given tokens into the environment variable
+func (p *Pool) ToEnv(tokenName string, tokenIDs []string) (name, value string) {
+	return tokenenv.ToEnv(tokenName, tokenIDs)
 }
