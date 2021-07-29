@@ -70,6 +70,9 @@ func (i *resourcePoolClient) Request(ctx context.Context, request *networkservic
 	err = assignVF(ctx, logger, conn, tokenID, i.resourcePool)
 	if err != nil {
 		_ = i.resourcePool.close(conn)
+		if _, closeErr := next.Client(ctx).Close(ctx, conn, opts...); closeErr != nil {
+			logger.Errorf("failed to close failed connection: %s %s", conn.GetId(), closeErr.Error())
+		}
 		return nil, err
 	}
 

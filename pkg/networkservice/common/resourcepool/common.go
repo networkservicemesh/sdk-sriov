@@ -21,6 +21,7 @@ import (
 	"sync"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
+	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/common"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/vfio"
 	"github.com/networkservicemesh/sdk-kernel/pkg/kernel/networkservice/vfconfig"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
@@ -135,6 +136,7 @@ func assignVF(ctx context.Context, logger log.Logger, conn *networkservice.Conne
 	case sriov.VFIOPCIDriver:
 		vfio.ToMechanism(conn.GetMechanism()).SetIommuGroup(iommuGroup)
 	}
+	conn.GetMechanism().GetParameters()[common.PCIAddressKey] = vf.GetPCIAddress()
 
 	return nil
 }
