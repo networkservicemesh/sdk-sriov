@@ -22,6 +22,7 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
+	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/common"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 	"github.com/pkg/errors"
@@ -56,6 +57,9 @@ func NewClient(
 func (i *resourcePoolClient) Request(ctx context.Context, request *networkservice.NetworkServiceRequest, opts ...grpc.CallOption) (*networkservice.Connection, error) {
 	logger := log.FromContext(ctx).WithField("resourcePoolClient", "Request")
 
+	oldPCIAddress := request.GetConnection().GetMechanism().GetParameters()[common.PCIAddressKey]
+	oldTokenIDKey := request.GetConnection().GetMechanism().GetParameters()[TokenIDKey]
+
 	conn, err := next.Client(ctx).Request(ctx, request, opts...)
 	if err != nil {
 		return nil, err
@@ -76,13 +80,18 @@ func (i *resourcePoolClient) Request(ctx context.Context, request *networkservic
 		return nil, err
 	}
 
-	// communicate assigned VF's pci address to endpoint by making another Request and ignore
-	// returned connection. this would also need subsequent chain elements to ignore
-	// handling of response for 2nd Request.
+	// Don't make second request if PCI address, token id weren't changed
+	if conn.GetMechanism().GetParameters()[common.PCIAddressKey] == oldPCIAddress && oldTokenIDKey == tokenID {
+		return conn, nil
+	}
+
+	// communicate assigned VF's pci address to endpoint by making another Request.
+	// this would also need subsequent chain elements to ignore handling of response
+	// for 2nd Request.
 	request.Connection = conn.Clone()
-	if _, err = next.Client(ctx).Request(ctx, request); err != nil {
+	if conn, err = next.Client(ctx).Request(ctx, request); err != nil {
 		// Perform local cleanup in case of second Request failed
-		_ = i.resourcePool.close(conn)
+		_ = i.resourcePool.close(request.Connection)
 		if _, closeErr := next.Client(ctx).Close(ctx, conn, opts...); closeErr != nil {
 			logger.Errorf("failed to close failed connection: %s %s", conn.GetId(), closeErr.Error())
 		}
