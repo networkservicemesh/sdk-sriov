@@ -58,7 +58,7 @@ func (i *resourcePoolClient) Request(ctx context.Context, request *networkservic
 	logger := log.FromContext(ctx).WithField("resourcePoolClient", "Request")
 
 	oldPCIAddress := request.GetConnection().GetMechanism().GetParameters()[common.PCIAddressKey]
-	oldTokenIDKey := request.GetConnection().GetMechanism().GetParameters()[TokenIDKey]
+	oldTokenID := request.GetConnection().GetMechanism().GetParameters()[TokenIDKey]
 
 	conn, err := next.Client(ctx).Request(ctx, request, opts...)
 	if err != nil {
@@ -81,7 +81,7 @@ func (i *resourcePoolClient) Request(ctx context.Context, request *networkservic
 	}
 
 	// Don't make second request if PCI address, token id weren't changed
-	if conn.GetMechanism().GetParameters()[common.PCIAddressKey] == oldPCIAddress && oldTokenIDKey == tokenID {
+	if conn.GetMechanism().GetParameters()[common.PCIAddressKey] == oldPCIAddress && oldTokenID == tokenID {
 		return conn, nil
 	}
 
@@ -92,12 +92,9 @@ func (i *resourcePoolClient) Request(ctx context.Context, request *networkservic
 	if conn, err = next.Client(ctx).Request(ctx, request); err != nil {
 		// Perform local cleanup in case of second Request failed
 		_ = i.resourcePool.close(request.Connection)
-		if _, closeErr := next.Client(ctx).Close(ctx, conn, opts...); closeErr != nil {
-			logger.Errorf("failed to close failed connection: %s %s", conn.GetId(), closeErr.Error())
-		}
 	}
 
-	return conn, nil
+	return conn, err
 }
 
 func (i *resourcePoolClient) Close(ctx context.Context, conn *networkservice.Connection, opts ...grpc.CallOption) (*empty.Empty, error) {
