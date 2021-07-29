@@ -76,6 +76,18 @@ func (i *resourcePoolClient) Request(ctx context.Context, request *networkservic
 		return nil, err
 	}
 
+	// communicate assigned VF's pci address to endpoint by making another Request and ignore
+	// returned connection. this would also need subsequent chain elements to ignore
+	// handling of response for 2nd Request.
+	request.Connection = conn.Clone()
+	if _, err = next.Client(ctx).Request(ctx, request); err != nil {
+		// Perform local cleanup in case of second Request failed
+		_ = i.resourcePool.close(conn)
+		if _, closeErr := next.Client(ctx).Close(ctx, conn, opts...); closeErr != nil {
+			logger.Errorf("failed to close failed connection: %s %s", conn.GetId(), closeErr.Error())
+		}
+	}
+
 	return conn, nil
 }
 
