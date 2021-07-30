@@ -1,5 +1,3 @@
-// Copyright (c) 2020-2021 Doc.ai and/or its affiliates.
-//
 // Copyright (c) 2021 Nordix Foundation.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -16,7 +14,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package vfconfig provides vfconfig chain elements
 package vfconfig
 
 import (
@@ -24,36 +21,46 @@ import (
 	"sync"
 
 	"github.com/golang/protobuf/ptypes/empty"
-	"github.com/pkg/errors"
-
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/sdk-kernel/pkg/kernel/networkservice/vfconfig"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
+	"github.com/pkg/errors"
+	"google.golang.org/grpc"
 )
 
-type vfConfigServer struct {
+type vfConfigClient struct {
 	configs sync.Map
 }
 
-// NewServer returns a new vfconfig server chain element
-func NewServer() networkservice.NetworkServiceServer {
-	return &vfConfigServer{
+// NewClient returns a new vfconfig client chain element
+func NewClient() networkservice.NetworkServiceClient {
+	return &vfConfigClient{
 		configs: sync.Map{},
 	}
 }
 
-func (s *vfConfigServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
-	rawConfig, _ := s.configs.LoadOrStore(request.GetConnection().GetId(), &vfconfig.VFConfig{})
+func (c *vfConfigClient) Request(ctx context.Context, request *networkservice.NetworkServiceRequest, opts ...grpc.CallOption) (*networkservice.Connection, error) {
+	conn, err := next.Client(ctx).Request(ctx, request, opts...)
+	if err != nil {
+		return nil, err
+	}
+	rawConfig, _ := c.configs.LoadOrStore(conn.GetId(), &vfconfig.VFConfig{})
+	vfconfig.WithConfig(ctx, rawConfig.(*vfconfig.VFConfig))
 
-	return next.Server(ctx).Request(vfconfig.WithConfig(ctx, rawConfig.(*vfconfig.VFConfig)), request)
+	return conn, nil
 }
 
-func (s *vfConfigServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {
-	rawConfig, ok := s.configs.Load(conn.GetId())
+func (c *vfConfigClient) Close(ctx context.Context, conn *networkservice.Connection, opts ...grpc.CallOption) (*empty.Empty, error) {
+	rv, err := next.Client(ctx).Close(ctx, conn, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	rawConfig, ok := c.configs.Load(conn.GetId())
 	if !ok {
 		return nil, errors.Errorf("no VF config for the connection: %v", conn.GetId())
 	}
-	s.configs.Delete(conn.GetId())
-
-	return next.Server(ctx).Close(vfconfig.WithConfig(ctx, rawConfig.(*vfconfig.VFConfig)), conn)
+	c.configs.Delete(conn.GetId())
+	vfconfig.WithConfig(ctx, rawConfig.(*vfconfig.VFConfig))
+	return rv, err
 }
