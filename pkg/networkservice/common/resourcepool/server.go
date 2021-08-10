@@ -26,6 +26,7 @@ import (
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov"
@@ -63,7 +64,7 @@ func (s *resourcePoolServer) Request(ctx context.Context, request *networkservic
 		return next.Server(ctx).Request(ctx, request)
 	}
 
-	err := assignVF(ctx, logger, conn, tokenID, s.resourcePool)
+	err := assignVF(ctx, logger, conn, tokenID, s.resourcePool, metadata.IsClient(s))
 	if err != nil {
 		_ = s.resourcePool.close(conn)
 		return nil, err

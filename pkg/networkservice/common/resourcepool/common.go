@@ -106,10 +106,11 @@ func (s *resourcePoolConfig) close(conn *networkservice.Connection) error {
 	return s.resourcePool.Free(vfPCIAddr)
 }
 
-func assignVF(ctx context.Context, logger log.Logger, conn *networkservice.Connection, tokenID string, resourcePool *resourcePoolConfig) error {
-	vfConfig := vfconfig.Config(ctx)
+func assignVF(ctx context.Context, logger log.Logger, conn *networkservice.Connection, tokenID string, resourcePool *resourcePoolConfig, isClient bool) error {
 	resourcePool.resourceLock.Lock()
 	defer resourcePool.resourceLock.Unlock()
+
+	vfConfig := &vfconfig.VFConfig{}
 
 	logger.Infof("trying to select VF for %v", resourcePool.driverType)
 	vf, err := resourcePool.selectVF(conn.GetId(), vfConfig, tokenID)
@@ -137,6 +138,8 @@ func assignVF(ctx context.Context, logger log.Logger, conn *networkservice.Conne
 		vfio.ToMechanism(conn.GetMechanism()).SetIommuGroup(iommuGroup)
 	}
 	conn.GetMechanism().GetParameters()[common.PCIAddressKey] = vf.GetPCIAddress()
+
+	vfconfig.Store(ctx, isClient, vfConfig)
 
 	return nil
 }

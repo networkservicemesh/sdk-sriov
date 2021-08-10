@@ -46,6 +46,7 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanismtranslation"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/adapters"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 	"github.com/networkservicemesh/sdk/pkg/tools/addressof"
 	"github.com/networkservicemesh/sdk/pkg/tools/token"
 
@@ -53,7 +54,6 @@ import (
 	"github.com/networkservicemesh/sdk-sriov/pkg/networkservice/common/mechanisms/vfio"
 	"github.com/networkservicemesh/sdk-sriov/pkg/networkservice/common/resetmechanism"
 	"github.com/networkservicemesh/sdk-sriov/pkg/networkservice/common/resourcepool"
-	"github.com/networkservicemesh/sdk-sriov/pkg/networkservice/common/vfconfig"
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov"
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/config"
 )
@@ -108,8 +108,8 @@ func NewServer(
 
 	resourceLock := &sync.Mutex{}
 	sriovChain := chain.NewNetworkServiceServer(
+		metadata.NewServer(),
 		recvfd.NewServer(),
-		vfconfig.NewServer(),
 		resetmechanism.NewServer(
 			mechanisms.NewServer(map[string]networkservice.NetworkServiceServer{
 				kernel.MECHANISM: chain.NewNetworkServiceServer(

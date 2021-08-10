@@ -28,6 +28,8 @@ import (
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/kernel"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/vfio"
 	"github.com/networkservicemesh/sdk-kernel/pkg/kernel/networkservice/vfconfig"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 
 	"github.com/networkservicemesh/sdk-sriov/pkg/networkservice/common/resourcepool"
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov"
@@ -86,9 +88,6 @@ func TestResourcePoolServer_Request(t *testing.T) {
 	for i := range samples {
 		sample := samples[i]
 		t.Run(sample.mechanism, func(t *testing.T) {
-			vfConfig := new(vfconfig.VFConfig)
-			ctx := vfconfig.WithConfig(context.TODO(), vfConfig)
-
 			var pfs map[string]*sriovtest.PCIPhysicalFunction
 			_ = yamlhelper.UnmarshalFile(physicalFunctionsFilename, &pfs)
 
@@ -100,13 +99,16 @@ func TestResourcePoolServer_Request(t *testing.T) {
 
 			resourcePool := new(resourcePoolMock)
 
-			server := resourcepool.NewServer(sample.driverType, new(sync.Mutex), pciPool, resourcePool, conf)
+			server := chain.NewNetworkServiceServer(
+				metadata.NewServer(),
+				resourcepool.NewServer(sample.driverType, new(sync.Mutex), pciPool, resourcePool, conf))
 
 			// 1. Request
 
 			resourcePool.mock.On("Select", "1", sample.driverType).
 				Return(pfs[pf2PciAddr].Vfs[1].Addr, nil)
 
+			ctx := context.TODO()
 			conn, err := server.Request(ctx, &networkservice.NetworkServiceRequest{
 				Connection: &networkservice.Connection{
 					Id: "id",
@@ -121,7 +123,10 @@ func TestResourcePoolServer_Request(t *testing.T) {
 			require.NoError(t, err)
 
 			resourcePool.mock.AssertNumberOfCalls(t, "Select", 1)
-
+			// TODO: this is broken now, should we include test server chain element after resource pool server
+			// which populates vfConfig ?
+			vfConfig, ok := vfconfig.Load(ctx, false)
+			require.Equal(t, ok, true)
 			sample.test(t, pfs, vfConfig, conn)
 
 			// 2. Close
@@ -129,7 +134,7 @@ func TestResourcePoolServer_Request(t *testing.T) {
 			resourcePool.mock.On("Free", pfs[pf2PciAddr].Vfs[1].Addr).
 				Return(nil)
 
-			_, err = server.Close(ctx, conn)
+			_, err = server.Close(context.TODO(), conn)
 			require.NoError(t, err)
 
 			resourcePool.mock.AssertNumberOfCalls(t, "Free", 1)
