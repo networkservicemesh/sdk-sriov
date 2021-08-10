@@ -21,6 +21,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
@@ -29,6 +30,7 @@ import (
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/vfio"
 	"github.com/networkservicemesh/sdk-kernel/pkg/kernel/networkservice/vfconfig"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 
 	"github.com/networkservicemesh/sdk-sriov/pkg/networkservice/common/resourcepool"
@@ -84,6 +86,32 @@ var samples = []*sample{
 	},
 }
 
+type vfResource struct {
+	vfConfig *vfconfig.VFConfig
+}
+
+type vfResourceServer interface {
+	networkservice.NetworkServiceServer
+	getVFConfig() *vfconfig.VFConfig
+}
+
+func NewVFResourceServer() vfResourceServer {
+	return &vfResource{}
+}
+
+func (s *vfResource) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
+	s.vfConfig, _ = vfconfig.Load(ctx, false)
+	return next.Server(ctx).Request(ctx, request)
+}
+
+func (s *vfResource) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {
+	return next.Server(ctx).Close(ctx, conn)
+}
+
+func (s *vfResource) getVFConfig() *vfconfig.VFConfig {
+	return s.vfConfig
+}
+
 func TestResourcePoolServer_Request(t *testing.T) {
 	for i := range samples {
 		sample := samples[i]
@@ -98,10 +126,12 @@ func TestResourcePoolServer_Request(t *testing.T) {
 			require.NoError(t, err)
 
 			resourcePool := new(resourcePoolMock)
+			resourceServerChainElem := NewVFResourceServer()
 
 			server := chain.NewNetworkServiceServer(
 				metadata.NewServer(),
-				resourcepool.NewServer(sample.driverType, new(sync.Mutex), pciPool, resourcePool, conf))
+				resourcepool.NewServer(sample.driverType, new(sync.Mutex), pciPool, resourcePool, conf),
+				resourceServerChainElem)
 
 			// 1. Request
 
@@ -123,11 +153,7 @@ func TestResourcePoolServer_Request(t *testing.T) {
 			require.NoError(t, err)
 
 			resourcePool.mock.AssertNumberOfCalls(t, "Select", 1)
-			// TODO: this is broken now, should we include test server chain element after resource pool server
-			// which populates vfConfig ?
-			vfConfig, ok := vfconfig.Load(ctx, false)
-			require.Equal(t, ok, true)
-			sample.test(t, pfs, vfConfig, conn)
+			sample.test(t, pfs, resourceServerChainElem.getVFConfig(), conn)
 
 			// 2. Close
 
