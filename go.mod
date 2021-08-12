@@ -7,8 +7,8 @@ require (
 	github.com/golang/protobuf v1.4.3
 	github.com/google/uuid v1.2.0
 	github.com/networkservicemesh/api v1.0.1-0.20210811070028-10403c0f20c8
-	github.com/networkservicemesh/sdk v0.5.1-0.20210812061140-55d32c7c6e53
-	github.com/networkservicemesh/sdk-kernel v0.0.0-20210812061403-993d7ba63c3f
+	github.com/networkservicemesh/sdk v0.5.1-0.20210812070452-eeed15872b02
+	github.com/networkservicemesh/sdk-kernel v0.0.0-20210812070806-fb51a86a6c72
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.7.0
 	go.uber.org/goleak v1.1.10
