@@ -1,5 +1,7 @@
 // Copyright (c) 2020 Doc.ai and/or its affiliates.
 //
+// Copyright (c) 2021 Nordix Foundation.
+//
 // SPDX-License-Identifier: Apache-2.0
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,23 +25,37 @@ import (
 )
 
 const (
-	envPrefix = "NSM_SRIOV_TOKENS_"
+	// EnvPrefix sriov token env name prefix
+	EnvPrefix = "NSM_SRIOV_TOKENS_"
 )
 
 // ToEnv returns a (name, value) pair to store given tokens into the environment variable
 func ToEnv(tokenName string, tokenIDs []string) (name, value string) {
-	return fmt.Sprintf("%s%s", envPrefix, tokenName), strings.Join(tokenIDs, ",")
+	return fmt.Sprintf("%s%s", EnvPrefix, tokenName), strings.Join(tokenIDs, ",")
 }
 
 // FromEnv returns all stored tokens from the list of environment variables
 func FromEnv(envs []string) map[string][]string {
 	tokens := map[string][]string{}
 	for _, env := range envs {
-		if !strings.HasPrefix(env, envPrefix) {
+		if !strings.HasPrefix(env, EnvPrefix) {
 			continue
 		}
-		nameIDs := strings.Split(strings.TrimPrefix(env, envPrefix), "=")
+		nameIDs := strings.Split(strings.TrimPrefix(env, EnvPrefix), "=")
 		tokens[nameIDs[0]] = strings.Split(nameIDs[1], ",")
+	}
+	return tokens
+}
+
+// GetTokensFromEnv returns stored token ids from env for given tokenKey
+func GetTokensFromEnv(envs []string, tokenKey string) map[string][]string {
+	tokens := map[string][]string{}
+	for _, env := range envs {
+		if !strings.HasPrefix(env, EnvPrefix) || !strings.EqualFold(strings.TrimPrefix(env, EnvPrefix), tokenKey) {
+			continue
+		}
+		tokens[tokenKey] = strings.Split(strings.Split(env, "=")[1], ",")
+		break
 	}
 	return tokens
 }

@@ -1,5 +1,7 @@
 // Copyright (c) 2020 Doc.ai and/or its affiliates.
 //
+// Copyright (c) 2021 Nordix Foundation.
+//
 // SPDX-License-Identifier: Apache-2.0
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,14 +16,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package token provides chain element for inserting SRIOV tokens into request
+// Package token provides chain elements for inserting SRIOV tokens into request and response
 package token
 
 import (
 	"context"
 	"os"
 	"strings"
-	"sync"
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
@@ -40,37 +41,20 @@ const (
 )
 
 type tokenClient struct {
-	lock                sync.Mutex
-	tokens              map[string][]string // tokens[tokenName] -> []tokenIDs
-	connectionsByTokens map[string]string   // connectionsByTokens[tokenID] -> connectionID
-	tokensByConnections map[string]string   // tokensByConnections[connectionID] -> tokenID
+	config tokenConfig
 }
 
 // NewClient returns a new token client chain element
 func NewClient() networkservice.NetworkServiceClient {
 	return &tokenClient{
-		tokens:              tokens.FromEnv(os.Environ()),
-		connectionsByTokens: map[string]string{},
-		tokensByConnections: map[string]string{},
+		createTokenElement(tokens.FromEnv(os.Environ())),
 	}
 }
 
 func (c *tokenClient) Request(ctx context.Context, request *networkservice.NetworkServiceRequest, opts ...grpc.CallOption) (*networkservice.Connection, error) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-
 	if labels := request.GetConnection().GetLabels(); labels != nil {
 		if tokenName, ok := labels[sriovTokenLabel]; ok {
-			var tokenID string
-			for _, tokenID = range c.tokens[tokenName] {
-				if _, ok := c.connectionsByTokens[tokenID]; !ok {
-					c.connectionsByTokens[tokenID] = request.GetConnection().GetId()
-					c.tokensByConnections[request.GetConnection().GetId()] = tokenID
-					break
-				} else {
-					tokenID = ""
-				}
-			}
+			tokenID := c.config.assign(tokenName, request.GetConnection())
 			if tokenID == "" {
 				return nil, errors.Errorf("no free token for the name: %v", tokenName)
 			}
@@ -91,12 +75,6 @@ func (c *tokenClient) Request(ctx context.Context, request *networkservice.Netwo
 }
 
 func (c *tokenClient) Close(ctx context.Context, conn *networkservice.Connection, opts ...grpc.CallOption) (*empty.Empty, error) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-
-	if tokenID, ok := c.tokensByConnections[conn.GetId()]; ok {
-		delete(c.connectionsByTokens, tokenID)
-		delete(c.tokensByConnections, conn.GetId())
-	}
+	c.config.release(conn)
 	return next.Client(ctx).Close(ctx, conn, opts...)
 }
