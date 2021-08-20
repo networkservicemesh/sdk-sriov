@@ -52,9 +52,10 @@ func NewClient() networkservice.NetworkServiceClient {
 }
 
 func (c *tokenClient) Request(ctx context.Context, request *networkservice.NetworkServiceRequest, opts ...grpc.CallOption) (*networkservice.Connection, error) {
+	var tokenID string
 	if labels := request.GetConnection().GetLabels(); labels != nil {
 		if tokenName, ok := labels[sriovTokenLabel]; ok {
-			tokenID := c.config.assign(tokenName, request.GetConnection())
+			tokenID = c.config.assign(tokenName, request.GetConnection())
 			if tokenID == "" {
 				return nil, errors.Errorf("no free token for the name: %v", tokenName)
 			}
@@ -71,7 +72,14 @@ func (c *tokenClient) Request(ctx context.Context, request *networkservice.Netwo
 			}
 		}
 	}
-	return next.Client(ctx).Request(ctx, request, opts...)
+
+	isEstablished := request.GetConnection().GetNextPathSegment() != nil
+	conn, err := next.Client(ctx).Request(ctx, request, opts...)
+	if err != nil && tokenID != "" && !isEstablished {
+		c.config.release(request.GetConnection())
+	}
+
+	return conn, err
 }
 
 func (c *tokenClient) Close(ctx context.Context, conn *networkservice.Connection, opts ...grpc.CallOption) (*empty.Empty, error) {

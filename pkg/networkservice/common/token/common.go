@@ -44,6 +44,11 @@ func (c *tokenElement) assign(tokenName string, conn *networkservice.Connection)
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
+	var ok bool
+	if tokenID, ok = c.tokensByConnections[conn.GetId()]; ok {
+		return tokenID
+	}
+
 	for _, tokenID = range c.tokens[tokenName] {
 		if _, ok := c.connectionsByTokens[tokenID]; !ok {
 			c.connectionsByTokens[tokenID] = conn.GetId()

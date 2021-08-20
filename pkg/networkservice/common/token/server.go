@@ -38,18 +38,28 @@ type tokenServer struct {
 func NewServer(tokenKey string) networkservice.NetworkServiceServer {
 	return &tokenServer{
 		tokenName: tokenKey,
-		config:    createTokenElement(tokens.GetTokensFromEnv(os.Environ(), tokenKey)),
+		config: createTokenElement(map[string][]string{
+			tokenKey: tokens.FromEnv(os.Environ())[tokenKey],
+		}),
 	}
 }
 
 func (s *tokenServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
-	if mechanism := kernel.ToMechanism(request.GetConnection().GetMechanism()); mechanism != nil || mechanism.GetPCIAddress() == "" {
-		tokenID := s.config.assign(s.tokenName, request.GetConnection())
+	var tokenID string
+	if mechanism := kernel.ToMechanism(request.GetConnection().GetMechanism()); mechanism != nil || mechanism.Parameters[resourcepool.TokenIDKey] == "" {
+		tokenID = s.config.assign(s.tokenName, request.GetConnection())
 		if tokenID != "" {
 			mechanism.Parameters[resourcepool.TokenIDKey] = tokenID
 		}
 	}
-	return next.Server(ctx).Request(ctx, request)
+
+	isEstablished := request.GetConnection().GetNextPathSegment() != nil
+	conn, err := next.Server(ctx).Request(ctx, request)
+	if err != nil && tokenID != "" && !isEstablished {
+		s.config.release(request.GetConnection())
+	}
+
+	return conn, err
 }
 
 func (s *tokenServer) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {

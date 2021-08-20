@@ -46,16 +46,3 @@ func FromEnv(envs []string) map[string][]string {
 	}
 	return tokens
 }
-
-// GetTokensFromEnv returns stored token ids from env for given tokenKey
-func GetTokensFromEnv(envs []string, tokenKey string) map[string][]string {
-	tokens := map[string][]string{}
-	for _, env := range envs {
-		if !strings.HasPrefix(env, EnvPrefix) || !strings.EqualFold(strings.TrimPrefix(env, EnvPrefix), tokenKey) {
-			continue
-		}
-		tokens[tokenKey] = strings.Split(strings.Split(env, "=")[1], ",")
-		break
-	}
-	return tokens
-}
