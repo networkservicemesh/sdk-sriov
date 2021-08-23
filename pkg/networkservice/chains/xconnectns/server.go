@@ -1,5 +1,7 @@
 // Copyright (c) 2020-2021 Doc.ai and/or its affiliates.
 //
+// Copyright (c) 2021 Nordix Foundation.
+//
 // SPDX-License-Identifier: Apache-2.0
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -34,8 +36,6 @@ import (
 	"github.com/networkservicemesh/sdk-kernel/pkg/kernel/networkservice/connectioncontextkernel"
 	"github.com/networkservicemesh/sdk-kernel/pkg/kernel/networkservice/ethernetcontext"
 	"github.com/networkservicemesh/sdk-kernel/pkg/kernel/networkservice/inject"
-	"github.com/networkservicemesh/sdk-kernel/pkg/kernel/networkservice/netns"
-	"github.com/networkservicemesh/sdk-kernel/pkg/kernel/networkservice/rename"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/chains/client"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/chains/endpoint"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/clienturl"
@@ -114,8 +114,6 @@ func NewServer(
 			mechanisms.NewServer(map[string]networkservice.NetworkServiceServer{
 				kernel.MECHANISM: chain.NewNetworkServiceServer(
 					resourcepool.NewServer(sriov.KernelDriver, resourceLock, pciPool, resourcePool, sriovConfig),
-					rename.NewServer(),
-					inject.NewServer(),
 				),
 				vfiomech.MECHANISM: chain.NewNetworkServiceServer(
 					resourcepool.NewServer(sriov.VFIOPCIDriver, resourceLock, pciPool, resourcePool, sriovConfig),
@@ -126,9 +124,7 @@ func NewServer(
 		connectChainFactory(cls.REMOTE),
 		// we setup VF ethernet context using PF interface, so we do it in the forwarder net NS
 		ethernetcontext.NewVFServer(),
-		// now setup VF interface, so we do it in the client net NS
-		netns.NewServer(),
-		rename.NewServer(),
+		inject.NewServer(),
 		connectioncontextkernel.NewServer(),
 	)
 
