@@ -1,5 +1,7 @@
 // Copyright (c) 2021 Nordix Foundation.
 //
+// Copyright (c) 2021 Doc.ai and/or its affiliates.
+//
 // SPDX-License-Identifier: Apache-2.0
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,12 +23,14 @@ import (
 	"sync"
 
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/pkg/errors"
+	"google.golang.org/grpc"
+
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/common"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
-	"github.com/pkg/errors"
-	"google.golang.org/grpc"
+	"github.com/networkservicemesh/sdk/pkg/tools/postpone"
 
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov"
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/config"
@@ -60,6 +64,8 @@ func (i *resourcePoolClient) Request(ctx context.Context, request *networkservic
 	oldPCIAddress := request.GetConnection().GetMechanism().GetParameters()[common.PCIAddressKey]
 	oldTokenID := request.GetConnection().GetMechanism().GetParameters()[TokenIDKey]
 
+	postponeCtxFunc := postpone.ContextWithValues(ctx)
+
 	conn, err := next.Client(ctx).Request(ctx, request, opts...)
 	if err != nil {
 		return nil, err
@@ -73,10 +79,13 @@ func (i *resourcePoolClient) Request(ctx context.Context, request *networkservic
 
 	err = assignVF(ctx, logger, conn, tokenID, i.resourcePool)
 	if err != nil {
-		_ = i.resourcePool.close(conn)
-		if _, closeErr := next.Client(ctx).Close(ctx, conn, opts...); closeErr != nil {
-			logger.Errorf("failed to close failed connection: %s %s", conn.GetId(), closeErr.Error())
+		closeCtx, cancelClose := postponeCtxFunc()
+		defer cancelClose()
+
+		if _, closeErr := i.Close(closeCtx, conn, opts...); closeErr != nil {
+			err = errors.Wrapf(err, "connection closed with error: %s", closeErr.Error())
 		}
+
 		return nil, err
 	}
 
