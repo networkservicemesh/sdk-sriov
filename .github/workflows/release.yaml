@@ -47,6 +47,7 @@ jobs:
           - cmd-forwarder-sriov
           - cmd-nsc
           - cmd-nsc-init
+          - sdk-ovs
     name: Update ${{ matrix.repository }}
     needs: create-release
     runs-on: ubuntu-latest
