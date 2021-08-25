@@ -121,11 +121,11 @@ func NewServer(
 				),
 			}),
 		),
-		connectChainFactory(cls.REMOTE),
 		// we setup VF ethernet context using PF interface, so we do it in the forwarder net NS
 		ethernetcontext.NewVFServer(),
 		inject.NewServer(),
 		connectioncontextkernel.NewServer(),
+		connectChainFactory(cls.REMOTE),
 	)
 
 	rv.Endpoint = endpoint.NewServer(ctx, tokenGenerator,
