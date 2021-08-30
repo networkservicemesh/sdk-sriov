@@ -95,7 +95,7 @@ type vfResourceServer interface {
 	getVFConfig() *vfconfig.VFConfig
 }
 
-func NewVFResourceServer() vfResourceServer {
+func newVFResourceServer() vfResourceServer {
 	return &vfResource{}
 }
 
@@ -126,7 +126,7 @@ func TestResourcePoolServer_Request(t *testing.T) {
 			require.NoError(t, err)
 
 			resourcePool := new(resourcePoolMock)
-			resourceServerChainElem := NewVFResourceServer()
+			resourceServerChainElem := newVFResourceServer()
 
 			server := chain.NewNetworkServiceServer(
 				metadata.NewServer(),
