@@ -29,6 +29,7 @@ import (
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/common"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 	"github.com/networkservicemesh/sdk/pkg/tools/postpone"
 
@@ -77,7 +78,7 @@ func (i *resourcePoolClient) Request(ctx context.Context, request *networkservic
 		return conn, nil
 	}
 
-	err = assignVF(ctx, logger, conn, tokenID, i.resourcePool)
+	err = assignVF(ctx, logger, conn, tokenID, i.resourcePool, metadata.IsClient(i))
 	if err != nil {
 		closeCtx, cancelClose := postponeCtxFunc()
 		defer cancelClose()

@@ -21,6 +21,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
@@ -28,6 +29,9 @@ import (
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/kernel"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/vfio"
 	"github.com/networkservicemesh/sdk-kernel/pkg/kernel/networkservice/vfconfig"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 
 	"github.com/networkservicemesh/sdk-sriov/pkg/networkservice/common/resourcepool"
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov"
@@ -82,13 +86,36 @@ var samples = []*sample{
 	},
 }
 
+type vfResource struct {
+	vfConfig *vfconfig.VFConfig
+}
+
+type vfResourceServer interface {
+	networkservice.NetworkServiceServer
+	getVFConfig() *vfconfig.VFConfig
+}
+
+func newVFResourceServer() vfResourceServer {
+	return &vfResource{}
+}
+
+func (s *vfResource) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
+	s.vfConfig, _ = vfconfig.Load(ctx, false)
+	return next.Server(ctx).Request(ctx, request)
+}
+
+func (s *vfResource) Close(ctx context.Context, conn *networkservice.Connection) (*empty.Empty, error) {
+	return next.Server(ctx).Close(ctx, conn)
+}
+
+func (s *vfResource) getVFConfig() *vfconfig.VFConfig {
+	return s.vfConfig
+}
+
 func TestResourcePoolServer_Request(t *testing.T) {
 	for i := range samples {
 		sample := samples[i]
 		t.Run(sample.mechanism, func(t *testing.T) {
-			vfConfig := new(vfconfig.VFConfig)
-			ctx := vfconfig.WithConfig(context.TODO(), vfConfig)
-
 			var pfs map[string]*sriovtest.PCIPhysicalFunction
 			_ = yamlhelper.UnmarshalFile(physicalFunctionsFilename, &pfs)
 
@@ -99,14 +126,19 @@ func TestResourcePoolServer_Request(t *testing.T) {
 			require.NoError(t, err)
 
 			resourcePool := new(resourcePoolMock)
+			resourceServerChainElem := newVFResourceServer()
 
-			server := resourcepool.NewServer(sample.driverType, new(sync.Mutex), pciPool, resourcePool, conf)
+			server := chain.NewNetworkServiceServer(
+				metadata.NewServer(),
+				resourcepool.NewServer(sample.driverType, new(sync.Mutex), pciPool, resourcePool, conf),
+				resourceServerChainElem)
 
 			// 1. Request
 
 			resourcePool.mock.On("Select", "1", sample.driverType).
 				Return(pfs[pf2PciAddr].Vfs[1].Addr, nil)
 
+			ctx := context.TODO()
 			conn, err := server.Request(ctx, &networkservice.NetworkServiceRequest{
 				Connection: &networkservice.Connection{
 					Id: "id",
@@ -121,15 +153,14 @@ func TestResourcePoolServer_Request(t *testing.T) {
 			require.NoError(t, err)
 
 			resourcePool.mock.AssertNumberOfCalls(t, "Select", 1)
-
-			sample.test(t, pfs, vfConfig, conn)
+			sample.test(t, pfs, resourceServerChainElem.getVFConfig(), conn)
 
 			// 2. Close
 
 			resourcePool.mock.On("Free", pfs[pf2PciAddr].Vfs[1].Addr).
 				Return(nil)
 
-			_, err = server.Close(ctx, conn)
+			_, err = server.Close(context.TODO(), conn)
 			require.NoError(t, err)
 
 			resourcePool.mock.AssertNumberOfCalls(t, "Free", 1)
