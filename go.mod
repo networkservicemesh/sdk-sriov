@@ -8,7 +8,7 @@ require (
 	github.com/google/uuid v1.2.0
 	github.com/networkservicemesh/api v1.0.1-0.20210811070028-10403c0f20c8
 	github.com/networkservicemesh/sdk v0.5.1-0.20210831085601-2e38282f43bc
-	github.com/networkservicemesh/sdk-kernel v0.0.0-20210831085956-1b22e520d712
+	github.com/networkservicemesh/sdk-kernel v0.0.0-20210903075154-02b4e9abcf32
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.7.0
 	go.uber.org/goleak v1.1.10
