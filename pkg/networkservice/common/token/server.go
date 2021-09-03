@@ -1,5 +1,7 @@
 // Copyright (c) 2021 Nordix Foundation.
 //
+// Copyright (c) 2021 Doc.ai and/or its affiliates.
+//
 // SPDX-License-Identifier: Apache-2.0
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,11 +25,11 @@ import (
 	"os"
 
 	"github.com/golang/protobuf/ptypes/empty"
+
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/kernel"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 
-	"github.com/networkservicemesh/sdk-sriov/pkg/networkservice/common/resourcepool"
 	"github.com/networkservicemesh/sdk-sriov/pkg/tools/tokens"
 )
 
@@ -48,10 +50,9 @@ func NewServer(tokenKey string) networkservice.NetworkServiceServer {
 
 func (s *tokenServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
 	var tokenID string
-	if mechanism := kernel.ToMechanism(request.GetConnection().GetMechanism()); mechanism != nil || mechanism.Parameters[resourcepool.TokenIDKey] == "" {
-		tokenID = s.config.assign(s.tokenName, request.GetConnection())
-		if tokenID != "" {
-			mechanism.Parameters[resourcepool.TokenIDKey] = tokenID
+	if mechanism := kernel.ToMechanism(request.GetConnection().GetMechanism()); mechanism != nil || mechanism.GetDeviceTokenID() == "" {
+		if tokenID = s.config.assign(s.tokenName, request.GetConnection()); tokenID != "" {
+			mechanism.SetDeviceTokenID(tokenID)
 		}
 	}
 

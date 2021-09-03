@@ -23,11 +23,10 @@ import (
 	"path"
 	"sync"
 
-	"github.com/google/uuid"
 	"github.com/pkg/errors"
 
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/config"
-	tokenenv "github.com/networkservicemesh/sdk-sriov/pkg/tools/tokens"
+	sriovtokens "github.com/networkservicemesh/sdk-sriov/pkg/tools/tokens"
 )
 
 const (
@@ -81,7 +80,7 @@ func NewPool(cfg *config.Config) *Pool {
 				name := path.Join(serviceDomain, capability)
 				for i := 0; i < len(pfCfg.VirtualFunctions); i++ {
 					tok := &token{
-						id:    uuid.New().String(),
+						id:    sriovtokens.NewTokenID(),
 						name:  name,
 						state: free,
 					}
@@ -321,5 +320,5 @@ func (p *Pool) stopUsing(id string) error {
 
 // ToEnv returns a (name, value) pair to store given tokens into the environment variable
 func (p *Pool) ToEnv(tokenName string, tokenIDs []string) (name, value string) {
-	return tokenenv.ToEnv(tokenName, tokenIDs)
+	return sriovtokens.ToEnv(tokenName, tokenIDs)
 }

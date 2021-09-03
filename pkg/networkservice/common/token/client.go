@@ -31,9 +31,9 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
+	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/common"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 
-	"github.com/networkservicemesh/sdk-sriov/pkg/networkservice/common/resourcepool"
 	"github.com/networkservicemesh/sdk-sriov/pkg/tools/tokens"
 )
 
@@ -70,7 +70,7 @@ func (c *tokenClient) Request(ctx context.Context, request *networkservice.Netwo
 				if mech.Parameters == nil {
 					mech.Parameters = map[string]string{}
 				}
-				mech.Parameters[resourcepool.TokenIDKey] = tokenID
+				mech.Parameters[common.DeviceTokenIDKey] = tokenID
 			}
 		}
 	}

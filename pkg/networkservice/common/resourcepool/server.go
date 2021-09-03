@@ -27,12 +27,14 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
+	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/common"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
 
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov"
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/config"
+	"github.com/networkservicemesh/sdk-sriov/pkg/tools/tokens"
 )
 
 type resourcePoolServer struct {
@@ -60,10 +62,12 @@ func NewServer(
 func (s *resourcePoolServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
 	logger := log.FromContext(ctx).WithField("resourcePoolServer", "Request")
 	conn := request.GetConnection()
-	tokenID, ok := conn.GetMechanism().GetParameters()[TokenIDKey]
+	tokenID, ok := conn.GetMechanism().GetParameters()[common.DeviceTokenIDKey]
 	if !ok {
-		logger.Infof("no token id present for client connection %v", conn)
-		return next.Server(ctx).Request(ctx, request)
+		return nil, errors.New("no token ID provided")
+	}
+	if !tokens.IsTokenID(tokenID) {
+		return nil, errors.Errorf("no SR-IOV token ID provided, got: %s", tokenID)
 	}
 
 	err := assignVF(ctx, logger, conn, tokenID, s.resourcePool, metadata.IsClient(s))

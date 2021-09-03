@@ -26,20 +26,21 @@ import (
 	"testing"
 
 	"github.com/golang/protobuf/ptypes/empty"
-	"github.com/networkservicemesh/api/pkg/api/networkservice"
-	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
-	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 
-	"github.com/networkservicemesh/sdk-sriov/pkg/networkservice/common/resourcepool"
+	"github.com/networkservicemesh/api/pkg/api/networkservice"
+	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/common"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
+
 	"github.com/networkservicemesh/sdk-sriov/pkg/networkservice/common/token"
 	"github.com/networkservicemesh/sdk-sriov/pkg/tools/tokens"
 )
 
 const (
 	tokenName          = "service.domain/10G"
-	tokenID            = "1"
+	tokenID            = "sriov-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 	sriovTokenLabel    = "sriovToken"
 	serviceDomainLabel = "serviceDomain"
 	serviceDomain      = "service.domain"
@@ -89,7 +90,7 @@ func (c *validateClient) Request(ctx context.Context, request *networkservice.Ne
 	}, request.GetConnection().GetLabels())
 
 	for _, mech := range request.GetMechanismPreferences() {
-		require.Equal(c.t, tokenID, mech.GetParameters()[resourcepool.TokenIDKey])
+		require.Equal(c.t, tokenID, mech.GetParameters()[common.DeviceTokenIDKey])
 	}
 
 	return next.Client(ctx).Request(ctx, request, opts...)
