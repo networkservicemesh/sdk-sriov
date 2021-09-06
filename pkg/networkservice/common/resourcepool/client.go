@@ -69,11 +69,13 @@ func (i *resourcePoolClient) Request(ctx context.Context, request *networkservic
 	oldPCIAddress := mechParams[common.PCIAddressKey]
 	oldTokenID := mechParams[common.DeviceTokenIDKey]
 
+	isEstablished := request.GetConnection().GetNextPathSegment() != nil
+
 	postponeCtxFunc := postpone.ContextWithValues(ctx)
 
 	conn, err := next.Client(ctx).Request(ctx, request, opts...)
-	if err != nil {
-		return nil, err
+	if err != nil || isEstablished {
+		return conn, err
 	}
 
 	tokenID, ok := conn.GetMechanism().GetParameters()[common.DeviceTokenIDKey]
