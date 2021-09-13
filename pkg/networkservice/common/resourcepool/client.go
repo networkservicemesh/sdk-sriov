@@ -37,6 +37,7 @@ import (
 
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov"
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/config"
+	"github.com/networkservicemesh/sdk-sriov/pkg/tools/tokens"
 )
 
 type resourcePoolClient struct {
@@ -64,8 +65,9 @@ func NewClient(
 func (i *resourcePoolClient) Request(ctx context.Context, request *networkservice.NetworkServiceRequest, opts ...grpc.CallOption) (*networkservice.Connection, error) {
 	logger := log.FromContext(ctx).WithField("resourcePoolClient", "Request")
 
-	oldPCIAddress := request.GetConnection().GetMechanism().GetParameters()[common.PCIAddressKey]
-	oldTokenID := request.GetConnection().GetMechanism().GetParameters()[TokenIDKey]
+	mechParams := request.GetConnection().GetMechanism().GetParameters()
+	oldPCIAddress := mechParams[common.PCIAddressKey]
+	oldTokenID := mechParams[common.DeviceTokenIDKey]
 
 	postponeCtxFunc := postpone.ContextWithValues(ctx)
 
@@ -74,9 +76,13 @@ func (i *resourcePoolClient) Request(ctx context.Context, request *networkservic
 		return nil, err
 	}
 
-	tokenID, ok := conn.GetMechanism().GetParameters()[TokenIDKey]
+	tokenID, ok := conn.GetMechanism().GetParameters()[common.DeviceTokenIDKey]
 	if !ok {
-		logger.Infof("no token id present for endpoint connection %v", conn)
+		logger.Infof("no token ID present for the connection: %v", conn)
+		return conn, nil
+	}
+	if !tokens.IsTokenID(tokenID) {
+		logger.Infof("[%s] is not a SR-IOV token ID: %v", tokenID, conn)
 		return conn, nil
 	}
 

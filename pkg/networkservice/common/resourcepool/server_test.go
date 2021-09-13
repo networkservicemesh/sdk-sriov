@@ -30,6 +30,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
+	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/common"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/kernel"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/vfio"
 	"github.com/networkservicemesh/sdk-kernel/pkg/kernel/networkservice/vfconfig"
@@ -50,6 +51,7 @@ const (
 	configFileName            = "config.yml"
 	pf2PciAddr                = "0000:00:02.0"
 	vf2KernelDriver           = "vf-2-driver"
+	tokenID                   = "sriov-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 )
 
 type sample struct {
@@ -139,7 +141,7 @@ func TestResourcePoolServer_Request(t *testing.T) {
 
 			// 1. Request
 
-			resourcePool.mock.On("Select", "1", sample.driverType).
+			resourcePool.mock.On("Select", tokenID, sample.driverType).
 				Return(pfs[pf2PciAddr].Vfs[1].Addr, nil)
 
 			ctx := context.TODO()
@@ -149,7 +151,7 @@ func TestResourcePoolServer_Request(t *testing.T) {
 					Mechanism: &networkservice.Mechanism{
 						Type: sample.mechanism,
 						Parameters: map[string]string{
-							resourcepool.TokenIDKey: "1",
+							common.DeviceTokenIDKey: tokenID,
 						},
 					},
 				},
