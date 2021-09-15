@@ -28,9 +28,11 @@ import (
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/common"
+	"github.com/networkservicemesh/sdk-kernel/pkg/kernel/networkservice/vfconfig"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
+	"github.com/networkservicemesh/sdk/pkg/tools/postpone"
 
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov"
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/config"
@@ -70,15 +72,27 @@ func (s *resourcePoolServer) Request(ctx context.Context, request *networkservic
 		return nil, errors.Errorf("no SR-IOV token ID provided, got: %s", tokenID)
 	}
 
-	err := assignVF(ctx, logger, conn, tokenID, s.resourcePool, metadata.IsClient(s))
-	if err != nil {
-		_ = s.resourcePool.close(conn)
-		return nil, err
+	_, vfExists := vfconfig.Load(ctx, metadata.IsClient(s))
+
+	if !vfExists {
+		err := assignVF(ctx, logger, conn, tokenID, s.resourcePool, metadata.IsClient(s))
+		if err != nil {
+			_ = s.resourcePool.close(conn)
+			return nil, err
+		}
 	}
 
-	conn, err = next.Server(ctx).Request(ctx, request)
-	if err != nil {
-		_ = s.resourcePool.close(request.GetConnection())
+	postponeCtxFunc := postpone.ContextWithValues(ctx)
+
+	conn, err := next.Server(ctx).Request(ctx, request)
+	if err != nil && !vfExists {
+		closeCtx, cancelClose := postponeCtxFunc()
+		defer cancelClose()
+
+		if _, closeErr := s.Close(closeCtx, conn); closeErr != nil {
+			err = errors.Wrapf(err, "connection closed with error: %s", closeErr.Error())
+		}
+		return nil, err
 	}
 
 	return conn, err

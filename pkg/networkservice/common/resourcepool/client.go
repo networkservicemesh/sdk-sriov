@@ -30,6 +30,7 @@ import (
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/common"
+	"github.com/networkservicemesh/sdk-kernel/pkg/kernel/networkservice/vfconfig"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
@@ -69,11 +70,13 @@ func (i *resourcePoolClient) Request(ctx context.Context, request *networkservic
 	oldPCIAddress := mechParams[common.PCIAddressKey]
 	oldTokenID := mechParams[common.DeviceTokenIDKey]
 
+	_, vfExists := vfconfig.Load(ctx, metadata.IsClient(i))
+
 	postponeCtxFunc := postpone.ContextWithValues(ctx)
 
 	conn, err := next.Client(ctx).Request(ctx, request, opts...)
-	if err != nil {
-		return nil, err
+	if err != nil || vfExists {
+		return conn, err
 	}
 
 	tokenID, ok := conn.GetMechanism().GetParameters()[common.DeviceTokenIDKey]
