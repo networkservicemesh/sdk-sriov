@@ -28,6 +28,7 @@ import (
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/common"
+	"github.com/networkservicemesh/sdk-kernel/pkg/kernel/networkservice/vfconfig"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
@@ -71,9 +72,9 @@ func (s *resourcePoolServer) Request(ctx context.Context, request *networkservic
 		return nil, errors.Errorf("no SR-IOV token ID provided, got: %s", tokenID)
 	}
 
-	isEstablished := request.GetConnection().GetNextPathSegment() != nil
+	_, vfExists := vfconfig.Load(ctx, metadata.IsClient(s))
 
-	if !isEstablished {
+	if !vfExists {
 		err := assignVF(ctx, logger, conn, tokenID, s.resourcePool, metadata.IsClient(s))
 		if err != nil {
 			_ = s.resourcePool.close(conn)
@@ -84,7 +85,7 @@ func (s *resourcePoolServer) Request(ctx context.Context, request *networkservic
 	postponeCtxFunc := postpone.ContextWithValues(ctx)
 
 	conn, err := next.Server(ctx).Request(ctx, request)
-	if err != nil && !isEstablished {
+	if err != nil && !vfExists {
 		closeCtx, cancelClose := postponeCtxFunc()
 		defer cancelClose()
 
