@@ -32,7 +32,6 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
-	"github.com/networkservicemesh/sdk/pkg/tools/postpone"
 
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov"
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/config"
@@ -82,14 +81,9 @@ func (s *resourcePoolServer) Request(ctx context.Context, request *networkservic
 		}
 	}
 
-	postponeCtxFunc := postpone.ContextWithValues(ctx)
-
 	conn, err := next.Server(ctx).Request(ctx, request)
 	if err != nil && !vfExists {
-		closeCtx, cancelClose := postponeCtxFunc()
-		defer cancelClose()
-
-		if _, closeErr := s.Close(closeCtx, conn); closeErr != nil {
+		if closeErr := s.resourcePool.close(conn); closeErr != nil {
 			err = errors.Wrapf(err, "connection closed with error: %s", closeErr.Error())
 		}
 		return nil, err

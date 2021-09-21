@@ -54,6 +54,8 @@ func NewClient() networkservice.NetworkServiceClient {
 }
 
 func (c *tokenClient) Request(ctx context.Context, request *networkservice.NetworkServiceRequest, opts ...grpc.CallOption) (*networkservice.Connection, error) {
+	isEstablished := c.config.get(request.GetConnection()) != ""
+
 	var tokenID string
 	if labels := request.GetConnection().GetLabels(); labels != nil {
 		if tokenName, ok := labels[sriovTokenLabel]; ok {
@@ -75,7 +77,6 @@ func (c *tokenClient) Request(ctx context.Context, request *networkservice.Netwo
 		}
 	}
 
-	isEstablished := request.GetConnection().GetNextPathSegment() != nil
 	conn, err := next.Client(ctx).Request(ctx, request, opts...)
 	if err != nil && tokenID != "" && !isEstablished {
 		c.config.release(request.GetConnection())

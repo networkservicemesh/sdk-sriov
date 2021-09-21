@@ -33,6 +33,7 @@ type tokenElement struct {
 
 type tokenConfig interface {
 	assign(tokenName string, conn *networkservice.Connection) (tokenID string)
+	get(conn *networkservice.Connection) (tokenID string)
 	release(conn *networkservice.Connection)
 }
 
@@ -61,6 +62,13 @@ func (c *tokenElement) assign(tokenName string, conn *networkservice.Connection)
 		}
 	}
 	return
+}
+
+func (c *tokenElement) get(conn *networkservice.Connection) (tokenID string) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	return c.tokensByConnections[conn.GetId()]
 }
 
 func (c *tokenElement) release(conn *networkservice.Connection) {

@@ -49,6 +49,8 @@ func NewServer(tokenKey string) networkservice.NetworkServiceServer {
 }
 
 func (s *tokenServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
+	isEstablished := s.config.get(request.GetConnection()) != ""
+
 	var tokenID string
 	if mechanism := kernel.ToMechanism(request.GetConnection().GetMechanism()); mechanism != nil || mechanism.GetDeviceTokenID() == "" {
 		if tokenID = s.config.assign(s.tokenName, request.GetConnection()); tokenID != "" {
@@ -56,7 +58,6 @@ func (s *tokenServer) Request(ctx context.Context, request *networkservice.Netwo
 		}
 	}
 
-	isEstablished := request.GetConnection().GetNextPathSegment() != nil
 	conn, err := next.Server(ctx).Request(ctx, request)
 	if err != nil && tokenID != "" && !isEstablished {
 		s.config.release(request.GetConnection())
