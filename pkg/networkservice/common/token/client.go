@@ -38,8 +38,8 @@ import (
 )
 
 const (
-	sriovTokenLabel    = "sriovToken"
-	serviceDomainLabel = "serviceDomain"
+	SriovTokenLabel    = "sriovToken"
+	ServiceDomainLabel = "serviceDomain"
 )
 
 type tokenClient struct {
@@ -56,15 +56,15 @@ func NewClient() networkservice.NetworkServiceClient {
 func (c *tokenClient) Request(ctx context.Context, request *networkservice.NetworkServiceRequest, opts ...grpc.CallOption) (*networkservice.Connection, error) {
 	var tokenID string
 	if labels := request.GetConnection().GetLabels(); labels != nil {
-		if tokenName, ok := labels[sriovTokenLabel]; ok {
+		if tokenName, ok := labels[SriovTokenLabel]; ok {
 			tokenID = c.config.assign(tokenName, request.GetConnection())
 			if tokenID == "" {
 				return nil, errors.Errorf("no free token for the name: %v", tokenName)
 			}
 
 			request = request.Clone()
-			delete(request.GetConnection().GetLabels(), sriovTokenLabel)
-			request.GetConnection().GetLabels()[serviceDomainLabel] = strings.Split(tokenName, "/")[0]
+			delete(request.GetConnection().GetLabels(), SriovTokenLabel)
+			request.GetConnection().GetLabels()[ServiceDomainLabel] = strings.Split(tokenName, "/")[0]
 
 			for _, mech := range request.GetMechanismPreferences() {
 				if mech.Parameters == nil {
