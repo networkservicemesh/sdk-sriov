@@ -50,7 +50,7 @@ func NewServer(tokenKey string) networkservice.NetworkServiceServer {
 
 func (s *tokenServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
 	var tokenID string
-	if mechanism := kernel.ToMechanism(request.GetConnection().GetMechanism()); mechanism != nil || mechanism.GetDeviceTokenID() == "" {
+	if mechanism := kernel.ToMechanism(request.GetConnection().GetMechanism()); mechanism != nil && mechanism.GetDeviceTokenID() == "" {
 		if tokenID = s.config.assign(s.tokenName, request.GetConnection()); tokenID != "" {
 			mechanism.SetDeviceTokenID(tokenID)
 		}
