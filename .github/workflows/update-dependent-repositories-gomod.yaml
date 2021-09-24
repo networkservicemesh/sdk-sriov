@@ -19,6 +19,7 @@ jobs:
           - cmd-forwarder-sriov
           - cmd-nsc
           - cmd-nsc-init
+          - cmd-nse-icmp-responder
           - sdk-ovs
     name: Update ${{ matrix.repository }}
     runs-on: ubuntu-latest
