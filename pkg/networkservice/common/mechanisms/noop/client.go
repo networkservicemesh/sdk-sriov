@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Doc.ai and/or its affiliates.
+// Copyright (c) 2020-2021 Doc.ai and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -24,26 +24,29 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
+	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/cls"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/noop"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 )
 
-type noopClient struct {
-	class string
-}
+type noopClient struct{}
 
 // NewClient returns a NOOP client chain element
-func NewClient(class string) networkservice.NetworkServiceClient {
-	return &noopClient{
-		class: class,
-	}
+func NewClient() networkservice.NetworkServiceClient {
+	return new(noopClient)
 }
 
 func (c *noopClient) Request(ctx context.Context, request *networkservice.NetworkServiceRequest, opts ...grpc.CallOption) (*networkservice.Connection, error) {
-	request.MechanismPreferences = append(request.MechanismPreferences, &networkservice.Mechanism{
-		Cls:  c.class,
-		Type: noop.MECHANISM,
-	})
+	request.MechanismPreferences = append(request.MechanismPreferences,
+		&networkservice.Mechanism{
+			Cls:  cls.LOCAL,
+			Type: noop.MECHANISM,
+		},
+		&networkservice.Mechanism{
+			Cls:  cls.REMOTE,
+			Type: noop.MECHANISM,
+		},
+	)
 	return next.Client(ctx).Request(ctx, request, opts...)
 }
 
