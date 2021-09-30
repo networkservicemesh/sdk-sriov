@@ -29,7 +29,6 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
-	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/cls"
 	"github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/kernel"
 	noopmech "github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/noop"
 	vfiomech "github.com/networkservicemesh/api/pkg/api/networkservice/mechanisms/vfio"
@@ -44,6 +43,8 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms/recvfd"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanismtranslation"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/common/null"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/common/switchcase"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/adapters"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
@@ -87,27 +88,8 @@ func NewServer(
 ) endpoint.Endpoint {
 	rv := new(sriovServer)
 
-	connectChainFactory := func(class string) networkservice.NetworkServiceServer {
-		return chain.NewNetworkServiceServer(
-			clienturl.NewServer(clientURL),
-			heal.NewServer(ctx,
-				heal.WithOnHeal(addressof.NetworkServiceClient(adapters.NewServerToClient(rv))),
-				heal.WithOnRestore(heal.OnRestoreIgnore)),
-			connect.NewServer(ctx,
-				client.NewClientFactory(
-					client.WithName(name),
-					client.WithAdditionalFunctionality(
-						mechanismtranslation.NewClient(),
-						noop.NewClient(class),
-					),
-				),
-				connect.WithDialOptions(clientDialOptions...),
-			),
-		)
-	}
-
 	resourceLock := &sync.Mutex{}
-	sriovChain := chain.NewNetworkServiceServer(
+	additionalFunctionality := []networkservice.NetworkServiceServer{
 		metadata.NewServer(),
 		recvfd.NewServer(),
 		resetmechanism.NewServer(
@@ -119,25 +101,41 @@ func NewServer(
 					resourcepool.NewServer(sriov.VFIOPCIDriver, resourceLock, pciPool, resourcePool, sriovConfig),
 					vfio.NewServer(vfioDir, cgroupBaseDir),
 				),
+				noopmech.MECHANISM: null.NewServer(),
 			}),
 		),
-		// we setup VF ethernet context using PF interface, so we do it in the forwarder net NS
-		ethernetcontext.NewVFServer(),
-		inject.NewServer(),
-		connectioncontextkernel.NewServer(),
-		connectChainFactory(cls.REMOTE),
-	)
+		switchcase.NewServer(
+			&switchcase.ServerCase{
+				Condition: func(_ context.Context, conn *networkservice.Connection) bool {
+					return conn.GetMechanism().GetType() != noopmech.MECHANISM
+				},
+				Server: chain.NewNetworkServiceServer(
+					ethernetcontext.NewVFServer(),
+					inject.NewServer(),
+					connectioncontextkernel.NewServer(),
+				),
+			},
+		),
+		clienturl.NewServer(clientURL),
+		heal.NewServer(ctx,
+			heal.WithOnHeal(addressof.NetworkServiceClient(adapters.NewServerToClient(rv))),
+			heal.WithOnRestore(heal.OnRestoreIgnore)),
+		connect.NewServer(ctx,
+			client.NewClientFactory(
+				client.WithName(name),
+				client.WithAdditionalFunctionality(
+					mechanismtranslation.NewClient(),
+					noop.NewClient(),
+				),
+			),
+			connect.WithDialOptions(clientDialOptions...),
+		),
+	}
 
 	rv.Endpoint = endpoint.NewServer(ctx, tokenGenerator,
 		endpoint.WithName(name),
 		endpoint.WithAuthorizeServer(authzServer),
-		endpoint.WithAdditionalFunctionality(
-			mechanisms.NewServer(map[string]networkservice.NetworkServiceServer{
-				kernel.MECHANISM:   sriovChain,
-				vfiomech.MECHANISM: sriovChain,
-				noopmech.MECHANISM: connectChainFactory(cls.LOCAL),
-			}),
-		),
+		endpoint.WithAdditionalFunctionality(additionalFunctionality...),
 	)
 
 	return rv
