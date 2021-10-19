@@ -34,16 +34,23 @@ import (
 )
 
 type tokenServer struct {
-	tokenName string
-	config    tokenConfig
+	tokenName   string
+	sharedToken string
+	config      tokenConfig
 }
 
 // NewServer returns a new token server chain element for the given tokenKey
 func NewServer(tokenKey string) networkservice.NetworkServiceServer {
+	sriovTokens := tokens.FromEnv(os.Environ())[tokenKey]
+	if len(sriovTokens) == 1 {
+		return &tokenServer{
+			sharedToken: sriovTokens[0],
+		}
+	}
 	return &tokenServer{
 		tokenName: tokenKey,
 		config: createTokenElement(map[string][]string{
-			tokenKey: tokens.FromEnv(os.Environ())[tokenKey],
+			tokenKey: sriovTokens,
 		}),
 	}
 }
@@ -52,10 +59,16 @@ func (s *tokenServer) Request(ctx context.Context, request *networkservice.Netwo
 	isEstablished := s.config.get(request.GetConnection()) != ""
 
 	var tokenID string
-	if mechanism := kernel.ToMechanism(request.GetConnection().GetMechanism()); mechanism != nil && mechanism.GetDeviceTokenID() == "" {
-		if tokenID = s.config.assign(s.tokenName, request.GetConnection()); tokenID != "" {
+	var isEstablished bool
+	mechanism := kernel.ToMechanism(request.GetConnection().GetMechanism())
+	if mechanism != nil && mechanism.GetDeviceTokenID() == "" {
+		if s.sharedToken != "" {
+			mechanism.SetDeviceTokenID(s.sharedToken)
+		} else if tokenID = s.config.assign(s.tokenName, request.GetConnection()); tokenID != "" {
 			mechanism.SetDeviceTokenID(tokenID)
 		}
+	} else if mechanism != nil && mechanism.GetDeviceTokenID() != "" {
+		isEstablished = true
 	}
 
 	conn, err := next.Server(ctx).Request(ctx, request)
