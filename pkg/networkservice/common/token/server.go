@@ -59,7 +59,6 @@ func (s *tokenServer) Request(ctx context.Context, request *networkservice.Netwo
 	isEstablished := s.config.get(request.GetConnection()) != ""
 
 	var tokenID string
-	var isEstablished bool
 	mechanism := kernel.ToMechanism(request.GetConnection().GetMechanism())
 	if mechanism != nil && mechanism.GetDeviceTokenID() == "" {
 		if s.sharedToken != "" {
