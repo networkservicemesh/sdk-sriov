@@ -56,9 +56,11 @@ func NewServer(tokenKey string) networkservice.NetworkServiceServer {
 }
 
 func (s *tokenServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
-	isEstablished := s.config.get(request.GetConnection()) != ""
-
+	var isEstablished bool
 	var tokenID string
+	if s.config != nil {
+		isEstablished = s.config.get(request.GetConnection()) != ""
+	}
 	mechanism := kernel.ToMechanism(request.GetConnection().GetMechanism())
 	if mechanism != nil && mechanism.GetDeviceTokenID() == "" {
 		if s.sharedToken != "" {
