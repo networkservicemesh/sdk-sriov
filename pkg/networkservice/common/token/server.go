@@ -58,12 +58,12 @@ func NewServer(tokenKey string) networkservice.NetworkServiceServer {
 func (s *tokenServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
 	var isEstablished bool
 	var tokenID string
-	if s.config != nil {
+	if s.isMultiToken() {
 		isEstablished = s.config.get(request.GetConnection()) != ""
 	}
 	mechanism := kernel.ToMechanism(request.GetConnection().GetMechanism())
 	if mechanism != nil && mechanism.GetDeviceTokenID() == "" {
-		if s.sharedToken != "" {
+		if !s.isMultiToken() {
 			mechanism.SetDeviceTokenID(s.sharedToken)
 		} else if tokenID = s.config.assign(s.tokenName, request.GetConnection()); tokenID != "" {
 			mechanism.SetDeviceTokenID(tokenID)
@@ -85,4 +85,8 @@ func (s *tokenServer) Close(ctx context.Context, conn *networkservice.Connection
 		s.config.release(conn)
 	}
 	return next.Server(ctx).Close(ctx, conn)
+}
+
+func (s *tokenServer) isMultiToken() bool {
+	return s.config != nil
 }
