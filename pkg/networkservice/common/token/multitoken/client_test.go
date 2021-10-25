@@ -18,7 +18,7 @@
 
 // +build linux
 
-package token_test
+package multitoken_test
 
 import (
 	"context"
@@ -34,7 +34,7 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
 
-	"github.com/networkservicemesh/sdk-sriov/pkg/networkservice/common/token"
+	token "github.com/networkservicemesh/sdk-sriov/pkg/networkservice/common/token/multitoken"
 	"github.com/networkservicemesh/sdk-sriov/pkg/tools/tokens"
 )
 

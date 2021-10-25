@@ -16,7 +16,7 @@
 
 // +build linux
 
-package token
+package multitoken
 
 import (
 	"sync"
