@@ -83,7 +83,8 @@ func TestSharedTokenServer_Request(t *testing.T) {
 }
 
 func TestMultiTokenServer_Request(t *testing.T) {
-	name, value := tokens.ToEnv(tokenName, []string{tokenID1, tokenID2})
+	tokenList := []string{tokenID1, tokenID2}
+	name, value := tokens.ToEnv(tokenName, tokenList)
 	err := os.Setenv(name, value)
 	require.NoError(t, err)
 
@@ -118,7 +119,25 @@ func TestMultiTokenServer_Request(t *testing.T) {
 
 	mech := kernel.ToMechanism(conn.GetMechanism())
 	require.NotNil(t, mech)
+	require.Subset(t, tokenList, []string{mech.GetDeviceTokenID()})
+
 	mech2 := kernel.ToMechanism(conn2.GetMechanism())
 	require.NotNil(t, mech2)
+	require.Subset(t, tokenList, []string{mech2.GetDeviceTokenID()})
+
 	require.NotEqual(t, mech.GetDeviceTokenID(), mech2.GetDeviceTokenID())
+
+	conn3, err3 := server.Request(ctx, &networkservice.NetworkServiceRequest{
+		Connection: &networkservice.Connection{
+			Id: "id3",
+			Mechanism: &networkservice.Mechanism{
+				Type:       kernel.MECHANISM,
+				Parameters: map[string]string{},
+			},
+		},
+	})
+	require.NoError(t, err3)
+	mech3 := kernel.ToMechanism(conn3.GetMechanism())
+	require.NotNil(t, mech3)
+	require.Equal(t, "", mech3.GetDeviceTokenID())
 }
