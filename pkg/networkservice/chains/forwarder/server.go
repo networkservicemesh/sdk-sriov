@@ -90,7 +90,6 @@ func NewServer(
 	dialTimeout time.Duration,
 	clientDialOptions ...grpc.DialOption,
 ) endpoint.Endpoint {
-
 	nseClient := registryclient.NewNetworkServiceEndpointRegistryClient(ctx, clientURL,
 		registryclient.WithNSEAdditionalFunctionality(registryrecvfd.NewNetworkServiceEndpointRegistryClient()),
 		registryclient.WithDialOptions(clientDialOptions...),
