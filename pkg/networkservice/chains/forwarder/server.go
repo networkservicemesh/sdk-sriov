@@ -25,6 +25,7 @@ import (
 	"context"
 	"net/url"
 	"sync"
+	"time"
 
 	"google.golang.org/grpc"
 
@@ -37,12 +38,14 @@ import (
 	"github.com/networkservicemesh/sdk-kernel/pkg/kernel/networkservice/inject"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/chains/client"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/chains/endpoint"
-	"github.com/networkservicemesh/sdk/pkg/networkservice/common/clienturl"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/connect"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/common/discover"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/common/filtermechanisms"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanisms/recvfd"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/mechanismtranslation"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/null"
+	"github.com/networkservicemesh/sdk/pkg/networkservice/common/roundrobin"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/switchcase"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
@@ -54,6 +57,9 @@ import (
 	"github.com/networkservicemesh/sdk-sriov/pkg/networkservice/common/resourcepool"
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov"
 	"github.com/networkservicemesh/sdk-sriov/pkg/sriov/config"
+
+	registryclient "github.com/networkservicemesh/sdk/pkg/registry/chains/client"
+	registryrecvfd "github.com/networkservicemesh/sdk/pkg/registry/common/recvfd"
 )
 
 type sriovServer struct {
@@ -81,14 +87,24 @@ func NewServer(
 	sriovConfig *config.Config,
 	vfioDir, cgroupBaseDir string,
 	clientURL *url.URL,
+	dialTimeout time.Duration,
 	clientDialOptions ...grpc.DialOption,
 ) endpoint.Endpoint {
+
+	nseClient := registryclient.NewNetworkServiceEndpointRegistryClient(ctx, clientURL,
+		registryclient.WithNSEAdditionalFunctionality(registryrecvfd.NewNetworkServiceEndpointRegistryClient()),
+		registryclient.WithDialOptions(clientDialOptions...),
+	)
+	nsClient := registryclient.NewNetworkServiceRegistryClient(ctx, clientURL, registryclient.WithDialOptions(clientDialOptions...))
+
 	rv := new(sriovServer)
 
 	resourceLock := &sync.Mutex{}
 	additionalFunctionality := []networkservice.NetworkServiceServer{
 		metadata.NewServer(),
 		recvfd.NewServer(),
+		discover.NewServer(nsClient, nseClient),
+		roundrobin.NewServer(),
 		resetmechanism.NewServer(
 			mechanisms.NewServer(map[string]networkservice.NetworkServiceServer{
 				kernel.MECHANISM: chain.NewNetworkServiceServer(
@@ -113,7 +129,6 @@ func NewServer(
 				),
 			},
 		),
-		clienturl.NewServer(clientURL),
 		connect.NewServer(
 			client.NewClient(
 				ctx,
@@ -121,7 +136,9 @@ func NewServer(
 				client.WithAdditionalFunctionality(
 					mechanismtranslation.NewClient(),
 					noop.NewClient(),
+					filtermechanisms.NewClient(),
 				),
+				client.WithDialTimeout(dialTimeout),
 				client.WithDialOptions(clientDialOptions...),
 				client.WithoutRefresh(),
 			),
