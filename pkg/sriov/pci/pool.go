@@ -1,4 +1,6 @@
-// Copyright (c) 2020 Doc.ai and/or its affiliates.
+// Copyright (c) 2020-2021 Doc.ai and/or its affiliates.
+//
+// Copyright (c) 2021 Nordix Foundation.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -50,7 +52,7 @@ type Pool struct {
 	functions             map[string]*function // pciAddr -> *function
 	functionsByIOMMUGroup map[uint][]*function // iommuGroup -> []*function
 	vfioDir               string
-	test                  bool
+	skipDriverCheck       bool
 }
 
 type function struct {
@@ -60,10 +62,16 @@ type function struct {
 
 // NewPool returns a new PCI Pool
 func NewPool(pciDevicesPath, pciDriversPath, vfioDir string, cfg *config.Config) (*Pool, error) {
+	return NewPCIPool(pciDevicesPath, pciDriversPath, vfioDir, cfg, false)
+}
+
+// NewPCIPool returns a new PCI Pool
+func NewPCIPool(pciDevicesPath, pciDriversPath, vfioDir string, cfg *config.Config, skipDriverCheck bool) (*Pool, error) {
 	p := &Pool{
 		functions:             map[string]*function{},
 		functionsByIOMMUGroup: map[uint][]*function{},
 		vfioDir:               vfioDir,
+		skipDriverCheck:       skipDriverCheck,
 	}
 
 	for pfPCIAddr, pfCfg := range cfg.PhysicalFunctions {
@@ -91,7 +99,7 @@ func NewTestPool(physicalFunctions map[string]*sriovtest.PCIPhysicalFunction, cf
 	p := &Pool{
 		functions:             map[string]*function{},
 		functionsByIOMMUGroup: map[uint][]*function{},
-		test:                  true,
+		skipDriverCheck:       true,
 	}
 
 	for pfPCIAddr, pfCfg := range cfg.PhysicalFunctions {
@@ -175,7 +183,8 @@ func (p *Pool) waitDriverGettingBound(ctx context.Context, pcif pciFunction, dri
 			return errors.Errorf("driver type is not supported: %v", driverType)
 		}
 
-		if driverCheck(pcif) == nil {
+		err := driverCheck(pcif)
+		if err == nil {
 			return nil
 		}
 
@@ -183,14 +192,14 @@ func (p *Pool) waitDriverGettingBound(ctx context.Context, pcif pciFunction, dri
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-timeoutCh:
-			return errors.Errorf("time for binding kernel driver exceeded: %s", pcif.GetPCIAddress())
+			return errors.Errorf("time for binding kernel driver exceeded: %s, cause: %v", pcif.GetPCIAddress(), err)
 		case <-time.After(driverBindCheck):
 		}
 	}
 }
 
 func (p *Pool) kernelDriverCheck(pcif pciFunction) error {
-	if p.test {
+	if p.skipDriverCheck {
 		return nil
 	}
 
@@ -199,7 +208,7 @@ func (p *Pool) kernelDriverCheck(pcif pciFunction) error {
 }
 
 func (p *Pool) vfioDriverCheck(pcif pciFunction) error {
-	if p.test {
+	if p.skipDriverCheck {
 		return nil
 	}
 
