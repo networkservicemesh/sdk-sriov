@@ -8,7 +8,7 @@ on:
     types:
       - completed
     workflows:
-      - 'automerge'
+      - "automerge"
 jobs:
   update-dependent-repositories:
     continue-on-error: true
@@ -20,6 +20,7 @@ jobs:
           - cmd-nsc
           - cmd-nsc-init
           - cmd-nse-icmp-responder
+          - cmd-forwarder-vpp
           - cmd-nse-vlan-vpp
           - sdk-ovs
     name: Update ${{ matrix.repository }}
