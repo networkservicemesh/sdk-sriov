@@ -35,10 +35,10 @@ jobs:
         run: go build -race  ./...
       - name: Test
         if: matrix.os != 'windows-latest'
-        run: sudo -E PATH="$PATH" bash -c "go test -race ./..."
+        run: sudo -E PATH="$PATH" bash -c "go test -run TestVFIOServer_Request -count 20000 -race ./pkg/networkservice/common/mechanisms/vfio -timeout 3h -v"
       - name: Test
         if: matrix.os == 'windows-latest'
-        run: go test -race ./...
+        run: go test -run TestVFIOServer_Request -count 20000 -race ./pkg/networkservice/common/mechanisms/vfio -timeout 3h -v
 
   golangci-lint:
     name: golangci-lint
