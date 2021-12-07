@@ -83,6 +83,8 @@ func testCgroups(ctx context.Context, t *testing.T, tmpDir string) (notAllowed, 
 }
 
 func TestVFIOServer_Request(t *testing.T) {
+	t.Skip("https://github.com/networkservicemesh/sdk-sriov/issues/336")
+
 	defer goleak.VerifyNone(t, goleak.IgnoreCurrent())
 
 	ctx, cancel := context.WithTimeout(context.TODO(), 5*time.Second)
@@ -157,6 +159,8 @@ func TestVFIOServer_Request(t *testing.T) {
 }
 
 func TestVFIOServer_Close(t *testing.T) {
+	t.Skip("https://github.com/networkservicemesh/sdk-sriov/issues/336")
+
 	defer goleak.VerifyNone(t, goleak.IgnoreCurrent())
 
 	ctx, cancel := context.WithTimeout(context.TODO(), 5*time.Second)
