@@ -41,6 +41,7 @@ const (
 	vf21PciAddr     = "0000:02:00.1"
 	vf22PciAddr     = "0000:02:00.2"
 	vf23PciAddr     = "0000:02:00.3"
+	skipDriverCheck = "true"
 )
 
 func TestReadConfigFile(t *testing.T) {
@@ -68,6 +69,7 @@ func TestReadConfigFile(t *testing.T) {
 						IOMMUGroup: 2,
 					},
 				},
+				SkipDriverCheck: skipDriverCheck,
 			},
 			pf2PciAddr: {
 				PFKernelDriver: pfKernelDriver,
@@ -94,6 +96,7 @@ func TestReadConfigFile(t *testing.T) {
 						IOMMUGroup: 3,
 					},
 				},
+				SkipDriverCheck: skipDriverCheck,
 			},
 		},
 	}, cfg)

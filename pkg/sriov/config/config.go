@@ -56,7 +56,7 @@ type PhysicalFunction struct {
 	VFKernelDriver   string             `yaml:"vfKernelDriver"`
 	Capabilities     []string           `yaml:"capabilities"`
 	ServiceDomains   []string           `yaml:"serviceDomains"`
-	SkipDriverCheck  string             `default:"false" yaml:"skipDriverCheck"`
+	SkipDriverCheck  string             `yaml:"skipDriverCheck"`
 	VirtualFunctions []*VirtualFunction `yaml:"virtualFunctions"`
 }
 

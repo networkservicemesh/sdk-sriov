@@ -1,6 +1,7 @@
 ---
 physicalFunctions:
   0000:00:01.0:
+    skipDriverCheck: true
     pfKernelDriver: pf-1-driver
     vfKernelDriver: vf-1-driver
     capabilities:
@@ -14,6 +15,7 @@ physicalFunctions:
       - address: 0000:00:01.2
         iommuGroup: 1
   0000:00:02.0:
+    skipDriverCheck: true
     pfKernelDriver: pf-2-driver
     vfKernelDriver: vf-2-driver
     capabilities:
