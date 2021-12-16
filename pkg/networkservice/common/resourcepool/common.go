@@ -22,6 +22,7 @@ package resourcepool
 
 import (
 	"context"
+	"strconv"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -57,10 +58,10 @@ type resourcePoolConfig struct {
 	selectedVFs  map[string]string
 }
 
-func (s *resourcePoolConfig) selectVF(connID string, vfConfig *vfconfig.VFConfig, tokenID string) (vf sriov.PCIFunction, err error) {
+func (s *resourcePoolConfig) selectVF(connID string, vfConfig *vfconfig.VFConfig, tokenID string) (vf sriov.PCIFunction, skipDriverCheck bool, err error) {
 	vfPCIAddr, err := s.resourcePool.Select(tokenID, s.driverType)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to select VF for: %v", s.driverType)
+		return nil, false, errors.Wrapf(err, "failed to select VF for: %v", s.driverType)
 	}
 	s.selectedVFs[connID] = vfPCIAddr
 
@@ -72,25 +73,27 @@ func (s *resourcePoolConfig) selectVF(connID string, vfConfig *vfconfig.VFConfig
 
 			pf, err := s.pciPool.GetPCIFunction(pfPCIAddr)
 			if err != nil {
-				return nil, errors.Wrapf(err, "failed to get PF: %v", pfPCIAddr)
+				return nil, true, errors.Wrapf(err, "failed to get PF: %v", pfPCIAddr)
 			}
 			vfConfig.PFInterfaceName, err = pf.GetNetInterfaceName()
 			if err != nil {
-				return nil, errors.Errorf("failed to get PF net interface name: %v", pfPCIAddr)
+				return nil, true, errors.Errorf("failed to get PF net interface name: %v", pfPCIAddr)
 			}
 
 			vf, err := s.pciPool.GetPCIFunction(vfPCIAddr)
 			if err != nil {
-				return nil, errors.Wrapf(err, "failed to get VF: %v", vfPCIAddr)
+				return nil, true, errors.Wrapf(err, "failed to get VF: %v", vfPCIAddr)
 			}
 
 			vfConfig.VFNum = i
 
-			return vf, err
+			skipDriverCheck, _ = strconv.ParseBool(pfCfg.SkipDriverCheck)
+
+			return vf, skipDriverCheck, err
 		}
 	}
 
-	return nil, errors.Errorf("no VF with selected PCI address exists: %v", s.selectedVFs[connID])
+	return nil, true, errors.Errorf("no VF with selected PCI address exists: %v", s.selectedVFs[connID])
 }
 
 func (s *resourcePoolConfig) close(conn *networkservice.Connection) error {
@@ -113,7 +116,7 @@ func assignVF(ctx context.Context, logger log.Logger, conn *networkservice.Conne
 	vfConfig := &vfconfig.VFConfig{}
 
 	logger.Infof("trying to select VF for %v", resourcePool.driverType)
-	vf, err := resourcePool.selectVF(conn.GetId(), vfConfig, tokenID)
+	vf, skipDriverCheck, err := resourcePool.selectVF(conn.GetId(), vfConfig, tokenID)
 	if err != nil {
 		return err
 	}
@@ -131,7 +134,7 @@ func assignVF(ctx context.Context, logger log.Logger, conn *networkservice.Conne
 	switch resourcePool.driverType {
 	case sriov.KernelDriver:
 		vfConfig.VFInterfaceName, err = vf.GetNetInterfaceName()
-		if err != nil {
+		if err != nil && !skipDriverCheck {
 			return errors.Wrapf(err, "failed to get VF net interface name: %v", vf.GetPCIAddress())
 		}
 	case sriov.VFIOPCIDriver:

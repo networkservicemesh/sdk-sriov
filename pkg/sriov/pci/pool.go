@@ -52,26 +52,20 @@ type Pool struct {
 	functions             map[string]*function // pciAddr -> *function
 	functionsByIOMMUGroup map[uint][]*function // iommuGroup -> []*function
 	vfioDir               string
-	skipDriverCheck       bool
 }
 
 type function struct {
-	function     pciFunction
-	kernelDriver string
+	function        pciFunction
+	kernelDriver    string
+	skipDriverCheck bool
 }
 
 // NewPool returns a new PCI Pool
 func NewPool(pciDevicesPath, pciDriversPath, vfioDir string, cfg *config.Config) (*Pool, error) {
-	return NewPCIPool(pciDevicesPath, pciDriversPath, vfioDir, cfg, false)
-}
-
-// NewPCIPool returns a new PCI Pool
-func NewPCIPool(pciDevicesPath, pciDriversPath, vfioDir string, cfg *config.Config, skipDriverCheck bool) (*Pool, error) {
 	p := &Pool{
 		functions:             map[string]*function{},
 		functionsByIOMMUGroup: map[uint][]*function{},
 		vfioDir:               vfioDir,
-		skipDriverCheck:       skipDriverCheck,
 	}
 
 	for pfPCIAddr, pfCfg := range cfg.PhysicalFunctions {
@@ -80,12 +74,14 @@ func NewPCIPool(pciDevicesPath, pciDriversPath, vfioDir string, cfg *config.Conf
 			return nil, err
 		}
 
-		if err := p.addFunction(&pf.Function, pfCfg.PFKernelDriver); err != nil {
+		skipDriverCheck, _ := strconv.ParseBool(pfCfg.SkipDriverCheck)
+
+		if err := p.addFunction(&pf.Function, pfCfg.PFKernelDriver, skipDriverCheck); err != nil {
 			return nil, err
 		}
 
 		for _, vf := range pf.GetVirtualFunctions() {
-			if err := p.addFunction(vf, pfCfg.VFKernelDriver); err != nil {
+			if err := p.addFunction(vf, pfCfg.VFKernelDriver, skipDriverCheck); err != nil {
 				return nil, err
 			}
 		}
@@ -99,7 +95,6 @@ func NewTestPool(physicalFunctions map[string]*sriovtest.PCIPhysicalFunction, cf
 	p := &Pool{
 		functions:             map[string]*function{},
 		functionsByIOMMUGroup: map[uint][]*function{},
-		skipDriverCheck:       true,
 	}
 
 	for pfPCIAddr, pfCfg := range cfg.PhysicalFunctions {
@@ -108,20 +103,21 @@ func NewTestPool(physicalFunctions map[string]*sriovtest.PCIPhysicalFunction, cf
 			return nil, errors.Errorf("PF doesn't exist: %v", pfPCIAddr)
 		}
 
-		_ = p.addFunction(&pf.PCIFunction, pfCfg.PFKernelDriver)
+		_ = p.addFunction(&pf.PCIFunction, pfCfg.PFKernelDriver, true)
 
 		for _, vf := range pf.Vfs {
-			_ = p.addFunction(vf, pfCfg.VFKernelDriver)
+			_ = p.addFunction(vf, pfCfg.VFKernelDriver, true)
 		}
 	}
 
 	return p, nil
 }
 
-func (p *Pool) addFunction(pcif pciFunction, kernelDriver string) (err error) {
+func (p *Pool) addFunction(pcif pciFunction, kernelDriver string, skipDriverCheck bool) (err error) {
 	f := &function{
-		function:     pcif,
-		kernelDriver: kernelDriver,
+		function:        pcif,
+		kernelDriver:    kernelDriver,
+		skipDriverCheck: skipDriverCheck,
 	}
 
 	p.functions[pcif.GetPCIAddress()] = f
@@ -162,7 +158,7 @@ func (p *Pool) BindDriver(ctx context.Context, iommuGroup uint, driverType sriov
 	}
 
 	for _, f := range p.functionsByIOMMUGroup[iommuGroup] {
-		if err := p.waitDriverGettingBound(ctx, f.function, driverType); err != nil {
+		if err := p.waitDriverGettingBound(ctx, f.function, driverType, f.skipDriverCheck); err != nil {
 			return err
 		}
 	}
@@ -170,10 +166,11 @@ func (p *Pool) BindDriver(ctx context.Context, iommuGroup uint, driverType sriov
 	return nil
 }
 
-func (p *Pool) waitDriverGettingBound(ctx context.Context, pcif pciFunction, driverType sriov.DriverType) error {
+func (p *Pool) waitDriverGettingBound(ctx context.Context, pcif pciFunction, driverType sriov.DriverType,
+	skipDriverCheck bool) error {
 	timeoutCh := time.After(driverBindTimeout)
 	for {
-		var driverCheck func(pciFunction) error
+		var driverCheck func(pciFunction, bool) error
 		switch driverType {
 		case sriov.KernelDriver:
 			driverCheck = p.kernelDriverCheck
@@ -183,7 +180,7 @@ func (p *Pool) waitDriverGettingBound(ctx context.Context, pcif pciFunction, dri
 			return errors.Errorf("driver type is not supported: %v", driverType)
 		}
 
-		err := driverCheck(pcif)
+		err := driverCheck(pcif, skipDriverCheck)
 		if err == nil {
 			return nil
 		}
@@ -198,8 +195,8 @@ func (p *Pool) waitDriverGettingBound(ctx context.Context, pcif pciFunction, dri
 	}
 }
 
-func (p *Pool) kernelDriverCheck(pcif pciFunction) error {
-	if p.skipDriverCheck {
+func (p *Pool) kernelDriverCheck(pcif pciFunction, skipDriverCheck bool) error {
+	if skipDriverCheck {
 		return nil
 	}
 
@@ -207,8 +204,8 @@ func (p *Pool) kernelDriverCheck(pcif pciFunction) error {
 	return err
 }
 
-func (p *Pool) vfioDriverCheck(pcif pciFunction) error {
-	if p.skipDriverCheck {
+func (p *Pool) vfioDriverCheck(pcif pciFunction, skipDriverCheck bool) error {
+	if skipDriverCheck {
 		return nil
 	}
 
