@@ -1,6 +1,8 @@
-// Copyright (c) 2020-2021 Doc.ai and/or its affiliates.
+// Copyright (c) 2020-2022 Doc.ai and/or its affiliates.
 //
-// Copyright (c) 2021 Nordix Foundation.
+// Copyright (c) 2021-2022 Nordix Foundation.
+//
+// Copyright (c) 2022 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -60,6 +62,7 @@ import (
 
 	registryclient "github.com/networkservicemesh/sdk/pkg/registry/chains/client"
 	registryrecvfd "github.com/networkservicemesh/sdk/pkg/registry/common/recvfd"
+	registrysendfd "github.com/networkservicemesh/sdk/pkg/registry/common/sendfd"
 )
 
 type sriovServer struct {
@@ -91,7 +94,10 @@ func NewServer(
 	clientDialOptions ...grpc.DialOption,
 ) endpoint.Endpoint {
 	nseClient := registryclient.NewNetworkServiceEndpointRegistryClient(ctx, clientURL,
-		registryclient.WithNSEAdditionalFunctionality(registryrecvfd.NewNetworkServiceEndpointRegistryClient()),
+		registryclient.WithNSEAdditionalFunctionality(
+			registryrecvfd.NewNetworkServiceEndpointRegistryClient(),
+			registrysendfd.NewNetworkServiceEndpointRegistryClient(),
+		),
 		registryclient.WithDialOptions(clientDialOptions...),
 	)
 	nsClient := registryclient.NewNetworkServiceRegistryClient(ctx, clientURL, registryclient.WithDialOptions(clientDialOptions...))
