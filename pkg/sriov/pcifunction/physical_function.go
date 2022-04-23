@@ -1,3 +1,5 @@
+// Copyright (c) 2022 Cisco and/or its affiliates.
+//
 // Copyright (c) 2020 Doc.ai and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -122,8 +124,10 @@ func (pf *PhysicalFunction) loadVirtualFunctions() error {
 	}
 
 	sort.Slice(vfDirs, func(i, k int) bool {
+		//revive:disable:var-naming
 		iVFNum, _ := strconv.Atoi(strings.TrimPrefix(vfDirs[i], virtualFunctionPrefix))
 		kVFNum, _ := strconv.Atoi(strings.TrimPrefix(vfDirs[k], virtualFunctionPrefix))
+		//revive:enable:var-naming
 		return iVFNum < kVFNum
 	})
 

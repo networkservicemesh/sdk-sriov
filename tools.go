@@ -1,7 +1,5 @@
 // Copyright (c) 2022 Cisco and/or its affiliates.
 //
-// Copyright (c) 2021 Doc.ai and/or its affiliates.
-//
 // SPDX-License-Identifier: Apache-2.0
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,24 +14,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build !windows
-// +build !windows
+//go:build tools
 
-package vfio
+package tools
 
-// Option is an option for NewClient
-type Option func(c *vfioClient)
-
-// WithVFIODir sets vfioClient vfioDir
-func WithVFIODir(vfioDir string) Option {
-	return func(c *vfioClient) {
-		c.vfioDir = vfioDir
-	}
-}
-
-// WithCgroupDir sets vfioClient cgroupDir
-func WithCgroupDir(cgroupDir string) Option {
-	return func(c *vfioClient) {
-		c.cgroupDir = cgroupDir
-	}
-}
+import (
+	_ "github.com/searKing/golang/tools/cmd/go-syncmap"
+)

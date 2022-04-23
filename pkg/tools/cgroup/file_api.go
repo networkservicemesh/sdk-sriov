@@ -1,3 +1,5 @@
+// Copyright (c) 2022 Cisco and/or its affiliates.
+//
 // Copyright (c) 2020-2021 Doc.ai and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -14,7 +16,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//+build !windows
+//go:build !windows
+// +build !windows
 
 package cgroup
 
@@ -28,7 +31,7 @@ import (
 )
 
 const (
-	createPerm = 0666
+	createPerm = 0o666
 )
 
 func inputFileAPI(ctx context.Context, filePath string, consumer func(string)) error {

@@ -1,3 +1,5 @@
+// Copyright (c) 2022 Cisco and/or its affiliates.
+//
 // Copyright (c) 2020-2021 Doc.ai and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -14,7 +16,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//+build !windows
+//go:build !windows
+// +build !windows
 
 package vfio
 
@@ -42,8 +45,8 @@ type vfioClient struct {
 }
 
 const (
-	mkdirPerm = 0750
-	mknodPerm = 0666
+	mkdirPerm = 0o750
+	mknodPerm = 0o666
 )
 
 // NewClient returns a new VFIO client chain element

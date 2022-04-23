@@ -1,3 +1,5 @@
+// Copyright (c) 2022 Cisco and/or its affiliates.
+//
 // Copyright (c) 2020 Doc.ai and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -118,10 +120,12 @@ func (p *Pool) Select(tokenID string, driverType sriov.DriverType) (string, erro
 	}
 
 	sort.Slice(vfs, func(i, k int) bool {
+		//revive:disable:var-naming
 		iIg := p.iommuGroups[vfs[i].iommuGroup]
 		kIg := p.iommuGroups[vfs[k].iommuGroup]
 		iPF := p.physicalFunctions[vfs[i].pfPCIAddr]
 		kPF := p.physicalFunctions[vfs[k].pfPCIAddr]
+		//revive:enable:var-naming
 		switch {
 		case iIg == driverType && kIg == sriov.NoDriver:
 			return true
