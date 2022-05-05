@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Doc.ai and/or its affiliates.
+// Copyright (c) 2020-2022 Doc.ai and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -101,7 +101,7 @@ func (f *Function) BindDriver(driver string) error {
 	case boundDriver == driver:
 		return nil
 	case boundDriver != "":
-		unbindPath := filepath.Join(f.withDevicePath(boundDriverPath, unbindDriverPath))
+		unbindPath := f.withDevicePath(boundDriverPath, unbindDriverPath)
 		if err := ioutil.WriteFile(unbindPath, []byte(f.address), 0); err != nil {
 			return errors.Wrapf(err, "failed to unbind driver from the device: %v", f.address)
 		}

@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2021 Doc.ai and/or its affiliates.
+// Copyright (c) 2020-2022 Doc.ai and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -14,7 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//+build !windows
+//go:build !windows
+// +build !windows
 
 package vfio_test
 
@@ -101,9 +102,9 @@ func TestVFIOServer_Request(t *testing.T) {
 
 	notAllowed, allowed, wider := testCgroups(ctx, t, tmpDir)
 
-	err := unix.Mknod(filepath.Join(tmpDir, vfioDevice), unix.S_IFCHR|0666, int(unix.Mkdev(1, 2)))
+	err := unix.Mknod(filepath.Join(tmpDir, vfioDevice), unix.S_IFCHR|0o666, int(unix.Mkdev(1, 2)))
 	require.NoError(t, err)
-	err = unix.Mknod(filepath.Join(tmpDir, iommuGroupString), unix.S_IFCHR|0666, int(unix.Mkdev(3, 4)))
+	err = unix.Mknod(filepath.Join(tmpDir, iommuGroupString), unix.S_IFCHR|0o666, int(unix.Mkdev(3, 4)))
 	require.NoError(t, err)
 
 	conn, err := server.Request(ctx, &networkservice.NetworkServiceRequest{
