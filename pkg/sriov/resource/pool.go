@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Doc.ai and/or its affiliates.
+// Copyright (c) 2020-2022 Doc.ai and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -118,18 +118,18 @@ func (p *Pool) Select(tokenID string, driverType sriov.DriverType) (string, erro
 	}
 
 	sort.Slice(vfs, func(i, k int) bool {
-		iIg := p.iommuGroups[vfs[i].iommuGroup]
-		kIg := p.iommuGroups[vfs[k].iommuGroup]
-		iPF := p.physicalFunctions[vfs[i].pfPCIAddr]
-		kPF := p.physicalFunctions[vfs[k].pfPCIAddr]
+		leftIG := p.iommuGroups[vfs[i].iommuGroup]
+		rightIG := p.iommuGroups[vfs[k].iommuGroup]
+		leftPF := p.physicalFunctions[vfs[i].pfPCIAddr]
+		rightPF := p.physicalFunctions[vfs[k].pfPCIAddr]
 		switch {
-		case iIg == driverType && kIg == sriov.NoDriver:
+		case leftIG == driverType && rightIG == sriov.NoDriver:
 			return true
-		case iIg == sriov.NoDriver && kIg == driverType:
+		case leftIG == sriov.NoDriver && rightIG == driverType:
 			return false
-		case iPF.freeVFsCount > kPF.freeVFsCount:
+		case leftPF.freeVFsCount > rightPF.freeVFsCount:
 			return true
-		case iPF.freeVFsCount < kPF.freeVFsCount:
+		case leftPF.freeVFsCount < rightPF.freeVFsCount:
 			return false
 		default:
 			// we need this additional comparison to make sort deterministic

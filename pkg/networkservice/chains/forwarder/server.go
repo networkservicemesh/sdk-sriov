@@ -18,6 +18,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build linux
 // +build linux
 
 // Package xconnectns provides an Endpoint implementing the SR-IOV Forwarder networks service

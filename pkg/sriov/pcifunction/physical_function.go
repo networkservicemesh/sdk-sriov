@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Doc.ai and/or its affiliates.
+// Copyright (c) 2020-2022 Doc.ai and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -122,9 +122,9 @@ func (pf *PhysicalFunction) loadVirtualFunctions() error {
 	}
 
 	sort.Slice(vfDirs, func(i, k int) bool {
-		iVFNum, _ := strconv.Atoi(strings.TrimPrefix(vfDirs[i], virtualFunctionPrefix))
-		kVFNum, _ := strconv.Atoi(strings.TrimPrefix(vfDirs[k], virtualFunctionPrefix))
-		return iVFNum < kVFNum
+		leftVFNum, _ := strconv.Atoi(strings.TrimPrefix(vfDirs[i], virtualFunctionPrefix))
+		rightVFNum, _ := strconv.Atoi(strings.TrimPrefix(vfDirs[k], virtualFunctionPrefix))
+		return leftVFNum < rightVFNum
 	})
 
 	for _, vfDir := range vfDirs {
