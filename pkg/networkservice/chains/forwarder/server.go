@@ -94,14 +94,17 @@ func NewServer(
 	dialTimeout time.Duration,
 	clientDialOptions ...grpc.DialOption,
 ) endpoint.Endpoint {
-	nseClient := registryclient.NewNetworkServiceEndpointRegistryClient(ctx, clientURL,
+	nseClient := registryclient.NewNetworkServiceEndpointRegistryClient(ctx,
+		registryclient.WithClientURL(clientURL),
 		registryclient.WithNSEAdditionalFunctionality(
 			registryrecvfd.NewNetworkServiceEndpointRegistryClient(),
 			registrysendfd.NewNetworkServiceEndpointRegistryClient(),
 		),
 		registryclient.WithDialOptions(clientDialOptions...),
 	)
-	nsClient := registryclient.NewNetworkServiceRegistryClient(ctx, clientURL, registryclient.WithDialOptions(clientDialOptions...))
+	nsClient := registryclient.NewNetworkServiceRegistryClient(ctx,
+		registryclient.WithClientURL(clientURL),
+		registryclient.WithDialOptions(clientDialOptions...))
 
 	rv := new(sriovServer)
 
