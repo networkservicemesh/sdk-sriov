@@ -27,6 +27,8 @@ github.com/cncf/xds/go v0.0.0-20211011173535-cb28da3451f1/go.mod h1:eXthEFrGJvWH
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
+github.com/edwarnicke/exechelper v1.0.2 h1:dD49Ui2U0FBFxxhalnKw6vLS0P0TkgnXBRvKL/xmC5w=
+github.com/edwarnicke/exechelper v1.0.2/go.mod h1:/T271jtNX/ND4De6pa2aRy2+8sNtyCDB1A2pp4M+fUs=
 github.com/edwarnicke/grpcfd v1.1.2 h1:2b8kCABQ1+JjSKGDoHadqSW7whCeTXMqtyo6jmB5B8k=
 github.com/edwarnicke/grpcfd v1.1.2/go.mod h1:rHihB9YvNMixz8rS+ZbwosI2kj65VLkeyYAI2M+/cGA=
 github.com/edwarnicke/serialize v0.0.0-20200705214914-ebc43080eecf/go.mod h1:XvbCO/QGsl3X8RzjBMoRpkm54FIAZH5ChK2j+aox7pw=
@@ -78,6 +80,8 @@ github.com/google/go-cmp v0.5.0/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/
 github.com/google/go-cmp v0.5.5/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
 github.com/google/go-cmp v0.5.6 h1:BKbKCqvP6I+rmFHt06ZmyQtvB8xAkWdhFyr0ZUNZcxQ=
 github.com/google/go-cmp v0.5.6/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
+github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 h1:El6M4kTTCOh6aBiKaUGG7oYTSPP8MxqL4YI3kZKwcP4=
+github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510/go.mod h1:pupxD2MaaD3pAXIBCelhxNneeOaAeabZDe5s4K6zSpQ=
 github.com/google/uuid v1.1.2/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 github.com/google/uuid v1.2.0 h1:qJYtXnJRWmpe7m/3XlyhrsLrEURqHRM2kxzoxXqyUDs=
 github.com/google/uuid v1.2.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
@@ -99,10 +103,10 @@ github.com/matttproud/golang_protobuf_extensions v1.0.1/go.mod h1:D8He9yQNgCq6Z5
 github.com/mna/pigeon v0.0.0-20180808201053-bb0192cfc2ae/go.mod h1:Iym28+kJVnC1hfQvv5MUtI6AiFFzvQjHcvI4RFTG/04=
 github.com/networkservicemesh/api v1.3.2-0.20220512163820-8c875d61945b h1:suJRTlWU7/N0gF3FdcN9kCf1MO5Z7CdVSBdb2JTkLhk=
 github.com/networkservicemesh/api v1.3.2-0.20220512163820-8c875d61945b/go.mod h1:hOF2844BSstH1311oDMDgqqXS+kdc77htZNPRKl9mf8=
-github.com/networkservicemesh/sdk v0.5.1-0.20220512164527-dc8b0c099894 h1:J69KOXLObKnmtGaR7/uEw3PII/HqNkLwFQwdZffDdyE=
-github.com/networkservicemesh/sdk v0.5.1-0.20220512164527-dc8b0c099894/go.mod h1:7Aa9sCLOVzhsbR7LBJ1nSK/YCzd/EO/YK3BbHPB0puw=
-github.com/networkservicemesh/sdk-kernel v0.0.0-20220513014027-1a5c14d724b1 h1:j2x0mA93OxfDoj2yyFXNiZkUcBZ8Ou7LXHEnuwi2Twc=
-github.com/networkservicemesh/sdk-kernel v0.0.0-20220513014027-1a5c14d724b1/go.mod h1:qcsOKUNPmQ1H22NHpOFuzU8ToM4NZZrYt2WmDLmd6OU=
+github.com/networkservicemesh/sdk v0.5.1-0.20220513003022-4d9bebd00c37 h1:1wQY2oelI/porPJb9KREzozx8UOhJ05DumSBPkbVrhY=
+github.com/networkservicemesh/sdk v0.5.1-0.20220513003022-4d9bebd00c37/go.mod h1:7Aa9sCLOVzhsbR7LBJ1nSK/YCzd/EO/YK3BbHPB0puw=
+github.com/networkservicemesh/sdk-kernel v0.0.0-20220513094228-e0f2b84203da h1:FLXDVY/XzAGxdsO2Czd+15bzThDO5oOoe0n3r1+/hTg=
+github.com/networkservicemesh/sdk-kernel v0.0.0-20220513094228-e0f2b84203da/go.mod h1:qkXN/u/d/8QMBu52j6gaiiAsoaA85m58JTD65dMNGLM=
 github.com/olekukonko/tablewriter v0.0.1/go.mod h1:vsDQFd/mU46D+Z4whnwzcISnGGzXWMclvtLoiIKAKIo=
 github.com/open-policy-agent/opa v0.16.1 h1:BDADmi1Xl08aPcubaYgSEU0lJ/zrWDwmFMRXVPX856c=
 github.com/open-policy-agent/opa v0.16.1/go.mod h1:P0xUE/GQAAgnvV537GzA0Ikw4+icPELRT327QJPkaKY=
