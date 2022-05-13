@@ -103,10 +103,10 @@ github.com/matttproud/golang_protobuf_extensions v1.0.1/go.mod h1:D8He9yQNgCq6Z5
 github.com/mna/pigeon v0.0.0-20180808201053-bb0192cfc2ae/go.mod h1:Iym28+kJVnC1hfQvv5MUtI6AiFFzvQjHcvI4RFTG/04=
 github.com/networkservicemesh/api v1.3.2-0.20220512163820-8c875d61945b h1:suJRTlWU7/N0gF3FdcN9kCf1MO5Z7CdVSBdb2JTkLhk=
 github.com/networkservicemesh/api v1.3.2-0.20220512163820-8c875d61945b/go.mod h1:hOF2844BSstH1311oDMDgqqXS+kdc77htZNPRKl9mf8=
-github.com/networkservicemesh/sdk v0.5.1-0.20220513003022-4d9bebd00c37 h1:1wQY2oelI/porPJb9KREzozx8UOhJ05DumSBPkbVrhY=
-github.com/networkservicemesh/sdk v0.5.1-0.20220513003022-4d9bebd00c37/go.mod h1:7Aa9sCLOVzhsbR7LBJ1nSK/YCzd/EO/YK3BbHPB0puw=
-github.com/networkservicemesh/sdk-kernel v0.0.0-20220513094228-e0f2b84203da h1:FLXDVY/XzAGxdsO2Czd+15bzThDO5oOoe0n3r1+/hTg=
-github.com/networkservicemesh/sdk-kernel v0.0.0-20220513094228-e0f2b84203da/go.mod h1:qkXN/u/d/8QMBu52j6gaiiAsoaA85m58JTD65dMNGLM=
+github.com/networkservicemesh/sdk v0.5.1-0.20220513144854-3f01437e5b07 h1:H8+MUWaWmmz3HVBnUnsFzw32kpRhURGQH7Hy0Yg0Y+w=
+github.com/networkservicemesh/sdk v0.5.1-0.20220513144854-3f01437e5b07/go.mod h1:7Aa9sCLOVzhsbR7LBJ1nSK/YCzd/EO/YK3BbHPB0puw=
+github.com/networkservicemesh/sdk-kernel v0.0.0-20220513145139-fac6cff68c14 h1:YNzMsg5JytCNaqkOVMlcQCB1EsfjYFpfp17sqgtBUlg=
+github.com/networkservicemesh/sdk-kernel v0.0.0-20220513145139-fac6cff68c14/go.mod h1:LW+tRe4LmfI7eLFuPkZGN+IEtLJy7kGA/uuoISnHDIo=
 github.com/olekukonko/tablewriter v0.0.1/go.mod h1:vsDQFd/mU46D+Z4whnwzcISnGGzXWMclvtLoiIKAKIo=
 github.com/open-policy-agent/opa v0.16.1 h1:BDADmi1Xl08aPcubaYgSEU0lJ/zrWDwmFMRXVPX856c=
 github.com/open-policy-agent/opa v0.16.1/go.mod h1:P0xUE/GQAAgnvV537GzA0Ikw4+icPELRT327QJPkaKY=
