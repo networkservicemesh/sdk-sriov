@@ -7,8 +7,8 @@ require (
 	github.com/golang/protobuf v1.5.2
 	github.com/google/uuid v1.2.0
 	github.com/networkservicemesh/api v1.3.2-0.20220512163820-8c875d61945b
-	github.com/networkservicemesh/sdk v0.5.1-0.20220512164527-dc8b0c099894
-	github.com/networkservicemesh/sdk-kernel v0.0.0-20220513014027-1a5c14d724b1
+	github.com/networkservicemesh/sdk v0.5.1-0.20220513003022-4d9bebd00c37
+	github.com/networkservicemesh/sdk-kernel v0.0.0-20220513094228-e0f2b84203da
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.7.0
 	go.uber.org/goleak v1.1.12
@@ -21,12 +21,14 @@ require (
 	github.com/antonfisher/nested-logrus-formatter v1.3.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.1.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/edwarnicke/exechelper v1.0.2 // indirect
 	github.com/edwarnicke/grpcfd v1.1.2 // indirect
 	github.com/edwarnicke/serialize v1.0.7 // indirect
 	github.com/go-logr/logr v1.2.1 // indirect
 	github.com/go-logr/stdr v1.2.0 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/google/go-cmp v0.5.6 // indirect
+	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0 // indirect
 	github.com/open-policy-agent/opa v0.16.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
