@@ -1,25 +1,58 @@
 ---
-name: Pull Request on update/* Branch Push
+name: Release
 on:
-  push:
-    branches:
-      - update/**
+  workflow_run:
+    types:
+      - completed
+    workflows:
+      - "ci"
 jobs:
-  auto-pull-request:
-    name: Pull Request on update/* Branch Push
+  print-debug-info:
+    name: Print debug info for Release workflow
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: Construct PR message
+      - uses: hmarr/debug-action@v2
+
+  get-tag:
+    name: Get tag
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' && contains(github.event.workflow_run.head_branch, 'release/') }}
+    outputs:
+      tag: ${{ steps.get-tag-step.outputs.tag }}
+    steps:
+      - name: Get tag
         run: |
-          PULL_REQUEST_BODY=$(git log --pretty='format:%B' -1 | sed '/^$/d;$d' | sed 's/#/# /g')
-          echo "$PULL_REQUEST_BODY"
-          echo "PULL_REQUEST_BODY<<EOF" >> $GITHUB_ENV
-          echo "$PULL_REQUEST_BODY" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
-      - name: pull-request-action
-        uses: vsoch/pull-request-action@1.0.12
-        env:
-          GITHUB_TOKEN: ${{ secrets.NSM_BOT_GITHUB_TOKEN }}
-          BRANCH_PREFIX: "update/"
-          PULL_REQUEST_BRANCH: "main"
+          branch=${{github.event.workflow_run.head_branch}}
+          echo '::set-output name=tag::'${branch#release/}
+        id: get-tag-step
+
+  create-release:
+    name: Create release
+    needs: get-tag
+    uses: networkservicemesh/.github/.github/workflows/release.yaml@main
+    with:
+      tag: ${{ needs.get-tag.outputs.tag }}
+    secrets:
+      token: ${{ secrets.NSM_BOT_GITHUB_TOKEN }}
+
+  release-dependent-repositories:
+    name: Release dependent repositories
+    needs: [get-tag, create-release]
+    uses: networkservicemesh/.github/.github/workflows/release-dependent-repositories.yaml@main
+    with:
+      tag: ${{ needs.get-tag.outputs.tag }}
+      dependent_repositories: |
+        ["sdk-k8s",
+        "sdk-kernel",
+        "cmd-nsmgr",
+        "cmd-nsmgr-proxy",
+        "cmd-registry-memory",
+        "cmd-registry-proxy-dns",
+        "cmd-nse-remote-vlan",
+        "cmd-nse-vfio",
+        "cmd-nsc-init",
+        "cmd-ipam-vl3",
+        "cmd-map-ip-k8s",
+        "cmd-admission-webhook-k8s"]
+    secrets:
+      token: ${{ secrets.NSM_BOT_GITHUB_TOKEN }}

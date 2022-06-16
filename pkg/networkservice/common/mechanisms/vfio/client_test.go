@@ -14,8 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build !windows
-// +build !windows
+//go:build !windows && perm
+// +build !windows,perm
 
 package vfio_test
 
@@ -71,7 +71,7 @@ func testServer(ctx context.Context, tmpDir string) (*grpc.ClientConn, error) {
 	return grpc.DialContext(ctx, socketURL.String(), grpc.WithInsecure())
 }
 
-func TestVFIOClient_Request(t *testing.T) {
+func TestVFIOClient_RequestPerm(t *testing.T) {
 	defer goleak.VerifyNone(t, goleak.IgnoreCurrent())
 
 	ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
