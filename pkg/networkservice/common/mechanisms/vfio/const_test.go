@@ -18,6 +18,5 @@ package vfio_test
 
 const (
 	vfioDevice       = "vfio"
-	iommuGroup       = 1
 	iommuGroupString = "1"
 )
