@@ -42,17 +42,12 @@ jobs:
     with:
       tag: ${{ needs.get-tag.outputs.tag }}
       dependent_repositories: |
-        ["sdk-k8s",
-        "sdk-kernel",
-        "cmd-nsmgr",
-        "cmd-nsmgr-proxy",
-        "cmd-registry-memory",
-        "cmd-registry-proxy-dns",
-        "cmd-nse-remote-vlan",
-        "cmd-nse-vfio",
+        ["cmd-forwarder-sriov",
+        "cmd-nsc",
         "cmd-nsc-init",
-        "cmd-ipam-vl3",
-        "cmd-map-ip-k8s",
-        "cmd-admission-webhook-k8s"]
+        "cmd-nse-icmp-responder",
+        "cmd-forwarder-vpp",
+        "cmd-nse-vlan-vpp",
+        "sdk-ovs"]
     secrets:
       token: ${{ secrets.NSM_BOT_GITHUB_TOKEN }}
