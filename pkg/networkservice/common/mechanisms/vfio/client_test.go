@@ -46,6 +46,7 @@ import (
 const (
 	serverSocket = "server.socket"
 	cgroupDir    = "cgroup_dir"
+	iommuGroup   = 1
 )
 
 func testServer(ctx context.Context, tmpDir string) (*grpc.ClientConn, error) {

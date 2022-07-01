@@ -1,5 +1,7 @@
 // Copyright (c) 2020-2021 Doc.ai and/or its affiliates.
 //
+// Copyright (c) 2022 Cisco and/or its affiliates.
+//
 // SPDX-License-Identifier: Apache-2.0
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,6 +20,5 @@ package vfio_test
 
 const (
 	vfioDevice       = "vfio"
-	iommuGroup       = 1
 	iommuGroupString = "1"
 )
