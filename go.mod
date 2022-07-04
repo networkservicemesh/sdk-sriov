@@ -7,8 +7,8 @@ require (
 	github.com/golang/protobuf v1.5.2
 	github.com/google/uuid v1.2.0
 	github.com/networkservicemesh/api v1.3.2-0.20220516230921-edaa6f46d6ab
-	github.com/networkservicemesh/sdk v0.5.1-0.20220603191023-6abdf1e0eb19
-	github.com/networkservicemesh/sdk-kernel v0.0.0-20220606222221-50547dc2e107
+	github.com/networkservicemesh/sdk v0.5.1-0.20220704121245-6cf1b72d2395
+	github.com/networkservicemesh/sdk-kernel v0.0.0-20220704121914-75c5e0fd3acd
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.7.0
 	go.uber.org/goleak v1.1.12
@@ -35,7 +35,7 @@ require (
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect
 	github.com/stretchr/objx v0.1.1 // indirect
-	github.com/vishvananda/netlink v1.1.1-0.20220118170537-d6b03fdeb845 // indirect
+	github.com/vishvananda/netlink v1.2.1-beta.2.0.20220630165224-c591ada0fb2b // indirect
 	github.com/vishvananda/netns v0.0.0-20211101163701-50045581ed74 // indirect
 	github.com/yashtewari/glob-intersection v0.0.0-20180916065949-5c77d914dd0b // indirect
 	go.opentelemetry.io/otel v1.3.0 // indirect
