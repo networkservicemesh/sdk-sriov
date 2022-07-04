@@ -103,10 +103,10 @@ github.com/matttproud/golang_protobuf_extensions v1.0.1/go.mod h1:D8He9yQNgCq6Z5
 github.com/mna/pigeon v0.0.0-20180808201053-bb0192cfc2ae/go.mod h1:Iym28+kJVnC1hfQvv5MUtI6AiFFzvQjHcvI4RFTG/04=
 github.com/networkservicemesh/api v1.3.2-0.20220516230921-edaa6f46d6ab h1:hV6T7Kvze0qQphqi6g5ZKFoJ0m08OKdWETUINo3tuaA=
 github.com/networkservicemesh/api v1.3.2-0.20220516230921-edaa6f46d6ab/go.mod h1:hOF2844BSstH1311oDMDgqqXS+kdc77htZNPRKl9mf8=
-github.com/networkservicemesh/sdk v0.5.1-0.20220603191023-6abdf1e0eb19 h1:fE/thEOElctFJ6n/lAL7omJdBKtnXXIMTMdb6Xk3faw=
-github.com/networkservicemesh/sdk v0.5.1-0.20220603191023-6abdf1e0eb19/go.mod h1:FdmGiefBBcj9HlV+poQSEAPOuBVp/hkwjWoDEN2a+jg=
-github.com/networkservicemesh/sdk-kernel v0.0.0-20220606222221-50547dc2e107 h1:c8TpvP+nXqG6hd0XSiS41pTUnLqahFSkaI78iJBDlt0=
-github.com/networkservicemesh/sdk-kernel v0.0.0-20220606222221-50547dc2e107/go.mod h1:QPWvWoxeYHSuLYttIlgk85SZiomtN+o9Wweg2Pelc5g=
+github.com/networkservicemesh/sdk v0.5.1-0.20220704121245-6cf1b72d2395 h1:W2NWEX8zcVoltQsrRR/qFRrvzoHWjMQKPsvQMnx3WZ8=
+github.com/networkservicemesh/sdk v0.5.1-0.20220704121245-6cf1b72d2395/go.mod h1:FdmGiefBBcj9HlV+poQSEAPOuBVp/hkwjWoDEN2a+jg=
+github.com/networkservicemesh/sdk-kernel v0.0.0-20220704121914-75c5e0fd3acd h1:pSwK7yICjzBiSypuRQsYU2F79ZLz5JPGBKs7vG0xm3M=
+github.com/networkservicemesh/sdk-kernel v0.0.0-20220704121914-75c5e0fd3acd/go.mod h1:Z5YlGxs6GsBf92cYGtBZQKLIY28E+BJr6blTUSa2Eng=
 github.com/olekukonko/tablewriter v0.0.1/go.mod h1:vsDQFd/mU46D+Z4whnwzcISnGGzXWMclvtLoiIKAKIo=
 github.com/open-policy-agent/opa v0.16.1 h1:BDADmi1Xl08aPcubaYgSEU0lJ/zrWDwmFMRXVPX856c=
 github.com/open-policy-agent/opa v0.16.1/go.mod h1:P0xUE/GQAAgnvV537GzA0Ikw4+icPELRT327QJPkaKY=
@@ -139,8 +139,8 @@ github.com/stretchr/testify v1.4.0/go.mod h1:j7eGeouHqKxXV5pUuKE4zz7dFj8WfuZ+81P
 github.com/stretchr/testify v1.5.1/go.mod h1:5W2xD1RspED5o8YsWQXVCued0rvSQ+mT+I5cxcmMvtA=
 github.com/stretchr/testify v1.7.0 h1:nwc3DEeHmmLAfoZucVR881uASk0Mfjw8xYJ99tb5CcY=
 github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
-github.com/vishvananda/netlink v1.1.1-0.20220118170537-d6b03fdeb845 h1:bIVwDExax2ZzN6mYF8Az0ms0wg+v/LYA4VI8x1TSQcs=
-github.com/vishvananda/netlink v1.1.1-0.20220118170537-d6b03fdeb845/go.mod h1:twkDnbuQxJYemMlGd4JFIcuhgX83tXhKS2B/PRMpOho=
+github.com/vishvananda/netlink v1.2.1-beta.2.0.20220630165224-c591ada0fb2b h1:CyMWBGvc1ZOvUBxW51DVTSIIAeJWWJJs+Ko3ouM/AVI=
+github.com/vishvananda/netlink v1.2.1-beta.2.0.20220630165224-c591ada0fb2b/go.mod h1:twkDnbuQxJYemMlGd4JFIcuhgX83tXhKS2B/PRMpOho=
 github.com/vishvananda/netns v0.0.0-20200728191858-db3c7e526aae/go.mod h1:DD4vA1DwXk04H54A1oHXtwZmA0grkVMdPxx/VGLCah0=
 github.com/vishvananda/netns v0.0.0-20211101163701-50045581ed74 h1:gga7acRE695APm9hlsSMoOoE65U4/TcqNj90mc69Rlg=
 github.com/vishvananda/netns v0.0.0-20211101163701-50045581ed74/go.mod h1:DD4vA1DwXk04H54A1oHXtwZmA0grkVMdPxx/VGLCah0=
