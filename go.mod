@@ -7,8 +7,8 @@ require (
 	github.com/golang/protobuf v1.5.2
 	github.com/google/uuid v1.2.0
 	github.com/networkservicemesh/api v1.4.1-0.20220711153918-a59689088578
-	github.com/networkservicemesh/sdk v0.5.1-0.20220727114459-599be654ed67
-	github.com/networkservicemesh/sdk-kernel v0.0.0-20220727115150-30165385f1bb
+	github.com/networkservicemesh/sdk v0.5.1-0.20220728125347-990b34144761
+	github.com/networkservicemesh/sdk-kernel v0.0.0-20220728125711-2cca96db15dd
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.7.0
 	go.uber.org/goleak v1.1.12
@@ -34,10 +34,12 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect
+	github.com/spiffe/go-spiffe/v2 v2.0.0 // indirect
 	github.com/stretchr/objx v0.1.1 // indirect
 	github.com/vishvananda/netlink v1.2.1-beta.2.0.20220630165224-c591ada0fb2b // indirect
 	github.com/vishvananda/netns v0.0.0-20211101163701-50045581ed74 // indirect
 	github.com/yashtewari/glob-intersection v0.0.0-20180916065949-5c77d914dd0b // indirect
+	github.com/zeebo/errs v1.2.2 // indirect
 	go.opentelemetry.io/otel v1.3.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/internal/retry v1.3.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric v0.26.0 // indirect
@@ -51,11 +53,13 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v0.26.0 // indirect
 	go.opentelemetry.io/otel/trace v1.3.0 // indirect
 	go.opentelemetry.io/proto/otlp v0.11.0 // indirect
+	golang.org/x/crypto v0.0.0-20220307211146-efcb8507fb70 // indirect
 	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
 	golang.org/x/net v0.0.0-20211112202133-69e39bad7dc2 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	google.golang.org/genproto v0.0.0-20211129164237-f09f9a12af12 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
+	gopkg.in/square/go-jose.v2 v2.4.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 )
