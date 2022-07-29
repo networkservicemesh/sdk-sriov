@@ -85,6 +85,7 @@ func NewServer(
 	ctx context.Context,
 	name string,
 	authzServer networkservice.NetworkServiceServer,
+	authzMonitorConnectionServer networkservice.MonitorConnectionServer,
 	tokenGenerator token.GeneratorFunc,
 	pciPool resourcepool.PCIPool,
 	resourcePool resourcepool.ResourcePool,
@@ -157,6 +158,7 @@ func NewServer(
 	rv.Endpoint = endpoint.NewServer(ctx, tokenGenerator,
 		endpoint.WithName(name),
 		endpoint.WithAuthorizeServer(authzServer),
+		endpoint.WithAuthorizeMonitorConnectionServer(authzMonitorConnectionServer),
 		endpoint.WithAdditionalFunctionality(additionalFunctionality...),
 	)
 
