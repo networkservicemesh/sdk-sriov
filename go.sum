@@ -702,10 +702,10 @@ github.com/ncw/swift v1.0.47/go.mod h1:23YIA4yWVnGwv2dQlN4bB7egfYX6YLn0Yo/S6zZO/
 github.com/networkplumbing/go-nft v0.2.0/go.mod h1:HnnM+tYvlGAsMU7yoYwXEVLLiDW9gdMmb5HoGcwpuQs=
 github.com/networkservicemesh/api v1.4.1-0.20220711153918-a59689088578 h1:2MZD6SGFULqTgMKA8BFy7F+ldRErAyxsWht7oCwCVRM=
 github.com/networkservicemesh/api v1.4.1-0.20220711153918-a59689088578/go.mod h1:hOF2844BSstH1311oDMDgqqXS+kdc77htZNPRKl9mf8=
-github.com/networkservicemesh/sdk v0.5.1-0.20220822190826-a7b84cf4d5c8 h1:H5iJiGI7kfRmgKHsoP7w/zPfymA3jJnjCxoIxVYaCME=
-github.com/networkservicemesh/sdk v0.5.1-0.20220822190826-a7b84cf4d5c8/go.mod h1:GBsxXRUJUDGXtpSJu/4Gh3FK4/bW2PzJklcBFWR3vcY=
-github.com/networkservicemesh/sdk-kernel v0.0.0-20220822191151-1e365960e01a h1:8lNwp0vPrujCN8hyr/xVY66q2kVlU5M0R/SBjx/wJj8=
-github.com/networkservicemesh/sdk-kernel v0.0.0-20220822191151-1e365960e01a/go.mod h1:FouUXNaJw2LrtQp59GaYkhxHMPeRFXKstoL6xK/mmlw=
+github.com/networkservicemesh/sdk v0.5.1-0.20220825014614-dacfc9890c07 h1:wr3mZgu0tCWObI6ULU3sn733/RWQWUG31nHAp2fibzM=
+github.com/networkservicemesh/sdk v0.5.1-0.20220825014614-dacfc9890c07/go.mod h1:ic2ei1BweJHofQ2Gz1gMBV9cJwBhvkvpwCfGge/pLY0=
+github.com/networkservicemesh/sdk-kernel v0.0.0-20220825014933-e8b76c058df6 h1:nn5h4sN/JVaUMTBHeyctbvR0rwkgWiE0oGaP2q0qDvM=
+github.com/networkservicemesh/sdk-kernel v0.0.0-20220825014933-e8b76c058df6/go.mod h1:Kqwk4lJ+4mq7zBqIjXqaZ49UK8BtGNWawCjjG6OHgyQ=
 github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e/go.mod h1:zD1mROLANZcx1PVRCS0qkT7pwLkGfwJo4zjcN/Tysno=
 github.com/nxadm/tail v1.4.4/go.mod h1:kenIhsEOeOJmVchQTgglprH7qJGnHDVpk1VPCcaMI8A=
 github.com/nxadm/tail v1.4.8/go.mod h1:+ncqLTQzXmGhMZNUePPaPqPvBxHAIsmXswZKocGu+AU=
