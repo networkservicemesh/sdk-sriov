@@ -71,16 +71,16 @@ type sriovServer struct {
 }
 
 // NewServer - returns an Endpoint implementing the SR-IOV Forwarder networks service
-//             - name - name of the Forwarder
-//             - authzServer - policy for allowing or rejecting requests
-//             - tokenGenerator - token.GeneratorFunc - generates tokens for use in Path
-//             - pciPool - provides PCI functions
-//             - resourcePool - provides SR-IOV resources
-//             - sriovConfig - SR-IOV PCI functions config
-//             - vfioDir - host /dev/vfio directory mount location
-//             - cgroupBaseDir - host /sys/fs/cgroup/devices directory mount location
-//             - clientUrl - *url.URL for the talking to the NSMgr
-//             - ...clientDialOptions - dialOptions for dialing the NSMgr
+//   - name - name of the Forwarder
+//   - authzServer - policy for allowing or rejecting requests
+//   - tokenGenerator - token.GeneratorFunc - generates tokens for use in Path
+//   - pciPool - provides PCI functions
+//   - resourcePool - provides SR-IOV resources
+//   - sriovConfig - SR-IOV PCI functions config
+//   - vfioDir - host /dev/vfio directory mount location
+//   - cgroupBaseDir - host /sys/fs/cgroup/devices directory mount location
+//   - clientUrl - *url.URL for the talking to the NSMgr
+//   - ...clientDialOptions - dialOptions for dialing the NSMgr
 func NewServer(
 	ctx context.Context,
 	name string,
