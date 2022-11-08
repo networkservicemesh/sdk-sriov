@@ -6,9 +6,9 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/golang/protobuf v1.5.2
 	github.com/google/uuid v1.2.0
-	github.com/networkservicemesh/api v1.4.1-0.20220711153918-a59689088578
-	github.com/networkservicemesh/sdk v0.5.1-0.20221013082556-9ae27f8b63af
-	github.com/networkservicemesh/sdk-kernel v0.0.0-20221013082925-354d38e71cde
+	github.com/networkservicemesh/api v1.6.2-0.20221108105251-f71f283feaa5
+	github.com/networkservicemesh/sdk v0.5.1-0.20221108114500-e51c7ad0404f
+	github.com/networkservicemesh/sdk-kernel v0.0.0-20221108115311-a19d97e96552
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.8.0
 	go.uber.org/goleak v1.1.12
