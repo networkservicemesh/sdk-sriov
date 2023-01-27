@@ -1,5 +1,7 @@
 // Copyright (c) 2020-2022 Doc.ai and/or its affiliates.
 //
+// Copyright (c) 2023 Cisco and/or its affiliates.
+//
 // SPDX-License-Identifier: Apache-2.0
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -62,7 +64,7 @@ func NewFakeWideCgroup(ctx context.Context, path string) (*Cgroup, error) {
 	}
 
 	if err = deviceSupplier("a *:* rwm"); err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	return cg, nil
@@ -70,7 +72,7 @@ func NewFakeWideCgroup(ctx context.Context, path string) (*Cgroup, error) {
 
 func newFakeCgroup(ctx context.Context, path string) (*Cgroup, supplierFunc, error) {
 	if err := os.MkdirAll(path, mkdirPerm); err != nil {
-		return nil, nil, err
+		return nil, nil, errors.WithStack(err)
 	}
 	go func() {
 		<-ctx.Done()

@@ -2,6 +2,8 @@
 //
 // Copyright (c) 2021 Nordix Foundation.
 //
+// Copyright (c) 2023 Cisco and/or its affiliates.
+//
 // SPDX-License-Identifier: Apache-2.0
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -190,7 +192,7 @@ func (p *Pool) waitDriverGettingBound(ctx context.Context, pcif pciFunction, dri
 
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return errors.WithStack(ctx.Err())
 		case <-timeoutCh:
 			return errors.Errorf("time for binding kernel driver exceeded: %s, cause: %v", pcif.GetPCIAddress(), err)
 		case <-time.After(driverBindCheck):
@@ -218,5 +220,5 @@ func (p *Pool) vfioDriverCheck(pcif pciFunction) error {
 	}
 
 	_, err = os.Stat(filepath.Join(p.vfioDir, strconv.FormatUint(uint64(iommuGroup), 10)))
-	return err
+	return errors.WithStack(err)
 }
