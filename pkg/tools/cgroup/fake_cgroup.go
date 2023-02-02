@@ -64,7 +64,7 @@ func NewFakeWideCgroup(ctx context.Context, path string) (*Cgroup, error) {
 	}
 
 	if err = deviceSupplier("a *:* rwm"); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 
 	return cg, nil
@@ -72,7 +72,7 @@ func NewFakeWideCgroup(ctx context.Context, path string) (*Cgroup, error) {
 
 func newFakeCgroup(ctx context.Context, path string) (*Cgroup, supplierFunc, error) {
 	if err := os.MkdirAll(path, mkdirPerm); err != nil {
-		return nil, nil, errors.WithStack(err)
+		return nil, nil, errors.Wrapf(err, "failed to create directory path %s", path)
 	}
 	go func() {
 		<-ctx.Done()

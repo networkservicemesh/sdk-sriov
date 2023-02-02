@@ -1,5 +1,7 @@
 // Copyright (c) 2020-2022 Doc.ai and/or its affiliates.
 //
+// Copyright (c) 2023 Cisco and/or its affiliates.
+//
 // SPDX-License-Identifier: Apache-2.0
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,6 +28,7 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/inject/injecterror"
+	"github.com/pkg/errors"
 	"golang.org/x/sys/unix"
 	"google.golang.org/grpc"
 
@@ -89,7 +92,7 @@ func (c *vfioClient) Request(ctx context.Context, request *networkservice.Networ
 	if mech := vfio.ToMechanism(conn.GetMechanism()); mech != nil {
 		if err := os.Mkdir(c.vfioDir, mkdirPerm); err != nil && !os.IsExist(err) {
 			logger.Error("failed to create vfio directory")
-			return nil, err
+			return nil, errors.Wrapf(err, "failed to create vfio directory %s", c.vfioDir)
 		}
 
 		if err := unix.Mknod(
@@ -98,7 +101,7 @@ func (c *vfioClient) Request(ctx context.Context, request *networkservice.Networ
 			int(unix.Mkdev(mech.GetVfioMajor(), mech.GetVfioMinor())),
 		); err != nil && !os.IsExist(err) {
 			logger.Errorf("failed to mknod device: %v", vfioDevice)
-			return nil, err
+			return nil, errors.Wrapf(err, "failed to mknod device: %v", vfioDevice)
 		}
 
 		igid := mech.GetParameters()[vfio.IommuGroupKey]
@@ -108,7 +111,7 @@ func (c *vfioClient) Request(ctx context.Context, request *networkservice.Networ
 			int(unix.Mkdev(mech.GetDeviceMajor(), mech.GetDeviceMinor())),
 		); err != nil && !os.IsExist(err) {
 			logger.Errorf("failed to mknod device: %v", vfioDevice)
-			return nil, err
+			return nil, errors.Wrapf(err, "failed to mknod device: %v", vfioDevice)
 		}
 	}
 

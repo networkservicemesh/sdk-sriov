@@ -192,7 +192,7 @@ func (p *Pool) waitDriverGettingBound(ctx context.Context, pcif pciFunction, dri
 
 		select {
 		case <-ctx.Done():
-			return errors.WithStack(ctx.Err())
+			return errors.Wrap(ctx.Err(), "provided context is done")
 		case <-timeoutCh:
 			return errors.Errorf("time for binding kernel driver exceeded: %s, cause: %v", pcif.GetPCIAddress(), err)
 		case <-time.After(driverBindCheck):
@@ -220,5 +220,5 @@ func (p *Pool) vfioDriverCheck(pcif pciFunction) error {
 	}
 
 	_, err = os.Stat(filepath.Join(p.vfioDir, strconv.FormatUint(uint64(iommuGroup), 10)))
-	return errors.WithStack(err)
+	return errors.Wrapf(err, "failed to join path elements: %s, %s", p.vfioDir, strconv.FormatUint(uint64(iommuGroup), 10))
 }

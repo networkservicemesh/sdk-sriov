@@ -116,7 +116,7 @@ func (s *vfioServer) Request(ctx context.Context, request *networkservice.Networ
 func (s *vfioServer) getDeviceNumbers(deviceFile string) (major, minor uint32, err error) {
 	info := new(unix.Stat_t)
 	if err := unix.Stat(deviceFile, info); err != nil {
-		return 0, 0, errors.WithStack(err)
+		return 0, 0, errors.Wrapf(err, "failed to check %s file status", deviceFile)
 	}
 	return Major(info.Rdev), Minor(info.Rdev), nil
 }
