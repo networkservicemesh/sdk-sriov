@@ -1,6 +1,8 @@
-// Copyright (c) 2020-2022 Doc.ai and/or its affiliates.
+// Copyright (c) 2020-2023 Doc.ai and/or its affiliates.
 //
-// Copyright (c) 2021-2022 Nordix Foundation.
+// Copyright (c) 2021-2023 Nordix Foundation.
+//
+// Copyright (c) 2023 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -58,8 +60,10 @@ func (c *tokenClient) Request(ctx context.Context, request *networkservice.Netwo
 	isEstablished := c.config.get(request.GetConnection()) != ""
 
 	var tokenID string
+	var tokenName string
 	if labels := request.GetConnection().GetLabels(); labels != nil {
-		if tokenName, ok := labels[sriovTokenLabel]; ok {
+		var ok bool
+		if tokenName, ok = labels[sriovTokenLabel]; ok {
 			tokenID = c.config.assign(tokenName, request.GetConnection())
 			if tokenID == "" {
 				return nil, errors.Errorf("no free token for the name: %v", tokenName)
@@ -81,6 +85,12 @@ func (c *tokenClient) Request(ctx context.Context, request *networkservice.Netwo
 	conn, err := next.Client(ctx).Request(ctx, request, opts...)
 	if err != nil && tokenID != "" && !isEstablished {
 		c.config.release(request.GetConnection())
+	}
+
+	if tokenName != "" {
+		// Set the previous values in the labels. We need them for healing
+		delete(conn.GetLabels(), serviceDomainLabel)
+		conn.GetLabels()[sriovTokenLabel] = tokenName
 	}
 
 	return conn, err
