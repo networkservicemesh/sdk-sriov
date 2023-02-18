@@ -1,6 +1,8 @@
-// Copyright (c) 2020-2022 Doc.ai and/or its affiliates.
+// Copyright (c) 2020-2023 Doc.ai and/or its affiliates.
 //
-// Copyright (c) 2021-2022 Nordix Foundation.
+// Copyright (c) 2021-2023 Nordix Foundation.
+//
+// Copyright (c) 2023 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -73,12 +75,12 @@ func TestTokenClient_Request(t *testing.T) {
 		token.NewClient(),
 		&validateClient{t},
 	)
-	_, err = client.Request(context.TODO(), request)
+	conn, err := client.Request(context.Background(), request)
 	require.NoError(t, err)
 
 	require.Equal(t, map[string]string{
 		sriovTokenLabel: tokenName,
-	}, request.GetConnection().GetLabels())
+	}, conn.GetLabels())
 }
 
 type validateClient struct {
