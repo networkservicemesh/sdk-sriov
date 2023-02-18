@@ -1,5 +1,7 @@
 // Copyright (c) 2020-2022 Doc.ai and/or its affiliates.
 //
+// Copyright (c) 2023 Cisco and/or its affiliates.
+//
 // SPDX-License-Identifier: Apache-2.0
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -71,7 +73,7 @@ func (f *Function) GetNetInterfaceName() (string, error) {
 func (f *Function) GetIOMMUGroup() (uint, error) {
 	stringIOMMUGroup, err := evalSymlinkAndGetBaseName(f.withDevicePath(iommuGroup))
 	if err != nil {
-		return 0, errors.Wrapf(err, "error evaluating IOMMU group id for the device: %v", f.address)
+		return 0, err
 	}
 
 	iommuGroup, _ := strconv.Atoi(stringIOMMUGroup)
@@ -87,7 +89,7 @@ func (f *Function) GetBoundDriver() (string, error) {
 
 	driver, err := evalSymlinkAndGetBaseName(f.withDevicePath(boundDriverPath))
 	if err != nil {
-		return "", errors.Wrapf(err, "error evaluating bound driver for the device: %v", f.address)
+		return "", err
 	}
 
 	return driver, nil

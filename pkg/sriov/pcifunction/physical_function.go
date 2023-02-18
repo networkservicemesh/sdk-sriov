@@ -1,5 +1,7 @@
 // Copyright (c) 2020-2022 Doc.ai and/or its affiliates.
 //
+// Copyright (c) 2023 Cisco and/or its affiliates.
+//
 // SPDX-License-Identifier: Apache-2.0
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -97,7 +99,7 @@ func (pf *PhysicalFunction) GetVirtualFunctions() []*Function {
 func (pf *PhysicalFunction) createVirtualFunctions() error {
 	switch vfsCount, err := readUintFromFile(pf.withDevicePath(configuredVFFile)); {
 	case err != nil:
-		return errors.Wrapf(err, "failed to get configured VFs number for the PCI device: %v", pf.address)
+		return err
 	case vfsCount > 0:
 		return nil
 	}

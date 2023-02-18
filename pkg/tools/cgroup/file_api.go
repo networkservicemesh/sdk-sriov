@@ -1,5 +1,7 @@
 // Copyright (c) 2020-2022 Doc.ai and/or its affiliates.
 //
+// Copyright (c) 2023 Cisco and/or its affiliates.
+//
 // SPDX-License-Identifier: Apache-2.0
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,6 +27,7 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/pkg/errors"
 	"golang.org/x/sys/unix"
 )
 
@@ -36,12 +39,12 @@ func inputFileAPI(ctx context.Context, filePath string, consumer func(string)) e
 	_ = os.Remove(filePath)
 	err := unix.Mkfifo(filePath, createPerm)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "failed to make FIFO special file %s", filePath)
 	}
 
 	fd, err := unix.Open(filePath, unix.O_RDWR|unix.O_NONBLOCK, 0)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "failed to open file %s", filePath)
 	}
 	file := os.NewFile(uintptr(fd), filePath)
 
@@ -79,7 +82,10 @@ type supplierFunc func(s string) error
 
 func outputFileAPI(filePath string) (supplier supplierFunc) {
 	supplier = func(data string) error {
-		return ioutil.WriteFile(filePath, []byte(data), createPerm)
+		if err := ioutil.WriteFile(filePath, []byte(data), createPerm); err != nil {
+			return errors.Wrapf(err, "failed to write to a %s", filePath)
+		}
+		return nil
 	}
 	return supplier
 }

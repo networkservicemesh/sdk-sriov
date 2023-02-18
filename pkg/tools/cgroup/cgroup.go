@@ -1,5 +1,7 @@
 // Copyright (c) 2020-2022 Doc.ai and/or its affiliates.
 //
+// Copyright (c) 2023 Cisco and/or its affiliates.
+//
 // SPDX-License-Identifier: Apache-2.0
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,6 +27,8 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+
+	"github.com/pkg/errors"
 )
 
 const (
@@ -41,9 +45,10 @@ type Cgroup struct {
 // NewCgroups returns all cgroups matching pathPattern
 func NewCgroups(pathPattern string) (cgroups []*Cgroup, err error) {
 	var filePaths []string
-	filePaths, err = filepath.Glob(filepath.Join(pathPattern, deviceListFileName))
+	pattern := filepath.Join(pathPattern, deviceListFileName)
+	filePaths, err = filepath.Glob(pattern)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "failed to get filepaths %s", pattern)
 	}
 
 	for _, filePath := range filePaths {
@@ -57,14 +62,24 @@ func NewCgroups(pathPattern string) (cgroups []*Cgroup, err error) {
 func (c *Cgroup) Allow(major, minor uint32) error {
 	dev := newDevice(major, minor, 'r', 'w', 'm')
 
-	return ioutil.WriteFile(filepath.Join(c.Path, deviceAllowFileName), []byte(dev.String()), 0)
+	filePath := filepath.Join(c.Path, deviceAllowFileName)
+	if err := ioutil.WriteFile(filePath, []byte(dev.String()), 0); err != nil {
+		return errors.Wrapf(err, "failed to write to a %s", filePath)
+	}
+
+	return nil
 }
 
 // Deny denies "c major:minor rw" for cgroup
 func (c *Cgroup) Deny(major, minor uint32) error {
 	dev := newDevice(major, minor, 'r', 'w')
 
-	return ioutil.WriteFile(filepath.Join(c.Path, deviceDenyFileName), []byte(dev.String()), 0)
+	filePath := filepath.Join(c.Path, deviceAllowFileName)
+	if err := ioutil.WriteFile(filePath, []byte(dev.String()), 0); err != nil {
+		return errors.Wrapf(err, "failed to write to a %s", filePath)
+	}
+
+	return nil
 }
 
 // IsAllowed returns if "c major:minor rwm" is allowed for cgroup
@@ -86,9 +101,10 @@ func (c *Cgroup) IsWiderThan(major, minor uint32) (bool, error) {
 }
 
 func (c *Cgroup) compareTo(dev *device) (isAllowed, isWider bool, err error) {
-	file, err := os.Open(filepath.Join(c.Path, deviceListFileName))
+	filePath := filepath.Clean(filepath.Join(c.Path, deviceListFileName))
+	file, err := os.Open(filePath)
 	if err != nil {
-		return false, false, err
+		return false, false, errors.Wrapf(err, "failed to open file %s", filePath)
 	}
 	defer func() { _ = file.Close() }()
 

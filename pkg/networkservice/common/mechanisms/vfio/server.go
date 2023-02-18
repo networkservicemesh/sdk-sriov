@@ -1,5 +1,7 @@
 // Copyright (c) 2020-2022 Doc.ai and/or its affiliates.
 //
+// Copyright (c) 2023 Cisco and/or its affiliates.
+//
 // SPDX-License-Identifier: Apache-2.0
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -114,7 +116,7 @@ func (s *vfioServer) Request(ctx context.Context, request *networkservice.Networ
 func (s *vfioServer) getDeviceNumbers(deviceFile string) (major, minor uint32, err error) {
 	info := new(unix.Stat_t)
 	if err := unix.Stat(deviceFile, info); err != nil {
-		return 0, 0, err
+		return 0, 0, errors.Wrapf(err, "failed to check %s file status", deviceFile)
 	}
 	return Major(info.Rdev), Minor(info.Rdev), nil
 }
