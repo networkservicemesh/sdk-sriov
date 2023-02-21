@@ -87,7 +87,7 @@ func (c *tokenClient) Request(ctx context.Context, request *networkservice.Netwo
 		c.config.release(request.GetConnection())
 	}
 
-	if tokenName != "" {
+	if err == nil && tokenName != "" {
 		// Set the previous values in the labels. We need them for healing
 		delete(conn.GetLabels(), serviceDomainLabel)
 		conn.GetLabels()[sriovTokenLabel] = tokenName
