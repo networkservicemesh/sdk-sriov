@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2022 Nordix Foundation.
+// Copyright (c) 2021-2023 Nordix Foundation.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -58,9 +58,8 @@ func (c *tokenElement) assign(tokenName string, conn *networkservice.Connection)
 			c.connectionsByTokens[tokenID] = conn.GetId()
 			c.tokensByConnections[conn.GetId()] = tokenID
 			break
-		} else {
-			tokenID = ""
 		}
+		tokenID = ""
 	}
 	return
 }

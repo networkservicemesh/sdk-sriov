@@ -19,7 +19,8 @@
 package pcifunction
 
 import (
-	"io/ioutil"
+	"os"
+
 	"path"
 	"path/filepath"
 	"strconv"
@@ -49,7 +50,7 @@ func (f *Function) GetPCIAddress() string {
 
 // GetNetInterfaceName returns f net interface name
 func (f *Function) GetNetInterfaceName() (string, error) {
-	fInfos, err := ioutil.ReadDir(f.withDevicePath(netInterfacesPath))
+	fInfos, err := os.ReadDir(f.withDevicePath(netInterfacesPath))
 	if err != nil {
 		return "", errors.Wrapf(err, "failed to read net directory for the device: %v", f.address)
 	}
@@ -104,7 +105,7 @@ func (f *Function) BindDriver(driver string) error {
 		return nil
 	case boundDriver != "":
 		unbindPath := f.withDevicePath(boundDriverPath, unbindDriverPath)
-		if err := ioutil.WriteFile(unbindPath, []byte(f.address), 0); err != nil {
+		if err := os.WriteFile(unbindPath, []byte(f.address), 0); err != nil {
 			return errors.Wrapf(err, "failed to unbind driver from the device: %v", f.address)
 		}
 	}
@@ -112,7 +113,7 @@ func (f *Function) BindDriver(driver string) error {
 	// For some reasons write to the driver/bind file fails but binds the driver to the PCI function
 	// so we ignore error and simply compare the bound driver with the given one
 	bindPath := filepath.Join(f.pciDriversPath, driver, bindDriverPath)
-	err := ioutil.WriteFile(bindPath, []byte(f.address), 0)
+	err := os.WriteFile(bindPath, []byte(f.address), 0)
 	if boundDriver, _ := f.GetBoundDriver(); boundDriver != driver {
 		return errors.Wrapf(err, "failed to bind the driver to the device: %v %v", f.address, driver)
 	}

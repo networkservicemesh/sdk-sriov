@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Doc.ai and/or its affiliates.
+// Copyright (c) 2023 Doc.ai and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -20,6 +20,7 @@ package resetmechanism
 import (
 	"context"
 
+	"github.com/edwarnicke/genericsync"
 	"github.com/golang/protobuf/ptypes/empty"
 
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
@@ -29,13 +30,14 @@ import (
 
 type resetMechanismServer struct {
 	wrappedServer networkservice.NetworkServiceServer
-	mechanisms    mechanismMap
+	mechanisms    *genericsync.Map[string, *networkservice.Mechanism]
 }
 
 // NewServer returns a new reset mechanism server chain element
 func NewServer(wrappedServer networkservice.NetworkServiceServer) networkservice.NetworkServiceServer {
 	return &resetMechanismServer{
 		wrappedServer: wrappedServer,
+		mechanisms:    &genericsync.Map[string, *networkservice.Mechanism]{},
 	}
 }
 

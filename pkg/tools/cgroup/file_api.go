@@ -24,7 +24,6 @@ package cgroup
 import (
 	"bufio"
 	"context"
-	"io/ioutil"
 	"os"
 
 	"github.com/pkg/errors"
@@ -82,7 +81,7 @@ type supplierFunc func(s string) error
 
 func outputFileAPI(filePath string) (supplier supplierFunc) {
 	supplier = func(data string) error {
-		if err := ioutil.WriteFile(filePath, []byte(data), createPerm); err != nil {
+		if err := os.WriteFile(filePath, []byte(data), createPerm); err != nil {
 			return errors.Wrapf(err, "failed to write to a %s", filePath)
 		}
 		return nil

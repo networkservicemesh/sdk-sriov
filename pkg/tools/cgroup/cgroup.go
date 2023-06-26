@@ -23,7 +23,6 @@ package cgroup
 
 import (
 	"bufio"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -63,7 +62,7 @@ func (c *Cgroup) Allow(major, minor uint32) error {
 	dev := newDevice(major, minor, 'r', 'w', 'm')
 
 	filePath := filepath.Join(c.Path, deviceAllowFileName)
-	if err := ioutil.WriteFile(filePath, []byte(dev.String()), 0); err != nil {
+	if err := os.WriteFile(filePath, []byte(dev.String()), 0); err != nil {
 		return errors.Wrapf(err, "failed to write to a %s", filePath)
 	}
 
@@ -75,7 +74,7 @@ func (c *Cgroup) Deny(major, minor uint32) error {
 	dev := newDevice(major, minor, 'r', 'w')
 
 	filePath := filepath.Join(c.Path, deviceAllowFileName)
-	if err := ioutil.WriteFile(filePath, []byte(dev.String()), 0); err != nil {
+	if err := os.WriteFile(filePath, []byte(dev.String()), 0); err != nil {
 		return errors.Wrapf(err, "failed to write to a %s", filePath)
 	}
 
