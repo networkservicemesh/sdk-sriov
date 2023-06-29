@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Doc.ai and/or its affiliates.
+// Copyright (c) 2023 Doc.ai and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -18,7 +18,7 @@
 package yamlhelper
 
 import (
-	"io/ioutil"
+	"os"
 	"path"
 
 	"github.com/ghodss/yaml"
@@ -27,7 +27,7 @@ import (
 
 // UnmarshalFile unmarshal YAML file into the object
 func UnmarshalFile(fileName string, o interface{}) error {
-	bytes, err := ioutil.ReadFile(path.Clean(fileName))
+	bytes, err := os.ReadFile(path.Clean(fileName))
 	if err != nil {
 		return errors.Wrapf(err, "error reading file: %v", fileName)
 	}

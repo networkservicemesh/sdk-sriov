@@ -20,7 +20,6 @@
 package pcifunction
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -104,12 +103,12 @@ func (pf *PhysicalFunction) createVirtualFunctions() error {
 		return nil
 	}
 
-	vfsCount, err := ioutil.ReadFile(pf.withDevicePath(totalVFFile))
+	vfsCount, err := os.ReadFile(pf.withDevicePath(totalVFFile))
 	if err != nil {
 		return errors.Wrapf(err, "failed to get available VFs number for the PCI device: %v", pf.address)
 	}
 
-	err = ioutil.WriteFile(pf.withDevicePath(configuredVFFile), vfsCount, 0)
+	err = os.WriteFile(pf.withDevicePath(configuredVFFile), vfsCount, 0)
 	if err != nil {
 		return errors.Wrapf(err, "failed to create VFs for the PCI device: %v", pf.address)
 	}

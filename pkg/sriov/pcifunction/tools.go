@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Doc.ai and/or its affiliates.
+// Copyright (c) 2023 Doc.ai and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -17,7 +17,6 @@
 package pcifunction
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -32,7 +31,7 @@ func isFileExists(path string) bool {
 }
 
 func readUintFromFile(path string) (uint, error) {
-	data, err := ioutil.ReadFile(filepath.Clean(path))
+	data, err := os.ReadFile(filepath.Clean(path))
 	if err != nil {
 		return 0, errors.Wrapf(err, "unable to locate file: %v", path)
 	}

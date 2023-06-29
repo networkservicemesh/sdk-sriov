@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2022 Doc.ai and/or its affiliates.
+// Copyright (c) 2021-2023 Doc.ai and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -20,7 +20,6 @@
 package cgroup_test
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -116,7 +115,7 @@ func TestCgroup_IsWiderThan(t *testing.T) {
 	for i := range samples {
 		sample := samples[i]
 		t.Run(sample.name, func(t *testing.T) {
-			err := ioutil.WriteFile(filepath.Join(tmpDir, deviceListFileName), []byte(sample.device), 0)
+			err := os.WriteFile(filepath.Join(tmpDir, deviceListFileName), []byte(sample.device), 0)
 			require.NoError(t, err)
 
 			isWider, err := cg.IsWiderThan(1, 2)
