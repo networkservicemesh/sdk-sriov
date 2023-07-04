@@ -8,8 +8,8 @@ require (
 	github.com/golang/protobuf v1.5.3
 	github.com/google/uuid v1.3.0
 	github.com/networkservicemesh/api v1.9.1-0.20230627143611-9785eacf9687
-	github.com/networkservicemesh/sdk v0.5.1-0.20230703092623-0ba94eaa823e
-	github.com/networkservicemesh/sdk-kernel v0.0.0-20230703092929-556b12d80987
+	github.com/networkservicemesh/sdk v0.5.1-0.20230704094111-f349173882f2
+	github.com/networkservicemesh/sdk-kernel v0.0.0-20230704094415-d67bccbf0625
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.8.3
 	go.uber.org/goleak v1.2.1
@@ -57,6 +57,7 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v0.39.0 // indirect
 	go.opentelemetry.io/otel/trace v1.16.0 // indirect
 	go.opentelemetry.io/proto/otlp v0.19.0 // indirect
+	go.uber.org/atomic v1.7.0 // indirect
 	golang.org/x/crypto v0.10.0 // indirect
 	golang.org/x/net v0.11.0 // indirect
 	golang.org/x/text v0.10.0 // indirect

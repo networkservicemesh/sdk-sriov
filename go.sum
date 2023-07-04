@@ -191,10 +191,10 @@ github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182aff
 github.com/miekg/dns v1.1.50 h1:DQUfb9uc6smULcREF09Uc+/Gd46YWqJd5DbpPE9xkcA=
 github.com/networkservicemesh/api v1.9.1-0.20230627143611-9785eacf9687 h1:Kb6h5eMQpRF4jwRIJjD/uciTsA5Fr0b61fFUmyyVVh4=
 github.com/networkservicemesh/api v1.9.1-0.20230627143611-9785eacf9687/go.mod h1:DO7D13Y4x/A8tQ2cQyUWa9o5wi7XHUB8+vITWRKreCc=
-github.com/networkservicemesh/sdk v0.5.1-0.20230703092623-0ba94eaa823e h1:ivVTOyjs4LR7QoVyhaJmKNJXMUjWzqa1KwdESGz9fAE=
-github.com/networkservicemesh/sdk v0.5.1-0.20230703092623-0ba94eaa823e/go.mod h1:r9XRbQ6UlS0+hefduzFb1cX9j3W/XNOqFqUlcQk7xYM=
-github.com/networkservicemesh/sdk-kernel v0.0.0-20230703092929-556b12d80987 h1:Z9yQQI7pu0/Fa3ZdoM04MiQfbJv7SuZSPw8AKsFQh/Y=
-github.com/networkservicemesh/sdk-kernel v0.0.0-20230703092929-556b12d80987/go.mod h1:2dB/VwPmweTXzHSzKnvRxAcpAdjenDDOgCFxKtMTpZo=
+github.com/networkservicemesh/sdk v0.5.1-0.20230704094111-f349173882f2 h1:xT48XAimEr6Ip/qjKIJyu4nse3gfVTJ9buzS2IzOEAg=
+github.com/networkservicemesh/sdk v0.5.1-0.20230704094111-f349173882f2/go.mod h1:r9XRbQ6UlS0+hefduzFb1cX9j3W/XNOqFqUlcQk7xYM=
+github.com/networkservicemesh/sdk-kernel v0.0.0-20230704094415-d67bccbf0625 h1:ochWYH671Jf1e3BAYggwkycF+OhTbJ6SAaLGzF8dcw0=
+github.com/networkservicemesh/sdk-kernel v0.0.0-20230704094415-d67bccbf0625/go.mod h1:oo5NTzZz/ThBpLNZrO81tyFY5ncPF3GTjCniyDzc79I=
 github.com/open-policy-agent/opa v0.44.0 h1:sEZthsrWBqIN+ShTMJ0Hcz6a3GkYsY4FaB2S/ou2hZk=
 github.com/open-policy-agent/opa v0.44.0/go.mod h1:YpJaFIk5pq89n/k72c1lVvfvR5uopdJft2tMg1CW/yU=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
@@ -220,6 +220,7 @@ github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+
 github.com/stretchr/objx v0.4.0/go.mod h1:YvHI0jy2hoMjB+UWwv71VJQ9isScKT/TqJzVSSt89Yw=
 github.com/stretchr/objx v0.5.0 h1:1zr/of2m5FGMsad5YfcqgdqdWrIhu+EBEJRhR1U7z/c=
 github.com/stretchr/objx v0.5.0/go.mod h1:Yh+to48EsGEfYuaHDzXPcE3xhTkx73EhmCGUpEOglKo=
+github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
 github.com/stretchr/testify v1.4.0/go.mod h1:j7eGeouHqKxXV5pUuKE4zz7dFj8WfuZ+81PSLYec5m4=
 github.com/stretchr/testify v1.5.1/go.mod h1:5W2xD1RspED5o8YsWQXVCued0rvSQ+mT+I5cxcmMvtA=
 github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
@@ -275,6 +276,8 @@ go.opentelemetry.io/otel/trace v1.16.0/go.mod h1:Yt9vYq1SdNz3xdjZZK7wcXv1qv2pwLk
 go.opentelemetry.io/proto/otlp v0.7.0/go.mod h1:PqfVotwruBrMGOCsRd/89rSnXhoiJIqeYNgFYFoEGnI=
 go.opentelemetry.io/proto/otlp v0.19.0 h1:IVN6GR+mhC4s5yfcTbmzHYODqvWAp3ZedA2SJPI1Nnw=
 go.opentelemetry.io/proto/otlp v0.19.0/go.mod h1:H7XAot3MsfNsj7EXtrA2q5xSNQ10UqI405h3+duxN4U=
+go.uber.org/atomic v1.7.0 h1:ADUqmZGgLDDfbSL9ZmPxKTybcoEYHgpYfELNoN+7hsw=
+go.uber.org/atomic v1.7.0/go.mod h1:fEN4uk6kAWBTFdckzkM89CLk9XfWZrxpCo0nPH17wJc=
 go.uber.org/goleak v1.1.10/go.mod h1:8a7PlsEVH3e/a/GLqe5IIrQx6GzcnRmZEufDUTk4A7A=
 go.uber.org/goleak v1.2.1 h1:NBol2c7O1ZokfZ0LEU9K6Whx/KnwvepVetCUhtKja4A=
 go.uber.org/goleak v1.2.1/go.mod h1:qlT2yGI9QafXHhZZLxlSuNsMw3FFLxBr+tBRlmO1xH4=
