@@ -6,15 +6,15 @@ require (
 	github.com/edwarnicke/genericsync v0.0.0-20220910010113-61a344f9bc29
 	github.com/ghodss/yaml v1.0.0
 	github.com/golang/protobuf v1.5.3
-	github.com/google/uuid v1.3.0
-	github.com/networkservicemesh/api v1.10.1-0.20230822145124-c4a3ece88804
-	github.com/networkservicemesh/sdk v0.5.1-0.20231017110504-02ca02e6655b
-	github.com/networkservicemesh/sdk-kernel v0.0.0-20231017110754-253b41ce0fa5
+	github.com/google/uuid v1.3.1
+	github.com/networkservicemesh/api v1.11.1-0.20231031152153-730abd666985
+	github.com/networkservicemesh/sdk v0.5.1-0.20231031174426-85ca154d11a8
+	github.com/networkservicemesh/sdk-kernel v0.0.0-20231031175017-76c2d34bfe04
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.8.4
 	go.uber.org/goleak v1.2.1
-	golang.org/x/sys v0.12.0
-	google.golang.org/grpc v1.58.0
+	golang.org/x/sys v0.13.0
+	google.golang.org/grpc v1.59.0
 )
 
 require (
@@ -65,11 +65,11 @@ require (
 	go.opentelemetry.io/otel/trace v1.19.0-rc.1 // indirect
 	go.opentelemetry.io/proto/otlp v1.0.0 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
-	golang.org/x/crypto v0.11.0 // indirect
-	golang.org/x/net v0.12.0 // indirect
-	golang.org/x/text v0.11.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20230711160842-782d3b101e98 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20230711160842-782d3b101e98 // indirect
+	golang.org/x/crypto v0.14.0 // indirect
+	golang.org/x/net v0.17.0 // indirect
+	golang.org/x/text v0.13.0 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20230822172742-b8732ec3820d // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20231030173426-d783a09b4405 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/square/go-jose.v2 v2.5.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
