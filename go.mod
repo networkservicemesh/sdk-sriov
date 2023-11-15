@@ -13,7 +13,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.8.4
 	go.uber.org/goleak v1.3.0
-	golang.org/x/sys v0.14.0
+	golang.org/x/sys v0.14.1-0.20231113162313-11eadc05e9bf
 	google.golang.org/grpc v1.59.0
 )
 
