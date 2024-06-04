@@ -8,8 +8,8 @@ require (
 	github.com/golang/protobuf v1.5.3
 	github.com/google/uuid v1.3.1
 	github.com/networkservicemesh/api v1.13.1-0.20240424210452-d0df98851760
-	github.com/networkservicemesh/sdk v0.5.1-0.20240529105330-c01f9e100851
-	github.com/networkservicemesh/sdk-kernel v0.0.0-20240529105556-06cfa696acac
+	github.com/networkservicemesh/sdk v0.5.1-0.20240604143537-e3eed82dc1b4
+	github.com/networkservicemesh/sdk-kernel v0.0.0-20240604150951-293bea632223
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.8.4
 	go.uber.org/goleak v1.3.0
@@ -27,7 +27,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/edwarnicke/exechelper v1.0.2 // indirect
-	github.com/edwarnicke/grpcfd v1.1.2 // indirect
+	github.com/edwarnicke/grpcfd v1.1.4 // indirect
 	github.com/edwarnicke/serialize v1.0.7 // indirect
 	github.com/go-jose/go-jose/v3 v3.0.3 // indirect
 	github.com/go-logr/logr v1.3.0 // indirect
