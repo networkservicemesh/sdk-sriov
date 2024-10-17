@@ -4,7 +4,7 @@ run:
   timeout: 2m
   issues-exit-code: 1
   tests: true
-  go: "1.20"
+  go: "1.23"
 linters-settings:
   goheader:
     template-path: ".ci/license/template.txt"
@@ -17,7 +17,8 @@ linters-settings:
     check-type-assertions: false
     check-blank: false
   govet:
-    check-shadowing: true
+    enable:
+      - shadow
     settings:
       printf:
         funcs:
@@ -25,19 +26,18 @@ linters-settings:
           - (github.com/sirupsen/logrus.FieldLogger).Warnf
           - (github.com/sirupsen/logrus.FieldLogger).Errorf
           - (github.com/sirupsen/logrus.FieldLogger).Fatalf
-  revive:
-    min-confidence: 0.8
   goimports:
     local-prefixes: github.com/networkservicemesh/sdk-sriov
   gocyclo:
     min-complexity: 15
-  maligned:
-    suggest-new: true
   dupl:
     threshold: 150
   funlen:
-    Lines: 100
-    Statements: 50
+    lines: 100
+    statements: 50
+  gosec:
+    excludes:
+      - G115
   goconst:
     min-len: 2
     min-occurrences: 2
@@ -127,10 +127,8 @@ linters-settings:
 linters:
   disable-all: true
   enable:
-    # - rowserrcheck
     - goheader
     - bodyclose
-    - deadcode
     - depguard
     - dogsled
     - dupl
@@ -147,20 +145,16 @@ linters:
     - gosimple
     - govet
     - ineffassign
-    - interfacer
-    # - lll
     - misspell
     - nakedret
-    - scopelint
     - staticcheck
-    - structcheck
     - stylecheck
     - typecheck
     - unconvert
     - unparam
-    # - unused
-    - varcheck
     - whitespace
+    - unused
+    - copyloopvar
 issues:
   exclude-use-default: false
   max-issues-per-linter: 0

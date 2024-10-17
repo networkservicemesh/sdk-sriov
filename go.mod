@@ -1,6 +1,6 @@
 module github.com/networkservicemesh/sdk-sriov
 
-go 1.20
+go 1.23
 
 require (
 	github.com/edwarnicke/genericsync v0.0.0-20220910010113-61a344f9bc29
