@@ -64,7 +64,11 @@ func NewClient(
 	}}
 }
 
-func (i *resourcePoolClient) Request(ctx context.Context, request *networkservice.NetworkServiceRequest, opts ...grpc.CallOption) (*networkservice.Connection, error) {
+func (i *resourcePoolClient) Request(
+	ctx context.Context,
+	request *networkservice.NetworkServiceRequest,
+	opts ...grpc.CallOption,
+) (*networkservice.Connection, error) {
 	logger := log.FromContext(ctx).WithField("resourcePoolClient", "Request")
 
 	mechParams := request.GetConnection().GetMechanism().GetParameters()

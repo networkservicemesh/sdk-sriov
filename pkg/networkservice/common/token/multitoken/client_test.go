@@ -87,7 +87,11 @@ type validateClient struct {
 	t *testing.T
 }
 
-func (c *validateClient) Request(ctx context.Context, request *networkservice.NetworkServiceRequest, opts ...grpc.CallOption) (*networkservice.Connection, error) {
+func (c *validateClient) Request(
+	ctx context.Context,
+	request *networkservice.NetworkServiceRequest,
+	opts ...grpc.CallOption,
+) (*networkservice.Connection, error) {
 	require.Equal(c.t, map[string]string{
 		serviceDomainLabel: serviceDomain,
 	}, request.GetConnection().GetLabels())

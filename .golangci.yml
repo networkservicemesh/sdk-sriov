@@ -71,7 +71,7 @@ linters-settings:
           - pkg: "errors"
             desc: "Please use \"github.com/pkg/errors\" instead of \"errors\" in go imports"
   lll:
-    line-length: 170
+    line-length: 160
   misspell:
     locale: US
   unparam:
