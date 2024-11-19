@@ -2,7 +2,7 @@
 //
 // Copyright (c) 2021-2023 Nordix Foundation.
 //
-// Copyright (c) 2023 Cisco and/or its affiliates.
+// Copyright (c) 2023-2024 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -87,7 +87,11 @@ type validateClient struct {
 	t *testing.T
 }
 
-func (c *validateClient) Request(ctx context.Context, request *networkservice.NetworkServiceRequest, opts ...grpc.CallOption) (*networkservice.Connection, error) {
+func (c *validateClient) Request(
+	ctx context.Context,
+	request *networkservice.NetworkServiceRequest,
+	opts ...grpc.CallOption,
+) (*networkservice.Connection, error) {
 	require.Equal(c.t, map[string]string{
 		serviceDomainLabel: serviceDomain,
 	}, request.GetConnection().GetLabels())

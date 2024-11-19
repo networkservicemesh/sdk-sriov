@@ -1,15 +1,15 @@
 module github.com/networkservicemesh/sdk-sriov
 
-go 1.20
+go 1.23
 
 require (
 	github.com/edwarnicke/genericsync v0.0.0-20220910010113-61a344f9bc29
 	github.com/ghodss/yaml v1.0.0
 	github.com/golang/protobuf v1.5.3
 	github.com/google/uuid v1.3.1
-	github.com/networkservicemesh/api v1.13.4-0.20240815101554-fdbfcd84fd0e
-	github.com/networkservicemesh/sdk v0.5.1-0.20241106141620-b53ccb0ebe20
-	github.com/networkservicemesh/sdk-kernel v0.0.0-20241106141842-3e1b97bc7989
+	github.com/networkservicemesh/api v1.14.2-0.20241114102931-df7655523954
+	github.com/networkservicemesh/sdk v0.5.1-0.20241119101250-cb2dbb0eccc2
+	github.com/networkservicemesh/sdk-kernel v0.0.0-20241119140044-74f2bf254043
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.8.4
 	go.uber.org/goleak v1.3.0
