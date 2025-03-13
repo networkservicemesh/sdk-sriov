@@ -29,7 +29,7 @@ require (
 	github.com/edwarnicke/exechelper v1.0.2 // indirect
 	github.com/edwarnicke/grpcfd v1.1.4 // indirect
 	github.com/edwarnicke/serialize v1.0.7 // indirect
-	github.com/go-jose/go-jose/v3 v3.0.3 // indirect
+	github.com/go-jose/go-jose/v3 v3.0.4 // indirect
 	github.com/go-logr/logr v1.3.0 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
