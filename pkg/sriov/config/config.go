@@ -1,5 +1,7 @@
 // Copyright (c) 2020-2021 Doc.ai and/or its affiliates.
 //
+// Copyright (c) 2021 Nordix Foundation.
+//
 // SPDX-License-Identifier: Apache-2.0
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,6 +22,7 @@ package config
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/networkservicemesh/sdk/pkg/tools/log/logruslogger"
@@ -55,6 +58,7 @@ type PhysicalFunction struct {
 	VFKernelDriver   string             `yaml:"vfKernelDriver"`
 	Capabilities     []string           `yaml:"capabilities"`
 	ServiceDomains   []string           `yaml:"serviceDomains"`
+	SkipDriverCheck  string             `yaml:"skipDriverCheck"`
 	VirtualFunctions []*VirtualFunction `yaml:"virtualFunctions"`
 }
 
@@ -83,6 +87,9 @@ func (pf *PhysicalFunction) String() string {
 	}
 	_, _ = sb.WriteString(strings.Join(strs, " "))
 	_, _ = sb.WriteString("]")
+
+	_, _ = sb.WriteString(" SkipDriverCheck:")
+	_, _ = sb.WriteString(pf.SkipDriverCheck)
 
 	_, _ = sb.WriteString("}")
 	return sb.String()
@@ -115,6 +122,9 @@ func ReadConfig(ctx context.Context, configFile string) (*Config, error) {
 		}
 		if len(pfCfg.ServiceDomains) == 0 {
 			return nil, errors.Errorf("%s has no ServiceDomains set", pciAddr)
+		}
+		if _, err := strconv.ParseBool(pfCfg.SkipDriverCheck); err != nil {
+			return nil, errors.Errorf("%s has invalid SkipDriverCheck set", pciAddr)
 		}
 	}
 
